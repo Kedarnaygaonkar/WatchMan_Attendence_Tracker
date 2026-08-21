@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base styles ───────────────────────────────────────────────── */
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    @apply font-sans;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-900 text-slate-100 min-h-screen;
+  }
+
+  /* Smooth scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-800;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-600;
+  }
+
+  /* Focus ring */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-900;
+  }
+
+  input, textarea, select {
+    @apply bg-surface-800 border-surface-700 text-slate-100 placeholder-slate-500;
+  }
+}
+
+/* ── Component classes ─────────────────────────────────────────── */
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-surface-800 rounded-2xl border border-surface-700 shadow-card;
+  }
+  .card-glass {
+    @apply rounded-2xl border border-white/10 shadow-card backdrop-blur-sm;
+    background: rgba(30, 41, 59, 0.8);
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold
+           transition-all duration-200 focus-visible:outline-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-500 active:scale-95
+           shadow-lg hover:shadow-glow;
+  }
+  .btn-success {
+    @apply btn bg-success-600 text-white hover:bg-success-500 active:scale-95
+           shadow-lg hover:shadow-glow-success;
+  }
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-500 active:scale-95;
+  }
+  .btn-ghost {
+    @apply btn text-slate-400 hover:text-slate-100 hover:bg-surface-700;
+  }
+  .btn-outline {
+    @apply btn border border-surface-700 text-slate-300 hover:border-brand-500
+           hover:text-brand-400 hover:bg-surface-800;
+  }
+
+  /* Watchman giant button */
+  .btn-mark-attendance {
+    @apply btn bg-gradient-to-br from-brand-500 to-brand-700
+           text-white text-2xl font-black py-8 px-10 rounded-3xl
+           shadow-2xl shadow-brand-900/50 hover:shadow-glow
+           active:scale-95 w-full transition-all duration-300
+           border border-brand-400/30;
+    min-height: 120px;
+  }
+
+  /* Form inputs */
+  .input {
+    @apply w-full px-4 py-3 bg-surface-800 border border-surface-700
+           rounded-xl text-slate-100 placeholder-slate-500
+           focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500
+           transition-colors duration-200;
+  }
+  .label {
+    @apply block text-sm font-medium text-slate-400 mb-1.5;
+  }
+  .form-group {
+    @apply space-y-1.5;
+  }
+
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+  .badge-present {
+    @apply badge bg-success-500/20 text-success-400 border border-success-500/30;
+  }
+  .badge-late {
+    @apply badge bg-warning-500/20 text-warning-400 border border-warning-500/30;
+  }
+  .badge-absent {
+    @apply badge bg-danger-500/20 text-danger-400 border border-danger-500/30;
+  }
+  .badge-suspicious {
+    @apply badge bg-orange-500/20 text-orange-400 border border-orange-500/30;
+  }
+  .badge-verified {
+    @apply badge bg-brand-500/20 text-brand-400 border border-brand-500/30;
+  }
+
+  /* Table */
+  .table-wrapper {
+    @apply overflow-x-auto rounded-xl border border-surface-700;
+  }
+  .table {
+    @apply w-full text-sm text-left;
+  }
+  .table thead {
+    @apply bg-surface-800 text-slate-400 text-xs uppercase tracking-wider;
+  }
+  .table th {
+    @apply px-4 py-3 font-medium;
+  }
+  .table td {
+    @apply px-4 py-3 text-slate-200;
+  }
+  .table tbody tr {
+    @apply border-t border-surface-700 hover:bg-surface-700/50 transition-colors duration-150;
+  }
+
+  /* Sidebar nav item */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm
+           text-slate-400 hover:text-slate-100 hover:bg-surface-700
+           transition-all duration-200 cursor-pointer;
+  }
+  .nav-item.active {
+    @apply text-brand-300 bg-brand-500/10 border border-brand-500/20;
+  }
+
+  /* Stat cards */
+  .stat-card {
+    @apply card p-5 flex flex-col gap-2;
+  }
+  .stat-value {
+    @apply text-3xl font-black text-slate-100;
+  }
+  .stat-label {
+    @apply text-sm text-slate-500 font-medium;
+  }
+
+  /* Section header */
+  .section-header {
+    @apply flex items-center justify-between mb-6;
+  }
+  .section-title {
+    @apply text-xl font-bold text-slate-100;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-surface-700 border-t-brand-500;
+  }
+}
+
+/* ── Leaflet map dark theme override ───────────────────────────── */
+.leaflet-container {
+  background: #1e293b !important;
+  border-radius: 12px;
+}
+.leaflet-tile {
+  filter: brightness(0.8) saturate(0.9);
+}
+.leaflet-control-zoom a {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+.leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #64748b !important;
+}
