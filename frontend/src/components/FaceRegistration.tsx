@@ -97,13 +97,14 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
   const captureAndRegister = useCallback(async () => {
     if (!videoRef.current) return;
     setStep('processing');
-    stopCamera();
 
     try {
       const detection = await faceapi
         .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
         .withFaceLandmarks(true)
         .withFaceDescriptor();
+
+      stopCamera();
 
       if (!detection) {
         setStep('error');
@@ -118,6 +119,7 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
       setStep('success');
       toast.success('Face registered! You are all set.');
     } catch (err: unknown) {
+      stopCamera();
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message || 'Registration failed. Please try again.';
       setStep('error');
