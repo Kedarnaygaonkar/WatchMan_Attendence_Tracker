@@ -48,6 +48,25 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
     return () => stopCamera();
   }, []);
 
+  const startFaceDetection = useCallback(() => {
+    detectionIntervalRef.current = setInterval(async () => {
+      if (!videoRef.current || videoRef.current.readyState < 2) return;
+      const detection = await faceapi
+        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+      setFaceDetected(!!detection);
+    }, 300);
+  }, []);
+
+  // Attach stream to video element AFTER it renders (fixes black camera bug)
+  useEffect(() => {
+    if (step === 'capturing' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      startFaceDetection();
+    }
+  }, [step, startFaceDetection]);
+
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -55,21 +74,12 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
         audio: false,
       });
       streamRef.current = stream;
-      setStep('capturing'); // render video element first
-      // stream will be attached via useEffect below
+      setStep('capturing'); // render video element first, stream attached via useEffect
     } catch {
       setStep('error');
       setErrorMsg('Camera access denied. Please enable camera access in your browser settings.');
     }
   }, []);
-
-  // Attach stream to video element AFTER it renders
-  useEffect(() => {
-    if (step === 'capturing' && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      startFaceDetection();
-    }
-  }, [step, startFaceDetection]);
 
   const stopCamera = useCallback(() => {
     if (detectionIntervalRef.current) {
@@ -83,16 +93,6 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
     setFaceDetected(false);
   }, []);
 
-  const startFaceDetection = useCallback(() => {
-    detectionIntervalRef.current = setInterval(async () => {
-      if (!videoRef.current || videoRef.current.readyState < 2) return;
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
-        .withFaceLandmarks(true)
-        .withFaceDescriptor();
-      setFaceDetected(!!detection);
-    }, 300);
-  }, []);
 
   const captureAndRegister = useCallback(async () => {
     if (!videoRef.current) return;
