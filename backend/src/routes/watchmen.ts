@@ -109,6 +109,56 @@ router.get('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(async
   res.json({ success: true, data: formatted });
 }));
 
+
+// ── FACE ROUTES (Watchman-accessible) — MUST be before /:id to avoid route conflict ──
+
+/**
+ * GET /api/watchmen/face-status
+ * Returns whether the logged-in watchman has registered their face.
+ */
+router.get('/face-status', requireRole(['watchman']), asyncHandler(async (req: Request, res: Response) => {
+  const watchman = await Watchman.findOne({ user_id: req.user!.userId }).select('face_registered face_descriptor');
+  if (!watchman) {
+    res.status(404).json({ success: false, message: 'Watchman profile not found.' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: {
+      face_registered: watchman.face_registered,
+      // Return descriptor so frontend can do local comparison
+      face_descriptor: watchman.face_registered ? watchman.face_descriptor : null,
+    },
+  });
+}));
+
+/**
+ * POST /api/watchmen/register-face
+ * Called by the watchman on first login to store their face descriptor.
+ * Body: { descriptor: number[128] }
+ */
+router.post('/register-face', requireRole(['watchman']), asyncHandler(async (req: Request, res: Response) => {
+  const { descriptor } = req.body;
+
+  if (!Array.isArray(descriptor) || descriptor.length !== 128) {
+    res.status(400).json({ success: false, message: 'Invalid face descriptor. Must be a 128-element array.' });
+    return;
+  }
+
+  const watchman = await Watchman.findOne({ user_id: req.user!.userId });
+  if (!watchman) {
+    res.status(404).json({ success: false, message: 'Watchman profile not found.' });
+    return;
+  }
+
+  watchman.face_descriptor = descriptor;
+  watchman.face_registered = true;
+  await watchman.save();
+
+  res.json({ success: true, message: 'Face registered successfully.' });
+}));
+
 /** GET /api/watchmen/:id */
 router.get('/:id', requireRole(['agency_admin', 'super_admin']), asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
@@ -235,55 +285,6 @@ router.post('/:id/photo', requireRole(['agency_admin', 'super_admin']), upload.s
   await watchman.save();
 
   res.json({ success: true, data: { id: watchman.id, profile_photo_url: watchman.profile_photo_url } });
-}));
-
-// ── FACE REGISTRATION ENDPOINTS (Watchman-accessible) ──────────────────────
-
-/**
- * POST /api/watchmen/register-face
- * Called by the watchman on first login to store their face descriptor.
- * Body: { descriptor: number[128], selfieDataUrl?: string }
- */
-router.post('/register-face', requireRole(['watchman']), asyncHandler(async (req: Request, res: Response) => {
-  const { descriptor } = req.body;
-
-  if (!Array.isArray(descriptor) || descriptor.length !== 128) {
-    res.status(400).json({ success: false, message: 'Invalid face descriptor. Must be a 128-element array.' });
-    return;
-  }
-
-  const watchman = await Watchman.findOne({ user_id: req.user!.userId });
-  if (!watchman) {
-    res.status(404).json({ success: false, message: 'Watchman profile not found.' });
-    return;
-  }
-
-  watchman.face_descriptor = descriptor;
-  watchman.face_registered = true;
-  await watchman.save();
-
-  res.json({ success: true, message: 'Face registered successfully.' });
-}));
-
-/**
- * GET /api/watchmen/face-status
- * Returns whether the logged-in watchman has registered their face.
- */
-router.get('/face-status', requireRole(['watchman']), asyncHandler(async (req: Request, res: Response) => {
-  const watchman = await Watchman.findOne({ user_id: req.user!.userId }).select('face_registered face_descriptor');
-  if (!watchman) {
-    res.status(404).json({ success: false, message: 'Watchman profile not found.' });
-    return;
-  }
-
-  res.json({
-    success: true,
-    data: {
-      face_registered: watchman.face_registered,
-      // Return descriptor so frontend can do local comparison
-      face_descriptor: watchman.face_registered ? watchman.face_descriptor : null,
-    },
-  });
 }));
 
 export default router;

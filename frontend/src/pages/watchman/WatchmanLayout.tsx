@@ -18,12 +18,14 @@ export default function WatchmanLayout() {
     }
     api.get('/watchmen/face-status')
       .then(({ data }) => {
-        if (!data.data.face_registered) {
+        // Show registration if face_registered is not explicitly true
+        if (data.data.face_registered !== true) {
           setShowFaceRegistration(true);
         }
       })
-      .catch(() => {
-        // If check fails, don't block the user
+      .catch((err) => {
+        console.error('Face status check failed:', err);
+        // If check fails, still show the dashboard (don't block)
       })
       .finally(() => setFaceCheckDone(true));
   }, [user]);
