@@ -1,9 +1,32 @@
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { LogOut, Shield } from 'lucide-react';
+import FaceRegistration from '../../components/FaceRegistration';
+import api from '../../api/client';
 
 export default function WatchmanLayout() {
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
+  const [showFaceRegistration, setShowFaceRegistration] = useState(false);
+  const [faceCheckDone, setFaceCheckDone] = useState(false);
+
+  // Check face registration status on mount
+  useEffect(() => {
+    if (user?.role !== 'watchman') {
+      setFaceCheckDone(true);
+      return;
+    }
+    api.get('/watchmen/face-status')
+      .then(({ data }) => {
+        if (!data.data.face_registered) {
+          setShowFaceRegistration(true);
+        }
+      })
+      .catch(() => {
+        // If check fails, don't block the user
+      })
+      .finally(() => setFaceCheckDone(true));
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-surface-950 to-surface-900 flex flex-col">
@@ -24,8 +47,13 @@ export default function WatchmanLayout() {
 
       {/* Main watchman content */}
       <main className="flex-1 flex flex-col">
-        <Outlet />
+        {faceCheckDone && <Outlet />}
       </main>
+
+      {/* Face Registration Overlay */}
+      {showFaceRegistration && (
+        <FaceRegistration onComplete={() => setShowFaceRegistration(false)} />
+      )}
     </div>
   );
 }

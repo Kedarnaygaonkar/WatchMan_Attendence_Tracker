@@ -25,6 +25,10 @@ export interface IAttendance extends Document {
   override_note?: string;
   override_by?: mongoose.Types.ObjectId;
   override_at?: Date;
+  /** Whether the face matched the registered descriptor */
+  face_verified?: boolean;
+  /** Euclidean distance score (lower = better match, < 0.6 = same person) */
+  face_match_score?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +66,8 @@ const attendanceSchema = new Schema<IAttendance>(
     override_note: { type: String },
     override_by: { type: Schema.Types.ObjectId, ref: 'User' },
     override_at: { type: Date },
+    face_verified: { type: Boolean, default: null },
+    face_match_score: { type: Number, default: null },
   },
   { timestamps: true }
 );

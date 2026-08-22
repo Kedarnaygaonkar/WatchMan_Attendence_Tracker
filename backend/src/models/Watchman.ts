@@ -11,6 +11,10 @@ export interface IWatchman extends Document {
   address?: string;
   joining_date?: Date;
   profile_photo_url?: string;
+  /** 128-element face embedding from face-api.js */
+  face_descriptor?: number[];
+  /** Whether the watchman has completed face registration */
+  face_registered: boolean;
   status: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +31,8 @@ const watchmanSchema = new Schema<IWatchman>(
     address: { type: String },
     joining_date: { type: Date },
     profile_photo_url: { type: String },
+    face_descriptor: { type: [Number], default: undefined },
+    face_registered: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended'],

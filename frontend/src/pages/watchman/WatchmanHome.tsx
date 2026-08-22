@@ -10,10 +10,11 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import * as faceapi from 'face-api.js';
 import {
   MapPin, Clock, Building2, CheckCircle2, AlertCircle,
   Camera, RefreshCw, Wifi, WifiOff, ChevronRight, Loader2,
-  ShieldCheck, Navigation
+  ShieldCheck, Navigation, ScanFace
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
@@ -21,7 +22,7 @@ import { offlineQueue } from '../../offline/attendanceQueue';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 
-type Step = 'home' | 'gps' | 'camera' | 'submitting' | 'success' | 'failed';
+type Step = 'home' | 'gps' | 'face_verify' | 'camera' | 'submitting' | 'success' | 'failed';
 
 interface Assignment {
   id: string;
@@ -71,8 +72,40 @@ export default function WatchmanHome() {
   const [successData, setSuccessData] = useState<{status: string; time: string; society: string} | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const faceVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const faceStreamRef = useRef<MediaStream | null>(null);
+  const faceDetectionInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Face verification state
+  const [faceVerified, setFaceVerified] = useState<boolean | null>(null);
+  const [faceMatchScore, setFaceMatchScore] = useState<number | null>(null);
+  const [faceDetecting, setFaceDetecting] = useState(false);
+  const [faceLiveDetected, setFaceLiveDetected] = useState(false);
+  const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
+
+  const MODELS_PATH = '/models';
+  const FACE_MATCH_THRESHOLD = 0.6; // distance < 0.6 = same person (~80% confidence)
+
+  // Load face-api.js models (once)
+  useEffect(() => {
+    async function loadFaceModels() {
+      try {
+        if (!faceapi.nets.tinyFaceDetector.params) {
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_PATH),
+            faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_PATH),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_PATH),
+          ]);
+        }
+        setFaceModelsLoaded(true);
+      } catch (err) {
+        console.error('Face models load error:', err);
+      }
+    }
+    loadFaceModels();
+  }, []);
 
   // Online/offline tracking
   useEffect(() => {
@@ -121,8 +154,9 @@ export default function WatchmanHome() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setGpsData(position.coords);
-        setStep('camera');
-        startCamera();
+        // After GPS, move to face verification
+        setStep('face_verify');
+        startFaceVerification();
       },
       (error) => {
         let msg = 'Please turn on Location and try again.';
@@ -134,6 +168,106 @@ export default function WatchmanHome() {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }, []);
+
+  // ── Face Verification ─────────────────────────────────────────────
+  const startFaceVerification = useCallback(async () => {
+    setFaceVerified(null);
+    setFaceMatchScore(null);
+    setFaceLiveDetected(false);
+    setFaceDetecting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      faceStreamRef.current = stream;
+      if (faceVideoRef.current) {
+        faceVideoRef.current.srcObject = stream;
+      }
+      // Poll for live face detection
+      faceDetectionInterval.current = setInterval(async () => {
+        if (!faceVideoRef.current || faceVideoRef.current.readyState < 2) return;
+        const detection = await faceapi
+          .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+          .withFaceLandmarks(true);
+        setFaceLiveDetected(!!detection);
+      }, 400);
+    } catch {
+      toast.error('Camera access required for face verification.');
+      setStep('home');
+      setFaceDetecting(false);
+    }
+  }, []);
+
+  const stopFaceVerification = useCallback(() => {
+    if (faceDetectionInterval.current) {
+      clearInterval(faceDetectionInterval.current);
+      faceDetectionInterval.current = null;
+    }
+    if (faceStreamRef.current) {
+      faceStreamRef.current.getTracks().forEach(t => t.stop());
+      faceStreamRef.current = null;
+    }
+    setFaceDetecting(false);
+    setFaceLiveDetected(false);
+  }, []);
+
+  const runFaceVerification = useCallback(async () => {
+    if (!faceVideoRef.current) return;
+    setFaceDetecting(false);
+
+    try {
+      // Fetch stored descriptor from backend
+      const { data } = await api.get('/watchmen/face-status');
+      const storedDescriptorArr: number[] | null = data.data.face_descriptor;
+
+      if (!storedDescriptorArr) {
+        // Watchman has no registered face — skip verification
+        setFaceVerified(true);
+        setFaceMatchScore(0);
+        stopFaceVerification();
+        setStep('camera');
+        startCamera();
+        return;
+      }
+
+      // Detect live face
+      const detection = await faceapi
+        .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+      if (!detection) {
+        toast.error('No face detected. Try in better lighting.');
+        setStep('home');
+        stopFaceVerification();
+        return;
+      }
+
+      // Compare descriptors
+      const stored = new Float32Array(storedDescriptorArr);
+      const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
+      const verified = distance < FACE_MATCH_THRESHOLD;
+
+      setFaceVerified(verified);
+      setFaceMatchScore(distance);
+      stopFaceVerification();
+
+      if (verified) {
+        // Face matched — proceed to selfie camera
+        setStep('camera');
+        startCamera();
+      } else {
+        // Face mismatch — block
+        setStep('face_verify'); // stay on screen to show mismatch
+      }
+    } catch (err) {
+      console.error('Face verification error:', err);
+      toast.error('Face verification failed. Please try again.');
+      stopFaceVerification();
+      setStep('home');
+    }
+  }, [stopFaceVerification]);
 
   // ── Camera ────────────────────────────────────────────────────────
   const startCamera = useCallback(async () => {
@@ -214,6 +348,14 @@ export default function WatchmanHome() {
 
     if (capturedBlob) {
       formData.append('selfie', capturedBlob, 'selfie.jpg');
+    }
+
+    // Include face verification results
+    if (faceVerified !== null) {
+      formData.append('faceVerified', String(faceVerified));
+    }
+    if (faceMatchScore !== null) {
+      formData.append('faceMatchScore', String(faceMatchScore));
     }
 
     if (!isOnline) {
@@ -301,6 +443,7 @@ export default function WatchmanHome() {
   // Reset to home
   const resetToHome = useCallback(() => {
     stopCamera();
+    stopFaceVerification();
     setStep('home');
     setGpsData(null);
     setGpsError('');
@@ -308,7 +451,9 @@ export default function WatchmanHome() {
     setCapturedBlob(null);
     setSubmitError('');
     setSuccessData(null);
-  }, [stopCamera]);
+    setFaceVerified(null);
+    setFaceMatchScore(null);
+  }, [stopCamera, stopFaceVerification]);
 
   // ────────────────────────────────────────────────────────────────
   // RENDER
@@ -476,6 +621,95 @@ export default function WatchmanHome() {
               <p className="text-slate-400 text-sm">
                 Please wait. Make sure Location is enabled in your phone settings.
               </p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── FACE VERIFICATION screen ──────────────────────────────────────
+  if (step === 'face_verify') {
+    const isMismatch = faceVerified === false;
+    return (
+      <div className="flex-1 flex flex-col p-4 animate-fade-in">
+        <div className="max-w-sm mx-auto w-full space-y-4">
+          <div className="text-center">
+            <div className={`badge-present mx-auto inline-flex mb-2 ${isMismatch ? 'badge-absent' : ''}`}>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              {isMismatch ? 'Face Mismatch' : 'Face Verification'}
+            </div>
+            <h2 className="text-xl font-bold text-slate-100">
+              {isMismatch ? 'Attendance Blocked' : 'Verify Your Identity'}
+            </h2>
+            <p className="text-slate-500 text-sm">
+              {isMismatch
+                ? 'Your face did not match your registered photo.'
+                : 'Look straight at the camera. Press verify when ready.'}
+            </p>
+          </div>
+
+          {isMismatch ? (
+            // Mismatch state
+            <div className="card p-6 flex flex-col items-center gap-4 border-danger-500/30">
+              <div className="w-20 h-20 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center">
+                <AlertCircle className="w-10 h-10 text-danger-400" />
+              </div>
+              <p className="text-danger-400 font-bold text-lg">Face Mismatch ✕</p>
+              <p className="text-slate-400 text-sm text-center">
+                Attendance cannot be marked. If this is a mistake, please try again in better lighting or contact your agency.
+              </p>
+            </div>
+          ) : (
+            // Camera feed + verify button
+            <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[4/3]">
+              <video
+                ref={faceVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+              {/* Oval guide */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div
+                  className={`w-48 h-56 rounded-full border-4 transition-colors duration-300 ${
+                    faceLiveDetected ? 'border-success-400' : 'border-white/30 border-dashed'
+                  }`}
+                />
+              </div>
+              {faceLiveDetected && (
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+                  <span className="badge-present text-xs px-3 py-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Face Detected ✓
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isMismatch ? (
+            <button onClick={resetToHome} className="btn-primary w-full py-4">
+              Go Back
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={runFaceVerification}
+                disabled={!faceLiveDetected || !faceModelsLoaded}
+                className={`w-full py-4 text-lg rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
+                  faceLiveDetected && faceModelsLoaded
+                    ? 'btn-primary'
+                    : 'bg-surface-700 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <ScanFace className="w-5 h-5" />
+                {!faceModelsLoaded ? 'Loading AI...' : faceLiveDetected ? 'Verify My Face' : 'Waiting for face...'}
+              </button>
+              <button onClick={resetToHome} className="btn-ghost w-full py-2 text-sm">
+                Cancel
+              </button>
             </>
           )}
         </div>

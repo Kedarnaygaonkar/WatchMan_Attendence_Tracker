@@ -113,6 +113,8 @@ const markAttendanceSchema = z.object({
   clientTimestamp: z.string().optional(),
   isOfflineSync: z.boolean().default(false),
   deviceInfo: z.record(z.unknown()).optional(),
+  faceVerified: z.boolean().optional(),
+  faceMatchScore: z.number().optional(),
 });
 
 router.post(
@@ -132,6 +134,8 @@ router.post(
       clientTimestamp: req.body.clientTimestamp,
       isOfflineSync: req.body.isOfflineSync === 'true',
       deviceInfo: req.body.deviceInfo ? JSON.parse(req.body.deviceInfo) : undefined,
+      faceVerified: req.body.faceVerified === 'true',
+      faceMatchScore: req.body.faceMatchScore ? parseFloat(req.body.faceMatchScore) : undefined,
     };
 
     const parse = markAttendanceSchema.safeParse(bodyParsed);
@@ -145,6 +149,15 @@ router.post(
     const watchman = await Watchman.findOne({ user_id: userId, agency_id: agencyId });
     if (!watchman || watchman.status !== 'active') {
       res.status(403).json({ success: false, message: 'Your account is inactive. Contact your agency.' });
+      return;
+    }
+
+    // 1b. Block attendance if face is not registered
+    if (watchman.face_registered && d.faceVerified === false) {
+      res.status(403).json({
+        success: false,
+        message: 'Face verification failed. Your face did not match the registered photo. Please try again in better lighting.',
+      });
       return;
     }
 
@@ -258,11 +271,15 @@ router.post(
       selfie_url: selfieUrl,
       device_info: d.deviceInfo,
       status,
-      verification_status: gpsAnalysis.verificationStatus,
+      verification_status: d.faceVerified === false ? 'suspicious'
+        : d.faceMatchScore && d.faceMatchScore > 0.5 ? 'warning'
+        : gpsAnalysis.verificationStatus,
       gps_flags: gpsAnalysis.flags,
       is_offline_sync: d.isOfflineSync,
       client_timestamp: d.clientTimestamp ? new Date(d.clientTimestamp) : null,
       synced_at: d.isOfflineSync ? new Date() : null,
+      face_verified: d.faceVerified ?? null,
+      face_match_score: d.faceMatchScore ?? null,
     });
 
     await att.save();
