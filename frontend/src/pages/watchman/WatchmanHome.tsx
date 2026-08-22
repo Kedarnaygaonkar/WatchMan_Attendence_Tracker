@@ -154,8 +154,7 @@ export default function WatchmanHome() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setGpsData(position.coords);
-        // After GPS, move to face verification
-        setStep('face_verify');
+        // After GPS, start face verification (this will set step to face_verify)
         startFaceVerification();
       },
       (error) => {
@@ -181,8 +180,7 @@ export default function WatchmanHome() {
         audio: false,
       });
       faceStreamRef.current = stream;
-      // step is already 'face_verify' at this point (set by GPS callback)
-      // stream attached via useEffect below
+      setStep('face_verify'); // render video element first, stream attached via useEffect
     } catch {
       toast.error('Camera access required for face verification.');
       setStep('home');
@@ -217,7 +215,6 @@ export default function WatchmanHome() {
         setFaceVerified(true);
         setFaceMatchScore(0);
         stopFaceVerification();
-        setStep('camera');
         startCamera();
         return;
       }
@@ -246,7 +243,6 @@ export default function WatchmanHome() {
 
       if (verified) {
         // Face matched — proceed to selfie camera
-        setStep('camera');
         startCamera();
       } else {
         // Face mismatch — block
@@ -268,7 +264,7 @@ export default function WatchmanHome() {
         audio: false,
       });
       streamRef.current = stream;
-      // stream attached to video element via useEffect below
+      setStep('camera'); // render video element first, stream attached via useEffect
     } catch {
       toast.error('Camera access denied. Please enable camera access.');
       setStep('home');
