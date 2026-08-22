@@ -55,16 +55,21 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setStep('capturing');
-      startFaceDetection();
+      setStep('capturing'); // render video element first
+      // stream will be attached via useEffect below
     } catch {
       setStep('error');
       setErrorMsg('Camera access denied. Please enable camera access in your browser settings.');
     }
   }, []);
+
+  // Attach stream to video element AFTER it renders
+  useEffect(() => {
+    if (step === 'capturing' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      startFaceDetection();
+    }
+  }, [step, startFaceDetection]);
 
   const stopCamera = useCallback(() => {
     if (detectionIntervalRef.current) {

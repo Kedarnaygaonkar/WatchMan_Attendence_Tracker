@@ -181,17 +181,8 @@ export default function WatchmanHome() {
         audio: false,
       });
       faceStreamRef.current = stream;
-      if (faceVideoRef.current) {
-        faceVideoRef.current.srcObject = stream;
-      }
-      // Poll for live face detection
-      faceDetectionInterval.current = setInterval(async () => {
-        if (!faceVideoRef.current || faceVideoRef.current.readyState < 2) return;
-        const detection = await faceapi
-          .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
-          .withFaceLandmarks(true);
-        setFaceLiveDetected(!!detection);
-      }, 400);
+      // step is already 'face_verify' at this point (set by GPS callback)
+      // stream attached via useEffect below
     } catch {
       toast.error('Camera access required for face verification.');
       setStep('home');
@@ -272,20 +263,41 @@ export default function WatchmanHome() {
   // ── Camera ────────────────────────────────────────────────────────
   const startCamera = useCallback(async () => {
     try {
-      // Prefer front camera on mobile
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      // stream attached to video element via useEffect below
     } catch {
       toast.error('Camera access denied. Please enable camera access.');
       setStep('home');
     }
   }, []);
+
+  // Attach face-verify stream after face_verify screen renders
+  useEffect(() => {
+    if (step === 'face_verify' && faceVideoRef.current && faceStreamRef.current) {
+      faceVideoRef.current.srcObject = faceStreamRef.current;
+      // Start polling for live face detection
+      if (!faceDetectionInterval.current) {
+        faceDetectionInterval.current = setInterval(async () => {
+          if (!faceVideoRef.current || faceVideoRef.current.readyState < 2) return;
+          const detection = await faceapi
+            .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+            .withFaceLandmarks(true);
+          setFaceLiveDetected(!!detection);
+        }, 400);
+      }
+    }
+  }, [step]);
+
+  // Attach attendance selfie stream after camera screen renders
+  useEffect(() => {
+    if (step === 'camera' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [step]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
