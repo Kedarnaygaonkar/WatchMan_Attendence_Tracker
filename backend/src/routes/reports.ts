@@ -64,7 +64,7 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
     { $unwind: '$shift' },
     {
       $lookup: {
-        from: 'attendance',
+        from: 'attendances',
         let: { wId: '$watchman_id', sId: '$shift_id' },
         pipeline: [
           {

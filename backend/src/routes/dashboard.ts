@@ -157,7 +157,7 @@ router.get('/missing-attendance', asyncHandler(async (req: Request, res: Respons
     },
     {
       $lookup: {
-        from: 'attendance',
+        from: 'attendances',
         let: { wId: '$watchman_id', sId: '$shift_id' },
         pipeline: [
           {

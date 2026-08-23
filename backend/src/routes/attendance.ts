@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import multer from 'multer';
 import path from 'path';
@@ -313,10 +314,10 @@ router.get(
     const { date, societyId, watchmanId, status, page = '1', limit = '50' } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    const matchStage: any = { agency_id: agencyId };
+    const matchStage: any = { agency_id: new mongoose.Types.ObjectId(agencyId) };
     if (date) matchStage.attendance_date = new Date(date as string);
-    if (societyId) matchStage.society_id = societyId;
-    if (watchmanId) matchStage.watchman_id = watchmanId;
+    if (societyId) matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
+    if (watchmanId) matchStage.watchman_id = new mongoose.Types.ObjectId(watchmanId as string);
     if (status) matchStage.status = status;
 
     const list = await Attendance.aggregate([
