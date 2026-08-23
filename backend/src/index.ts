@@ -7,8 +7,7 @@ import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { connectDB } from './config/database';
 
-// Connect to MongoDB
-connectDB();
+// MongoDB connection is handled via middleware for serverless compatibility
 
 // Routes
 import authRoutes from './routes/auth';
@@ -22,6 +21,12 @@ import reportsRoutes from './routes/reports';
 import replacementsRoutes from './routes/replacements';
 
 const app = express();
+
+// ── Database Connection Middleware (Serverless Safe) ──
+app.use(async (_req, _res, next) => {
+  await connectDB();
+  next();
+});
 
 // ── Security middleware ───────────────────────────────────────────────
 app.use(helmet({
