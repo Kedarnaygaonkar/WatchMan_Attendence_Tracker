@@ -79,15 +79,17 @@ app.use((_req, res) => {
 // ── Global error handler ──────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start server ──────────────────────────────────────────────────────
-app.listen(config.port, () => {
-  console.log('');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  🛡️  Watchman Tracker API');
-  console.log(`  🚀 Running on http://localhost:${config.port}`);
-  console.log(`  📁 Uploads: ${path.resolve(config.uploads.dir)}`);
-  console.log(`  🌍 Environment: ${config.nodeEnv}`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-});
+// ── Start server (Only locally, Vercel uses the exported app) ──
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+  app.listen(config.port, () => {
+    console.log('');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('  🛡️  Watchman Tracker API');
+    console.log(`  🚀 Running on http://localhost:${config.port}`);
+    console.log(`  📁 Uploads: ${path.resolve(config.uploads.dir)}`);
+    console.log(`  🌍 Environment: ${config.nodeEnv}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  });
+}
 
 export default app;
