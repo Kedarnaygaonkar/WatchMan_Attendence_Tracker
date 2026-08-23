@@ -53,8 +53,7 @@
     @apply bg-surface-800 rounded-2xl border border-surface-700 shadow-card;
   }
   .card-glass {
-    @apply rounded-2xl border border-white/10 shadow-card backdrop-blur-sm;
-    background: rgba(30, 41, 59, 0.8);
+    @apply rounded-2xl border border-surface-700/50 shadow-card backdrop-blur-sm bg-surface-800/80;
   }
 
   /* Buttons */
@@ -181,20 +180,13 @@
   }
 }
 
-/* ── Leaflet map dark theme override ───────────────────────────── */
+/* ── Leaflet map theme override ───────────────────────────── */
 .leaflet-container {
-  background: #1e293b !important;
-  border-radius: 12px;
-}
-.leaflet-tile {
-  filter: brightness(0.8) saturate(0.9);
+  @apply bg-surface-800 rounded-xl;
 }
 .leaflet-control-zoom a {
-  background-color: #1e293b !important;
-  color: #94a3b8 !important;
-  border-color: #334155 !important;
+  @apply bg-surface-800 text-slate-400 border-surface-700 !important;
 }
 .leaflet-control-attribution {
-  background: rgba(15, 23, 42, 0.8) !important;
-  color: #64748b !important;
+  @apply bg-surface-800/80 text-slate-500 !important;
 }

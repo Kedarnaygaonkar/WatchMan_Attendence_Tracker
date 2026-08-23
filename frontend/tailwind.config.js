@@ -36,16 +36,31 @@ export default {
           500: '#ef4444',
           600: '#dc2626',
         },
+        // Inverted Slate palette for text/borders (so text-slate-100 becomes dark, text-slate-900 becomes light)
+        slate: {
+          50: '#020617',
+          100: '#0f172a',
+          200: '#1e293b',
+          300: '#334155',
+          400: '#475569',
+          500: '#64748b',
+          600: '#94a3b8',
+          700: '#cbd5e1',
+          800: '#e2e8f0',
+          900: '#f1f5f9',
+          950: '#f8fafc',
+        },
+        // Inverted Surface palette (so bg-surface-900 becomes light, bg-surface-100 becomes dark)
         surface: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          850: '#172033',
-          900: '#0f172a',
-          950: '#020617',
+          50: '#0f172a',  // old 900
+          100: '#1e293b', // old 800
+          200: '#334155', // old 700
+          600: '#64748b', // old 500
+          700: '#94a3b8', // old 400
+          800: '#ffffff', // bright white for cards
+          850: '#f8fafc', // old 50
+          900: '#f1f5f9', // old 100 (light gray bg)
+          950: '#e2e8f0', // old 200
         },
       },
       fontFamily: {
