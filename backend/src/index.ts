@@ -60,7 +60,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ── Static files (uploads) ────────────────────────────────────────────
 app.use('/uploads', express.static(path.resolve(config.uploads.dir)));
 
-// ── Health check ──────────────────────────────────────────────────────
+// ── Root & Health check ───────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.json({ success: true, message: 'Watchman Tracker API is live!' });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'Watchman Tracker API is running', timestamp: new Date() });
 });
