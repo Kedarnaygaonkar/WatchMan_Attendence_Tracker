@@ -212,17 +212,7 @@ export default function LoginPage() {
                     </div>
                     <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 font-medium">Fill</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEmail('super@admin.com'); setPassword('superadmin123'); }}
-                    className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-700/50 hover:bg-surface-600 transition-colors border border-surface-600 mt-2"
-                  >
-                    <div className="text-left">
-                      <span className="block text-sm text-slate-200 font-medium">Super Admin</span>
-                      <span className="block text-xs text-slate-400 mt-0.5">super@admin.com</span>
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 font-medium">Fill</span>
-                  </button>
+
                 </>
               )}
             </div>
