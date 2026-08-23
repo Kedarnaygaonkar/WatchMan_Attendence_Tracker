@@ -49,6 +49,7 @@ export default function WatchmenPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watchmen'] });
+      queryClient.invalidateQueries({ queryKey: ['watchmen-list'] });
       toast.success(editWatchman ? 'Watchman updated!' : 'Watchman added!');
       closeModal();
     },

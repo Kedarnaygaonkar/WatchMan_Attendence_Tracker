@@ -36,7 +36,7 @@ export default function ShiftsPage() {
 
   const mutation = useMutation({
     mutationFn: (payload: typeof form) => editShift ? api.put(`/shifts/${editShift.id}`, payload) : api.post('/shifts', payload),
-    onSuccess: () => { queryClient.invalidateQueries({queryKey:['shifts']}); toast.success('Shift saved!'); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({queryKey:['shifts']}); queryClient.invalidateQueries({queryKey:['shifts-list']}); toast.success('Shift saved!'); closeModal(); },
     onError: (err: unknown) => toast.error((err as {response?:{data?:{message?:string}}})?.response?.data?.message || 'Failed'),
   });
 
