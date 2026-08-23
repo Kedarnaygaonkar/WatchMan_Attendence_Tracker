@@ -92,7 +92,7 @@ export default function LoginPage() {
         {/* Logo / Brand */}
         <div className="text-center mb-8 mt-12 sm:mt-0">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-glow mb-4">
-            <Shield className="w-10 h-10 text-white" strokeWidth={1.5} />
+            <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
           </div>
           <h1 className="text-3xl font-black text-slate-100 tracking-tight">
             Watchman Tracker

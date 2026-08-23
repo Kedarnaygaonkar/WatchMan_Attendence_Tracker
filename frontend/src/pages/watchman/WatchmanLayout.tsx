@@ -35,7 +35,7 @@ export default function WatchmanLayout() {
       {/* Simple top bar */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-surface-800">
         <div className="flex items-center gap-2">
-          <Shield className="w-6 h-6 text-brand-400" />
+          <img src="/logo.png" alt="Watchman Tracker Logo" className="w-8 h-8 object-contain" />
           <span className="text-sm font-semibold text-slate-300">WatchTrack</span>
         </div>
         <button
