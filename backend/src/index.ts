@@ -34,7 +34,14 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: [config.cors.frontendUrl, 'http://localhost:5173', 'http://localhost:4173'],
+  origin: (origin, callback) => {
+    // Allow localhost, the explicit FRONTEND_URL, any vercel.app domain, or tools without origin (like Postman)
+    if (!origin || origin.includes('localhost') || origin.includes('vercel.app') || origin === config.cors.frontendUrl) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
