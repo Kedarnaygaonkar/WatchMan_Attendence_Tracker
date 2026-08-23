@@ -18,7 +18,7 @@ export const config = {
   },
 
   uploads: {
-    dir: process.env.UPLOADS_DIR || './uploads',
+    dir: process.env.VERCEL ? '/tmp/uploads' : (process.env.UPLOADS_DIR || './uploads'),
     maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || '5', 10),
   },
 
