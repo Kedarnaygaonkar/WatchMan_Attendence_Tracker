@@ -410,9 +410,17 @@ router.patch(
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
 function isTimeInShift(time: string, start: string, end: string, isOvernight: boolean): boolean {
-  if (!isOvernight) return time >= start && time <= end;
-  return time >= start || time <= end;
+  const t = timeToMinutes(time);
+  const s = timeToMinutes(start);
+  const e = timeToMinutes(end);
+  if (!isOvernight) return t >= s && t <= e;
+  return t >= s || t <= e;
 }
 
 /**
@@ -426,17 +434,25 @@ function isTimeInShiftWithBuffer(
   isOvernight: boolean,
   bufferMinutes: number
 ): boolean {
-  const startWithBuffer = subtractMinutes(start, bufferMinutes);
-  return isTimeInShift(time, startWithBuffer, end, isOvernight);
-}
+  let t = timeToMinutes(time);
+  let s = timeToMinutes(start);
+  let e = timeToMinutes(end);
 
-function subtractMinutes(time: string, minutes: number): string {
-  const [h, m] = time.split(':').map(Number);
-  const totalMinutes = h * 60 + m - minutes;
-  const adjustedMinutes = ((totalMinutes % 1440) + 1440) % 1440;
-  const newH = Math.floor(adjustedMinutes / 60).toString().padStart(2, '0');
-  const newM = (adjustedMinutes % 60).toString().padStart(2, '0');
-  return `${newH}:${newM}`;
+  // Apply buffer to start time
+  s -= bufferMinutes;
+  
+  if (s < 0) {
+    s += 1440; // Wrap around to previous day
+    // If the shift wasn't already overnight, moving the start time before midnight makes it span midnight
+    if (!isOvernight) {
+      isOvernight = true;
+    }
+  }
+
+  if (isOvernight) {
+    return t >= s || t <= e;
+  }
+  return t >= s && t <= e;
 }
 
 function determineAttendanceStatus(
