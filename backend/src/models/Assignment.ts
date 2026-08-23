@@ -33,8 +33,7 @@ const assignmentSchema = new Schema<IAssignment>(
 assignmentSchema.plugin(toJSON);
 
 // Indexes
-assignmentSchema.index({ agency_id: 1 });
-assignmentSchema.index({ watchman_id: 1 });
+assignmentSchema.index({ agency_id: 1, watchman_id: 1, is_active: 1 }); // Optimized for watchman active assignment queries
 assignmentSchema.index({ society_id: 1 });
 assignmentSchema.index({ start_date: 1, end_date: 1 });
 

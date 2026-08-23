@@ -75,11 +75,10 @@ const attendanceSchema = new Schema<IAttendance>(
 attendanceSchema.plugin(toJSON);
 
 // Indexes
-attendanceSchema.index({ agency_id: 1 });
-attendanceSchema.index({ watchman_id: 1 });
-attendanceSchema.index({ attendance_date: 1 });
-attendanceSchema.index({ society_id: 1 });
-// Unique attendance per watchman, date, shift
+attendanceSchema.index({ agency_id: 1, attendance_date: -1 }); // Optimized for dashboard/reports
+attendanceSchema.index({ watchman_id: 1, shift_id: 1, attendance_date: -1 }); // Optimized for watchman history
+attendanceSchema.index({ society_id: 1, attendance_date: -1 }); // Optimized for society history
+// Unique attendance per watchman, date, shift (prevents offline sync race conditions)
 attendanceSchema.index({ watchman_id: 1, attendance_date: 1, shift_id: 1 }, { unique: true });
 
 export const Attendance = mongoose.model<IAttendance>('Attendance', attendanceSchema);

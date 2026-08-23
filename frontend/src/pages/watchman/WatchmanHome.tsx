@@ -190,7 +190,7 @@ export default function WatchmanHome() {
 
   const stopFaceVerification = useCallback(() => {
     if (faceDetectionInterval.current) {
-      clearInterval(faceDetectionInterval.current);
+      clearTimeout(faceDetectionInterval.current);
       faceDetectionInterval.current = null;
     }
     if (faceStreamRef.current) {
@@ -275,15 +275,33 @@ export default function WatchmanHome() {
   useEffect(() => {
     if (step === 'face_verify' && faceVideoRef.current && faceStreamRef.current) {
       faceVideoRef.current.srcObject = faceStreamRef.current;
-      // Start polling for live face detection
+      // Start polling for live face detection using async recursion
       if (!faceDetectionInterval.current) {
-        faceDetectionInterval.current = setInterval(async () => {
-          if (!faceVideoRef.current || faceVideoRef.current.readyState < 2) return;
-          const detection = await faceapi
-            .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
-            .withFaceLandmarks(true);
-          setFaceLiveDetected(!!detection);
-        }, 400);
+        let isRunning = true;
+        
+        const detectLoop = async () => {
+          if (!isRunning) return;
+          if (faceVideoRef.current && faceVideoRef.current.readyState >= 2) {
+            try {
+              const detection = await faceapi
+                .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+                .withFaceLandmarks(true);
+              setFaceLiveDetected(!!detection);
+            } catch (err) {
+              // ignore minor tracking errors
+            }
+          }
+          if (isRunning) {
+            faceDetectionInterval.current = setTimeout(detectLoop, 300);
+          }
+        };
+
+        faceDetectionInterval.current = setTimeout(detectLoop, 0);
+
+        return () => {
+          isRunning = false;
+          if (faceDetectionInterval.current) clearTimeout(faceDetectionInterval.current);
+        };
       }
     }
   }, [step]);
