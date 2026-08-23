@@ -72,6 +72,7 @@ export default function SocietiesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['societies'] });
       queryClient.invalidateQueries({ queryKey: ['societies-list'] });
+      queryClient.invalidateQueries({ queryKey: ['soc-all'] });
       toast.success(editSociety ? 'Society updated!' : 'Society added!');
       closeModal();
     },
