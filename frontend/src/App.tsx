@@ -24,7 +24,7 @@ import ReportsPage from './pages/agency/ReportsPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes (caches list views during tab navigation)
+      staleTime: 30 * 1000, // 30 seconds (default for real-time app)
       retry: 1,
     },
   },
