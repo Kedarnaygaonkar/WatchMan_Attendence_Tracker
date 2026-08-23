@@ -7,7 +7,7 @@ export const config = {
   isDev: process.env.NODE_ENV !== 'production',
 
   database: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/watchman_tracker',
+    uri: process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/watchman_tracker',
   },
 
   jwt: {
