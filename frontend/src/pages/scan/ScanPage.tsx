@@ -37,7 +37,6 @@ export default function ScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Load gate info on mount
   useEffect(() => {
     if (!token) { setStep('error'); setErrorMsg('Invalid QR code'); return; }
     axios.get(`${API}/scan/${token}`)
@@ -45,7 +44,13 @@ export default function ScanPage() {
       .catch(e => { setStep('error'); setErrorMsg(e.response?.data?.message || 'Invalid or expired QR code'); });
   }, [token]);
 
-  // Lookup guard
+  // Hook to attach video stream when DOM updates to 'take_photo'
+  useEffect(() => {
+    if (step === 'take_photo' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [step]);
+
   async function handleLookup() {
     if (!employeeId.trim()) return;
     setStep('loading');
@@ -55,8 +60,12 @@ export default function ScanPage() {
       setWatchman(wm);
       setExistingRecord(existing_record);
       setMode(detectedMode);
-      if (detectedMode === 'checkin') setStep('select_shift');
-      else startCamera().then(() => setStep('take_photo'));
+      if (detectedMode === 'checkin') {
+        setStep('select_shift');
+      } else {
+        await startCamera();
+        setStep('take_photo');
+      }
     } catch (e: any) {
       setStep('enter_id');
       setErrorMsg(e.response?.data?.message || 'Guard not found');
@@ -108,63 +117,64 @@ export default function ScanPage() {
     }
   }
 
-  // Cleanup on unmount
   useEffect(() => () => stopCamera(), []);
 
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: "'Inter', sans-serif" }}>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
+    <div className="min-h-screen bg-gradient-to-b from-surface-950 to-surface-900 flex flex-col items-center justify-center p-5 font-sans">
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <img src="/logo.png" alt="Logo" style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '8px' }} />
-        <div style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500 }}>
-          <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+      <div className="text-center mb-6">
+        <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain mb-2 mx-auto" />
+        <div className="text-slate-400 text-sm font-medium flex items-center justify-center gap-1.5">
+          <Clock className="w-3.5 h-3.5" />
           {currentTime}
         </div>
       </div>
 
       {/* Card */}
-      <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '420px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}>
+      <div className="bg-surface-900/50 backdrop-blur-xl border border-surface-800 rounded-2xl p-8 w-full max-w-md shadow-2xl">
 
         {/* Gate/Society info */}
         {gateInfo && step !== 'error' && (
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <div style={{ background: 'rgba(59,130,246,0.15)', borderRadius: '12px', padding: '16px', marginBottom: '8px' }}>
-              <p style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>{gateInfo.gate.name}</p>
-              <h1 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: 800, margin: '4px 0 0' }}>{gateInfo.society.name}</h1>
+          <div className="text-center mb-8">
+            <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl p-4 mb-3">
+              <p className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-1">{gateInfo.gate.name}</p>
+              <h1 className="text-slate-100 text-xl font-bold">{gateInfo.society.name}</h1>
             </div>
-            <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>{gateInfo.society.address}</p>
+            <p className="text-slate-400 text-xs">{gateInfo.society.address}</p>
           </div>
         )}
 
         {/* ── LOADING ── */}
         {step === 'loading' && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Loader2 size={40} color="#3b82f6" style={{ animation: 'spin 1s linear infinite' }} />
-            <p style={{ color: '#94a3b8', marginTop: '12px' }}>Loading...</p>
+          <div className="text-center py-10">
+            <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
+            <p className="text-slate-400 mt-4 font-medium">Loading...</p>
           </div>
         )}
 
         {/* ── ERROR ── */}
         {step === 'error' && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <AlertTriangle size={48} color="#f87171" style={{ marginBottom: '12px' }} />
-            <h2 style={{ color: '#f87171', fontSize: '18px', fontWeight: 700 }}>Error</h2>
-            <p style={{ color: '#94a3b8' }}>{errorMsg}</p>
+          <div className="text-center py-6">
+            <AlertTriangle className="w-12 h-12 text-danger-400 mx-auto mb-3" />
+            <h2 className="text-danger-400 text-lg font-bold">Error</h2>
+            <p className="text-slate-400 mt-2">{errorMsg}</p>
           </div>
         )}
 
         {/* ── ENTER ID ── */}
         {step === 'enter_id' && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <User size={20} color="#3b82f6" />
-              <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700, margin: 0 }}>Enter Your Guard ID</h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2.5 mb-2">
+              <User className="w-5 h-5 text-brand-400" />
+              <h2 className="text-slate-100 text-lg font-bold">Enter Your Guard ID</h2>
             </div>
-            {errorMsg && <div style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', color: '#fca5a5', fontSize: '13px', marginBottom: '16px' }}>{errorMsg}</div>}
+            {errorMsg && (
+              <div className="bg-danger-500/10 border border-danger-500/20 rounded-lg p-3 text-danger-400 text-sm">
+                {errorMsg}
+              </div>
+            )}
             <input
               type="text"
               placeholder="e.g. EMP001"
@@ -172,92 +182,129 @@ export default function ScanPage() {
               onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }}
               onKeyDown={e => e.key === 'Enter' && handleLookup()}
               autoFocus
-              style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#f1f5f9', fontSize: '18px', fontWeight: 700, letterSpacing: '2px', textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+              className="w-full p-4 rounded-xl border border-surface-700 bg-surface-800 text-slate-100 text-lg font-bold tracking-widest text-center focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all placeholder-slate-500 uppercase"
             />
-            <button onClick={handleLookup} disabled={!employeeId.trim()} style={{ width: '100%', marginTop: '16px', padding: '14px', borderRadius: '10px', border: 'none', background: employeeId.trim() ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : '#334155', color: 'white', fontSize: '15px', fontWeight: 700, cursor: employeeId.trim() ? 'pointer' : 'not-allowed' }}>
-              Continue →
+            <button 
+              onClick={handleLookup} 
+              disabled={!employeeId.trim()} 
+              className={`w-full mt-4 p-4 rounded-xl font-bold transition-all ${
+                employeeId.trim() ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/25' : 'bg-surface-800 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              Continue &rarr;
             </button>
           </div>
         )}
 
         {/* ── SELECT SHIFT ── */}
         {step === 'select_shift' && watchman && (
-          <div>
-            <div style={{ background: 'rgba(34,197,94,0.1)', borderRadius: '10px', padding: '14px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <CheckCircle size={20} color="#4ade80" />
+          <div className="space-y-4">
+            <div className="bg-success-500/10 border border-success-500/20 rounded-xl p-4 flex items-center gap-3">
+              <CheckCircle className="w-6 h-6 text-success-400 shrink-0" />
               <div>
-                <p style={{ color: '#4ade80', fontWeight: 700, margin: 0, fontSize: '15px' }}>{watchman.full_name}</p>
-                <p style={{ color: '#64748b', margin: 0, fontSize: '12px' }}>ID: {watchman.employee_id}{watchman.wing ? ` · ${watchman.wing}` : ''}</p>
+                <p className="text-success-400 font-bold">{watchman.full_name}</p>
+                <p className="text-slate-400 text-xs mt-0.5">ID: {watchman.employee_id}{watchman.wing ? ` · ${watchman.wing}` : ''}</p>
               </div>
             </div>
-            <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 700, marginBottom: '12px' }}>Select Your Shift</h2>
-            {gateInfo?.shifts.map(s => (
-              <button key={s.id} onClick={() => setSelectedShiftId(s.id)} style={{ width: '100%', padding: '12px 16px', marginBottom: '8px', borderRadius: '10px', border: `2px solid ${selectedShiftId === s.id ? '#3b82f6' : 'rgba(255,255,255,0.1)'}`, background: selectedShiftId === s.id ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.04)', color: '#f1f5f9', fontSize: '14px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{s.name}</span>
-                <span style={{ color: '#94a3b8', fontSize: '12px' }}>{s.start_time} – {s.end_time}</span>
-              </button>
-            ))}
-            <button onClick={() => { if (!selectedShiftId) return; startCamera().then(() => setStep('take_photo')); }} disabled={!selectedShiftId} style={{ width: '100%', marginTop: '8px', padding: '14px', borderRadius: '10px', border: 'none', background: selectedShiftId ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : '#334155', color: 'white', fontSize: '15px', fontWeight: 700, cursor: selectedShiftId ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <Camera size={18} /> Take Photo →
+            <h2 className="text-slate-100 text-base font-bold mb-2">Select Your Shift</h2>
+            <div className="space-y-2">
+              {gateInfo?.shifts.map(s => (
+                <button 
+                  key={s.id} 
+                  onClick={() => setSelectedShiftId(s.id)} 
+                  className={`w-full p-4 rounded-xl border-2 text-left flex justify-between items-center transition-all ${
+                    selectedShiftId === s.id 
+                      ? 'border-brand-500 bg-brand-500/10 text-slate-100' 
+                      : 'border-surface-700 bg-surface-800/50 text-slate-300 hover:border-surface-600'
+                  }`}
+                >
+                  <span className="font-semibold">{s.name}</span>
+                  <span className="text-slate-400 text-xs">{s.start_time} &ndash; {s.end_time}</span>
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={async () => { 
+                if (!selectedShiftId) return; 
+                await startCamera(); 
+                setStep('take_photo'); 
+              }} 
+              disabled={!selectedShiftId} 
+              className={`w-full mt-4 p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                selectedShiftId ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/25' : 'bg-surface-800 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              <Camera className="w-5 h-5" /> Take Photo &rarr;
             </button>
           </div>
         )}
 
         {/* ── TAKE PHOTO ── */}
         {step === 'take_photo' && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              {mode === 'checkin' ? <LogIn size={20} color="#4ade80" /> : <LogOut size={20} color="#fb923c" />}
-              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 700, margin: 0 }}>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              {mode === 'checkin' ? <LogIn className="w-5 h-5 text-success-400" /> : <LogOut className="w-5 h-5 text-warning-400" />}
+              <h2 className="text-slate-100 text-lg font-bold">
                 {mode === 'checkin' ? 'Check-In Photo' : 'Check-Out Photo'}
               </h2>
             </div>
             {mode === 'checkout' && existingRecord && (
-              <div style={{ background: 'rgba(251,146,60,0.1)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px', color: '#fdba74' }}>
+              <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-3 text-warning-400 text-sm">
                 Checked in at {new Date(existingRecord.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
               </div>
             )}
-            {errorMsg && <div style={{ background: 'rgba(248,113,113,0.15)', borderRadius: '8px', padding: '10px', color: '#fca5a5', fontSize: '13px', marginBottom: '12px' }}>{errorMsg}</div>}
-            <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', background: '#0f172a', aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', transform: 'scaleX(-1)' }} />
+            {errorMsg && (
+              <div className="bg-danger-500/10 border border-danger-500/20 rounded-lg p-3 text-danger-400 text-sm">
+                {errorMsg}
+              </div>
+            )}
+            <div className="rounded-xl overflow-hidden bg-surface-950 aspect-4/3 flex items-center justify-center relative border border-surface-700">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                className="w-full h-full object-cover scale-x-[-1]" 
+              />
             </div>
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
-            <button onClick={capturePhoto} style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: mode === 'checkin' ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'linear-gradient(135deg, #f97316, #c2410c)', color: 'white', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-              {mode === 'checkin' ? <><LogIn size={20} /> Mark Check-In</> : <><LogOut size={20} /> Mark Check-Out</>}
+            <canvas ref={canvasRef} className="hidden" />
+            <button 
+              onClick={capturePhoto} 
+              className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${
+                mode === 'checkin' ? 'bg-success-600 hover:bg-success-500 shadow-success-500/25' : 'bg-warning-600 hover:bg-warning-500 shadow-warning-500/25'
+              }`}
+            >
+              {mode === 'checkin' ? <><LogIn className="w-5 h-5" /> Mark Check-In</> : <><LogOut className="w-5 h-5" /> Mark Check-Out</>}
             </button>
           </div>
         )}
 
         {/* ── SUBMITTING ── */}
         {step === 'submitting' && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Loader2 size={40} color="#3b82f6" style={{ animation: 'spin 1s linear infinite' }} />
-            <p style={{ color: '#94a3b8', marginTop: '12px' }}>Recording attendance...</p>
+          <div className="text-center py-10">
+            <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
+            <p className="text-slate-400 mt-4 font-medium">Recording attendance...</p>
           </div>
         )}
 
         {/* ── SUCCESS ── */}
         {step === 'success' && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: isLate ? 'rgba(251,146,60,0.15)' : 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <CheckCircle size={40} color={isLate ? '#fb923c' : '#4ade80'} />
+          <div className="text-center py-6">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+              isLate ? 'bg-warning-500/10 text-warning-400' : 'bg-success-500/10 text-success-400'
+            }`}>
+              <CheckCircle className="w-10 h-10" />
             </div>
-            <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: 800, margin: '0 0 8px' }}>
+            <h2 className="text-slate-100 text-2xl font-bold mb-2">
               {isLate ? 'Late Arrival' : mode === 'checkin' ? 'Checked In!' : 'Checked Out!'}
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{successMsg}</p>
-            <p style={{ color: '#475569', fontSize: '12px', marginTop: '24px' }}>
+            <p className="text-slate-400 text-sm leading-relaxed mb-6">{successMsg}</p>
+            <p className="text-surface-500 text-xs font-medium">
               {new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
             </p>
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        * { box-sizing: border-box; }
-        input::placeholder { color: #475569; }
-      `}</style>
     </div>
   );
 }
