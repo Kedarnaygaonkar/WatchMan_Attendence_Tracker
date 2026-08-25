@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { Gate, Watchman, Assignment, Attendance, Shift, Society } from '../models';
+import { Gate, Watchman, Attendance, Shift } from '../models';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { getDistance } from 'geolib';
 
 const router = Router();
 // ⚠️ ALL routes here are PUBLIC — no authenticate middleware
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/scan/:token
-// Called when a guard scans a QR code. Returns gate/society info + shifts.
 // ─────────────────────────────────────────────────────────────────────────────
 router.get(
   '/:token',
@@ -20,8 +20,6 @@ router.get(
     if (!gate) throw new AppError('Invalid or expired QR code', 404);
 
     const society = gate.society_id as any;
-
-    // Return available shifts for this agency
     const shifts = await Shift.find({ agency_id: gate.agency_id, is_active: true }).lean();
 
     res.json({
@@ -51,7 +49,6 @@ router.get(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/scan/lookup
-// Guard enters their Guard ID to look up their details
 // ─────────────────────────────────────────────────────────────────────────────
 router.post(
   '/lookup',
@@ -70,7 +67,6 @@ router.post(
 
     if (!watchman) throw new AppError('Guard ID not found or inactive', 404);
 
-    // Check if guard already has a check-in today (for this society)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -91,6 +87,8 @@ router.post(
           employee_id: watchman.employee_id,
           wing: watchman.wing || null,
           profile_photo_url: watchman.profile_photo_url || null,
+          face_registered: !!watchman.face_registered,
+          face_descriptor: watchman.face_registered ? watchman.face_descriptor : null,
         },
         existing_record: existingRecord
           ? {
@@ -107,8 +105,40 @@ router.post(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/scan/register-face
+// ─────────────────────────────────────────────────────────────────────────────
+const registerFaceSchema = z.object({
+  employee_id: z.string().min(1),
+  gate_token: z.string().uuid(),
+  face_descriptor: z.array(z.number()).length(128),
+});
+
+router.post(
+  '/register-face',
+  asyncHandler(async (req: Request, res: Response) => {
+    const parse = registerFaceSchema.safeParse(req.body);
+    if (!parse.success) throw new AppError('Invalid face descriptor data', 400);
+    const { employee_id, gate_token, face_descriptor } = parse.data;
+
+    const gate = await Gate.findOne({ qr_token: gate_token, is_active: true }).lean();
+    if (!gate) throw new AppError('Invalid or expired QR code', 404);
+
+    const watchman = await Watchman.findOne({
+      employee_id: employee_id.trim().toUpperCase(),
+      agency_id: gate.agency_id,
+    });
+    if (!watchman) throw new AppError('Guard ID not found', 404);
+
+    watchman.face_descriptor = face_descriptor;
+    watchman.face_registered = true;
+    await watchman.save();
+
+    res.json({ success: true, message: 'Face registered successfully' });
+  })
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/scan/checkin
-// Records the guard's check-in time
 // ─────────────────────────────────────────────────────────────────────────────
 const checkinSchema = z.object({
   employee_id: z.string().min(1),
@@ -117,17 +147,22 @@ const checkinSchema = z.object({
   selfie_url: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  gps_accuracy: z.number().optional(),
+  face_verified: z.boolean().optional(),
+  face_match_score: z.number().optional(),
 });
 
 router.post(
   '/checkin',
   asyncHandler(async (req: Request, res: Response) => {
     const parse = checkinSchema.safeParse(req.body);
-    if (!parse.success) throw new AppError('Invalid data: ' + JSON.stringify(parse.error.flatten().fieldErrors), 400);
+    if (!parse.success) throw new AppError('Invalid data', 400);
 
-    const { employee_id, gate_token, shift_id, selfie_url, latitude, longitude } = parse.data;
+    const { employee_id, gate_token, shift_id, selfie_url, latitude, longitude, gps_accuracy, face_verified, face_match_score } = parse.data;
 
-    const gate = await Gate.findOne({ qr_token: gate_token, is_active: true }).lean();
+    const gate = await Gate.findOne({ qr_token: gate_token, is_active: true })
+      .populate<{ society_id: any }>('society_id', 'latitude longitude geofence_radius')
+      .lean();
     if (!gate) throw new AppError('Invalid or expired QR code', 404);
 
     const watchman = await Watchman.findOne({
@@ -140,7 +175,6 @@ router.post(
     const shift = await Shift.findById(shift_id).lean();
     if (!shift) throw new AppError('Shift not found', 404);
 
-    // Prevent duplicate check-in today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -153,7 +187,16 @@ router.post(
     });
     if (duplicate) throw new AppError('Already checked in today for this society', 409);
 
-    // Determine late status
+    // Calculate distance if GPS provided
+    let distanceFromSociety: number | undefined;
+    const society = gate.society_id as any;
+    if (latitude && longitude && society.latitude && society.longitude) {
+      distanceFromSociety = getDistance(
+        { latitude, longitude },
+        { latitude: society.latitude, longitude: society.longitude }
+      );
+    }
+
     const now = new Date();
     const [shiftH, shiftM] = shift.start_time.split(':').map(Number);
     const shiftStart = new Date();
@@ -164,7 +207,7 @@ router.post(
     const record = await Attendance.create({
       agency_id: gate.agency_id,
       watchman_id: watchman._id,
-      society_id: gate.society_id,
+      society_id: society._id,
       gate_id: gate._id,
       shift_id: shift._id,
       attendance_date: today,
@@ -172,8 +215,12 @@ router.post(
       selfie_url: selfie_url ?? undefined,
       latitude: latitude ?? undefined,
       longitude: longitude ?? undefined,
+      gps_accuracy: gps_accuracy ?? undefined,
+      distance_from_society: distanceFromSociety,
+      face_verified: face_verified ?? undefined,
+      face_match_score: face_match_score ?? undefined,
       status: isLate ? 'late' : 'present',
-      verification_status: 'verified',
+      verification_status: face_verified === false ? 'review_required' : 'verified',
       gps_flags: [],
       is_offline_sync: false,
       manual_override: false,
@@ -195,7 +242,6 @@ router.post(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/scan/checkout
-// Records the guard's check-out time
 // ─────────────────────────────────────────────────────────────────────────────
 const checkoutSchema = z.object({
   employee_id: z.string().min(1),
@@ -203,6 +249,9 @@ const checkoutSchema = z.object({
   selfie_url: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  gps_accuracy: z.number().optional(),
+  face_verified: z.boolean().optional(),
+  face_match_score: z.number().optional(),
 });
 
 router.post(
@@ -211,9 +260,11 @@ router.post(
     const parse = checkoutSchema.safeParse(req.body);
     if (!parse.success) throw new AppError('Invalid data', 400);
 
-    const { employee_id, gate_token, selfie_url, latitude, longitude } = parse.data;
+    const { employee_id, gate_token, selfie_url, latitude, longitude, gps_accuracy, face_verified, face_match_score } = parse.data;
 
-    const gate = await Gate.findOne({ qr_token: gate_token, is_active: true }).lean();
+    const gate = await Gate.findOne({ qr_token: gate_token, is_active: true })
+      .populate<{ society_id: any }>('society_id', 'latitude longitude geofence_radius')
+      .lean();
     if (!gate) throw new AppError('Invalid or expired QR code', 404);
 
     const watchman = await Watchman.findOne({
@@ -223,7 +274,6 @@ router.post(
     }).lean();
     if (!watchman) throw new AppError('Guard ID not found or inactive', 404);
 
-    // Find today's open check-in
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -231,11 +281,11 @@ router.post(
 
     const record = await Attendance.findOne({
       watchman_id: watchman._id,
-      society_id: gate.society_id,
+      society_id: (gate.society_id as any)._id,
       check_in_time: { $gte: today, $lt: tomorrow },
     });
 
-    if (!record) throw new AppError('No check-in found for today at this society', 404);
+    if (!record) throw new AppError('No check-in found for today', 404);
     if ((record as any).check_out_time) throw new AppError('Already checked out today', 409);
 
     const now = new Date();
@@ -247,6 +297,22 @@ router.post(
     record.set('check_out_latitude', latitude || null);
     record.set('check_out_longitude', longitude || null);
     record.set('duration_minutes', durationMinutes);
+    if (face_verified !== undefined) record.set('face_verified', face_verified);
+    if (face_match_score !== undefined) record.set('face_match_score', face_match_score);
+    
+    // Check GPS distance on checkout too (optional but useful)
+    if (latitude && longitude && (gate.society_id as any).latitude) {
+       const dist = getDistance(
+         { latitude, longitude },
+         { latitude: (gate.society_id as any).latitude, longitude: (gate.society_id as any).longitude }
+       );
+       record.set('distance_from_society', dist);
+    }
+    
+    if (face_verified === false) {
+      record.set('verification_status', 'review_required');
+    }
+
     await record.save();
 
     const hours = Math.floor(durationMinutes / 60);
