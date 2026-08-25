@@ -372,57 +372,96 @@ export default function ScanPage() {
 
         {step === 'face_verification' && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ScanFace className="w-5 h-5 text-brand-400" />
-              <h2 className="text-slate-100 text-lg font-bold">Face Verification</h2>
+            <div className="text-center">
+              <div className="bg-brand-500/10 text-brand-400 mx-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-2">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                {faceVerified === false ? 'Face Mismatch' : 'Face Verification'}
+              </div>
+              <h2 className="text-slate-100 text-xl font-bold">
+                {faceVerified === false ? 'Verification Failed' : 'Verify Your Identity'}
+              </h2>
+              <p className="text-slate-400 text-sm">
+                {faceVerified === false
+                  ? 'Your face did not match your registered photo.'
+                  : 'Look straight at the camera. Press verify when ready.'}
+              </p>
             </div>
-            <p className="text-slate-400 text-sm mb-4">Please look at the camera to verify your identity.</p>
-            <div className="rounded-xl overflow-hidden bg-surface-950 aspect-4/3 relative border border-surface-700">
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-              <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(59,130,246,0.2) 50%, transparent 60%)', backgroundSize: '100% 200%', animation: 'scan 2s linear infinite' }} />
-            </div>
-            <style>{`@keyframes scan { 0% { background-position: 0% -100%; } 100% { background-position: 0% 200%; } }`}</style>
 
-            <button 
-              onClick={async () => {
-                if (!videoRef.current) return;
-                const detection = await faceapi
-                  .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
-                  .withFaceLandmarks(true)
-                  .withFaceDescriptor();
-                
-                if (detection && watchman?.face_descriptor) {
-                  const stored = new Float32Array(watchman.face_descriptor);
-                  const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
-                  if (distance < FACE_MATCH_THRESHOLD) {
-                    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-                    setFaceVerified(true);
-                    setFaceMatchScore(distance);
-                    toast.success('Face Verified!');
-                    if (mode === 'checkin') setStep('select_shift');
-                    else setStep('take_photo');
-                  } else {
-                    toast.error('Face does not match. Please try again.');
-                  }
-                } else {
-                  toast.error('No face detected. Ensure good lighting.');
-                }
-              }}
-              className="w-full p-4 rounded-xl font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-lg transition-all"
-            >
-              Verify Face
-            </button>
-            <button 
-              onClick={() => {
-                if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-                setFaceVerified(false);
-                if (mode === 'checkin') setStep('select_shift');
-                else setStep('take_photo');
-              }}
-              className="w-full p-3 rounded-xl font-semibold bg-surface-800 text-slate-400 hover:text-slate-300 transition-all border border-surface-700"
-            >
-              Skip (Requires Admin Review)
-            </button>
+            {faceVerified === false ? (
+              <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-6 flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-danger-400" />
+                </div>
+                <p className="text-danger-400 font-bold text-lg">Face Mismatch ✕</p>
+                <p className="text-slate-400 text-sm text-center">
+                  Attendance cannot be marked. If this is a mistake, please try again in better lighting.
+                </p>
+                <button 
+                  onClick={() => {
+                    setFaceVerified(null);
+                    startFaceVerificationFlow();
+                  }}
+                  className="w-full mt-2 p-4 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-xl overflow-hidden bg-surface-950 aspect-[4/3] relative border border-surface-700">
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                  {/* Oval guide */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className={`w-48 h-56 rounded-full border-4 transition-colors duration-300 ${
+                      faceDetected ? 'border-success-400' : 'border-white/30 border-dashed'
+                    }`} />
+                  </div>
+                  {faceDetected && (
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+                      <span className="bg-success-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Face Detected ✓
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={async () => {
+                    if (!videoRef.current) return;
+                    setFaceVerified(null);
+                    const detection = await faceapi
+                      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+                      .withFaceLandmarks(true)
+                      .withFaceDescriptor();
+                    
+                    if (detection && watchman?.face_descriptor) {
+                      const stored = new Float32Array(watchman.face_descriptor);
+                      const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
+                      if (distance < FACE_MATCH_THRESHOLD) {
+                        if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+                        setFaceVerified(true);
+                        setFaceMatchScore(distance);
+                        toast.success('Face Verified!');
+                        if (mode === 'checkin') setStep('select_shift');
+                        else setStep('take_photo');
+                      } else {
+                        setFaceVerified(false);
+                      }
+                    } else {
+                      toast.error('No face detected. Ensure good lighting.');
+                    }
+                  }}
+                  disabled={!faceDetected}
+                  className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${
+                    faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-surface-700 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  <ScanFace className="w-5 h-5" />
+                  {faceDetected ? 'Verify My Face' : 'Waiting for face...'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
