@@ -1,123 +1,240 @@
-# 🛡️ Watchman Tracker — Security Agency Management Platform
+# 🛡️ Watchman Attendance Tracker
 
-A production-quality Progressive Web App for managing security agencies, watchmen, societies, shifts, and GPS-verified attendance.
+A full-stack web application for managing security guard attendance using QR code-based check-in and check-out — no app installation required for guards.
 
-## ✨ Features
+---
 
-- **GPS Geofencing** — Haversine-based location verification with configurable radius
-- **Selfie Attendance** — Camera capture with timestamp overlay
-- **Multi-Shift/Multi-Society** — Smart assignment resolver handles overnight shifts
-- **Offline Support** — IndexedDB queue syncs when internet returns
-- **GPS Security Flags** — Detects poor accuracy, impossible jumps, emulators
-- **Role-Based Access** — Super Admin / Agency Admin / Watchman
-- **Agency Isolation** — Each agency can only see its own data
-- **Interactive Map** — Leaflet + OpenStreetMap for society location setup
-- **PWA** — Install on Android as home screen app
+## 📦 Tech Stack
 
-## 🚀 Quick Start
+| Layer | Technology |
+|---|---|
+| Frontend | React (Vite + TypeScript) |
+| Backend | Node.js + Express + TypeScript |
+| Database | MongoDB Atlas (Mongoose) |
+| Auth | JWT (Access + Refresh Tokens) |
+| Deployment | Vercel (Frontend + Backend Serverless) |
+| Face Verify | face-api.js |
 
-- Node.js 18+
-- MongoDB Atlas account (or local MongoDB)
+---
 
-### 1. Setup Backend
+## 🏗️ Data Hierarchy
 
-```bash
-cd backend
-npm install
-npm run db:seed      # Load demo data
-npm run dev          # Start API on port 3001
+```
+Super Admin (Platform Owner)
+  └── Agency (Security Company) [Phase 2]
+        └── Society (Residential Complex / Property)
+              └── Wing (Wing A, Wing B, Gate 1, etc.)
+                    └── Watchman (Security Guard)
 ```
 
-### 2. Setup Frontend
+---
 
-```bash
-cd frontend
-npm install
-npm run dev          # Start on http://localhost:5173
+## 👥 User Roles
+
+### ✅ Phase 1 (Current Build — Two Roles)
+
+#### 👑 Super Admin
+- The platform owner (you).
+- Has full unrestricted access to the entire system.
+- Manages everything: Societies, Wings, Watchmen, Shifts, Gates.
+- Generates QR Codes for gates/locations.
+- Views all attendance records (check-in and check-out times).
+- Runs monthly reports and exports them to Excel/PDF.
+- Flags late arrivals automatically based on shift timings.
+
+#### 👮 Watchman (Guard)
+- Does **NOT** log in with email/password.
+- Scans a QR Code placed at their assigned gate.
+- A public web page opens (no app install needed).
+- Enters their **Guard ID** only.
+- System auto-detects: Name, Society, Wing, Shift, Date.
+- Takes a photo for visual verification.
+- Clicks **Submit** → **Check-In Time** is recorded.
+- At end of shift, scans the same QR again → clicks **Checkout** → **Check-Out Time** is recorded.
+
+---
+
+### 🔮 Phase 2 (Planned — Agency Admin Role)
+
+> **Note to Developer:** The database models and API structure must be built in Phase 1 with `agency_id` fields already in place on Societies, Watchmen, and Attendance records — so that Phase 2 is purely a UI and auth addition, not a database migration.
+
+#### 🏢 Agency Admin
+- A representative of a security company.
+- Can log in with email/password.
+- Can only see and manage their own assigned Societies, Wings, and Watchmen.
+- Cannot see data belonging to other agencies.
+- Receives monthly attendance reports sent by the Super Admin.
+
+#### Super Admin additions in Phase 2:
+- Full CRUD for Agencies.
+- Assign Societies to specific Agencies.
+- Send monthly PDF reports to Agency Admin via email.
+- View a per-agency dashboard summary.
+
+---
+
+## ✨ Core Features
+
+### Phase 1 Features
+
+| Feature | Status |
+|---|---|
+| Super Admin login (email/password) | ✅ Built |
+| Watchman QR scan + Guard ID check-in | 🔴 To Build |
+| Watchman Check-Out (Logout time recording) | 🔴 To Build |
+| Society Management | ✅ Built |
+| Wing Management (under Societies) | 🔴 To Build |
+| Watchman Management | ✅ Built |
+| Shift Management (Day/Night timings) | ✅ Built |
+| Gate / Location Management | 🔴 To Build |
+| QR Code Generator (per Gate) | 🔴 To Build |
+| Attendance Dashboard (Today's stats) | ✅ Built (partial) |
+| Late Mark Auto-Detection | 🔴 To Build |
+| Daily Attendance Report | ✅ Built (partial) |
+| Monthly Summary Report | ✅ Built (partial) |
+| Export to Excel / PDF | 🔴 To Build |
+| Face Photo Capture at Check-In | ✅ Built |
+
+### Phase 2 Features (Planned)
+
+| Feature | Status |
+|---|---|
+| Agency Management (CRUD) | 🔮 Phase 2 |
+| Agency Admin Role & Login | 🔮 Phase 2 |
+| Agency-Scoped Dashboard | 🔮 Phase 2 |
+| Email Monthly Reports to Agencies | 🔮 Phase 2 |
+| Per-Agency Data Isolation | 🔮 Phase 2 |
+
+---
+
+## 🔄 Attendance Flow
+
+### Check-In (Login)
+```
+Guard Scans QR Code at Gate
+        ↓
+Public Web Page Opens (no login required)
+        ↓
+Guard Enters Guard ID
+        ↓
+System Auto-Fills: Name, Society, Wing, Shift, Date
+        ↓
+Guard Takes a Photo
+        ↓
+Guard Clicks "Submit"
+        ↓
+✅ Check-In Time Recorded
 ```
 
-## 🔐 Demo Login Credentials
+### Check-Out (Logout)
+```
+Guard Scans Same QR Code at Gate
+        ↓
+Public Web Page Opens
+        ↓
+Guard Enters Guard ID
+        ↓
+System Detects: Active Check-In Exists → Shows "Checkout" button
+        ↓
+Guard Takes a Photo (Before Logout)
+        ↓
+Guard Clicks "Checkout"
+        ↓
+✅ Check-Out Time Recorded, Shift Duration Calculated
+```
 
-| Role | Email | Password |
-|------|-------|----------|
-| Agency Admin | admin@punesecure.com | Admin@123 |
-| Watchman (Ramesh) | ramesh@punesecure.com | Guard@123 |
-| Watchman (Suresh) | suresh@punesecure.com | Guard@123 |
-| Watchman (Amit) | amit@punesecure.com | Guard@123 |
-| Super Admin | superadmin@watchman.app | Super@123 |
+---
 
 ## 🗂️ Project Structure
 
 ```
-watchman-tracker/
-├── backend/              # Node.js + Express + TypeScript API
+Watchman_Attendence_Tracker/
+├── backend/
 │   ├── src/
-│   │   ├── config/       # Database + app config
-│   │   ├── db/           # Schema SQL + migrate + seed
-│   │   ├── middleware/   # Auth + error handler
-│   │   ├── routes/       # All API endpoints
-│   │   ├── utils/        # Haversine + GPS flags
-│   │   └── index.ts      # Express entry point
-│   └── uploads/          # Attendance photos (auto-created)
+│   │   ├── config/         # DB connection, env config
+│   │   ├── middleware/     # Auth, error handling
+│   │   ├── models/         # Mongoose schemas
+│   │   ├── routes/         # Express API routes
+│   │   ├── db/             # Seed scripts
+│   │   └── index.ts        # App entry point
+│   ├── vercel.json         # Vercel serverless config
+│   └── package.json
 │
-├── frontend/             # React 18 + Vite + Tailwind PWA
-│   └── src/
-│       ├── api/          # Axios client with auto-refresh
-│       ├── offline/      # IndexedDB offline queue
-│       ├── pages/
-│       │   ├── auth/     # Login page
-│       │   ├── watchman/ # Ultra-simple watchman UI
-│       │   └── agency/   # Full agency dashboard
-│       └── stores/       # Zustand auth store
-│
-└── .gitignore            # Git ignore rules
+├── frontend/
+│   ├── public/
+│   │   └── logo.png        # App logo
+│   ├── src/
+│   │   ├── api/            # Axios client
+│   │   ├── components/     # Shared components
+│   │   ├── pages/
+│   │   │   ├── auth/       # Login page
+│   │   │   ├── agency/     # Super Admin dashboard pages
+│   │   │   └── scan/       # [Phase 1] Public QR scan pages
+│   │   └── stores/         # Zustand auth store
+│   ├── vercel.json         # Vercel SPA routing config
+│   └── index.html
 ```
 
-## 📱 Watchman Flow (Mobile)
+---
 
+## 🚀 Deployment
+
+Both frontend and backend are deployed as separate Vercel projects pointing to the same GitHub repository.
+
+| Project | Vercel Root Directory | Key Env Variable |
+|---|---|---|
+| Backend API | `backend` | `MONGODB_URI`, `JWT_SECRET` |
+| Frontend App | `frontend` | `VITE_API_URL` |
+
+### Environment Variables
+
+**Backend:**
 ```
-Open App → See Assignment → MARK ATTENDANCE → GPS Check → Selfie → Done
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/watchman
+JWT_SECRET=your-secret-key
+JWT_REFRESH_SECRET=your-refresh-secret
+FRONTEND_URL=https://your-frontend.vercel.app
 ```
 
-The watchman never types the society name, employee ID, shift, or address.
+**Frontend:**
+```
+VITE_API_URL=https://your-backend.vercel.app/api
+```
 
-## 🔧 API Endpoints
+---
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | /api/auth/login | Login |
-| GET | /api/attendance/my-assignment | Watchman's current assignment |
-| POST | /api/attendance/mark | Mark attendance (with selfie) |
-| GET | /api/dashboard/summary | Agency dashboard stats |
-| GET | /api/dashboard/live-attendance | Today's live attendance |
-| GET | /api/dashboard/missing-attendance | Guards without attendance |
-| GET | /api/societies | List societies |
-| GET | /api/watchmen | List watchmen |
-| GET | /api/assignments | List assignments |
-| GET | /api/reports/daily | Daily attendance report |
-| GET | /api/reports/monthly | Monthly summary |
+## 🛠️ Local Development
 
-## 🌍 Tech Stack
+```bash
+# Start Backend
+cd backend
+npm install
+npm run dev   # Runs on http://localhost:3001
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS v3 |
-| State | Zustand + TanStack Query |
-| Backend | Node.js + Express + TypeScript |
-| Database | MongoDB Atlas + Mongoose |
-| Maps | Leaflet + OpenStreetMap (free) |
-| GPS | Browser Geolocation API |
-| Camera | Browser MediaDevices API |
-| Offline | IndexedDB (via idb) |
-| PWA | Vite PWA Plugin (Workbox) |
+# Start Frontend (in a new terminal)
+cd frontend
+npm install
+npm run dev   # Runs on http://localhost:5173
 
-## 🔮 Architecture for Future Features
+# Seed Database (first time only)
+cd backend
+npm run db:seed
+```
 
-The data model is already designed for:
-- Facial verification (selfie_url stored, AI can verify later)
-- Payroll (attendance_date + status = days present/late/absent)
-- Multi-branch agencies (agency_id on every table)
-- Subscription billing (status field on agencies)
-- WhatsApp notifications (notifications table ready)
-- QR/NFC check-in (assignment_id based check-in already in place)
+---
+
+## 📋 Phase 2 Implementation Checklist (For Future Reference)
+
+When ready to add Agency Admin support:
+
+- [ ] Add `agency_id` FK validation to the existing Societies and Watchmen APIs (already stored in DB).
+- [ ] Create `GET/POST/PUT /api/agencies` CRUD routes.
+- [ ] Add `agency_admin` role to the auth middleware.
+- [ ] Create Agency Admin dashboard (scoped to their `agency_id`).
+- [ ] Build email service (e.g., Nodemailer + SendGrid) for monthly report delivery.
+- [ ] Add "Send Report to Agency" button in the Super Admin monthly reports page.
+- [ ] Create a per-agency attendance view for Agency Admin.
+
+---
+
+*Built with ❤️ by Kedar Naygaonkar*

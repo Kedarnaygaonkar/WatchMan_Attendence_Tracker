@@ -12,6 +12,7 @@ export interface ISociety extends Document {
   geofence_radius: number;
   required_guards: number;
   is_active: boolean;
+  wings: string[];
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +30,7 @@ const societySchema = new Schema<ISociety>(
     geofence_radius: { type: Number, default: 100 },
     required_guards: { type: Number, default: 1 },
     is_active: { type: Boolean, default: true },
+    wings: { type: [String], default: [] },
     notes: { type: String },
   },
   { timestamps: true }

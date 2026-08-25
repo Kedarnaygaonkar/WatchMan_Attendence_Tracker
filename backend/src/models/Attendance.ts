@@ -6,9 +6,15 @@ export interface IAttendance extends Document {
   watchman_id: mongoose.Types.ObjectId;
   society_id: mongoose.Types.ObjectId;
   shift_id: mongoose.Types.ObjectId;
+  gate_id?: mongoose.Types.ObjectId;
   assignment_id?: mongoose.Types.ObjectId;
   attendance_date: Date; // logical shift date
   check_in_time: Date;
+  check_out_time?: Date;
+  check_out_selfie_url?: string;
+  check_out_latitude?: number;
+  check_out_longitude?: number;
+  duration_minutes?: number; // calculated on checkout
   latitude?: number;
   longitude?: number;
   gps_accuracy?: number;
@@ -40,8 +46,14 @@ const attendanceSchema = new Schema<IAttendance>(
     society_id: { type: Schema.Types.ObjectId, ref: 'Society', required: true },
     shift_id: { type: Schema.Types.ObjectId, ref: 'Shift', required: true },
     assignment_id: { type: Schema.Types.ObjectId, ref: 'Assignment' },
+    gate_id: { type: Schema.Types.ObjectId, ref: 'Gate' },
     attendance_date: { type: Date, required: true },
     check_in_time: { type: Date, required: true },
+    check_out_time: { type: Date },
+    check_out_selfie_url: { type: String },
+    check_out_latitude: { type: Number },
+    check_out_longitude: { type: Number },
+    duration_minutes: { type: Number },
     latitude: { type: Number },
     longitude: { type: Number },
     gps_accuracy: { type: Number },

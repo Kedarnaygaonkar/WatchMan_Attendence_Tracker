@@ -19,6 +19,8 @@ import attendanceRoutes from './routes/attendance';
 import dashboardRoutes from './routes/dashboard';
 import reportsRoutes from './routes/reports';
 import replacementsRoutes from './routes/replacements';
+import gatesRoutes from './routes/gates';
+import scanRoutes from './routes/scan';
 
 const app = express();
 
@@ -83,6 +85,8 @@ app.use('/api/watchmen', watchmenRoutes);
 app.use('/api/shifts', shiftsRoutes);
 app.use('/api/assignments', assignmentsRoutes);
 app.use('/api/attendance', attendanceLimiter, attendanceRoutes);
+app.use('/api/gates', gatesRoutes);
+app.use('/api/scan', attendanceLimiter, scanRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/replacements', replacementsRoutes);

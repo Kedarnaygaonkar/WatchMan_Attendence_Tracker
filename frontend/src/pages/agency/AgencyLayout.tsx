@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   Shield, LayoutDashboard, Building2, Users, Clock, GitBranch,
-  ClipboardList, ArrowLeftRight, BarChart3, LogOut, Menu, X, Bell
+  ClipboardList, ArrowLeftRight, BarChart3, LogOut, Menu, X, Bell, QrCode
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/agency/societies', label: 'Societies', icon: Building2 },
   { to: '/agency/watchmen', label: 'Watchmen', icon: Users },
   { to: '/agency/shifts', label: 'Shifts', icon: Clock },
+  { to: '/agency/gates', label: 'Gates & QR', icon: QrCode },
   { to: '/agency/assignments', label: 'Assignments', icon: GitBranch },
   { to: '/agency/attendance', label: 'Attendance', icon: ClipboardList },
   { to: '/agency/replacements', label: 'Replacements', icon: ArrowLeftRight },

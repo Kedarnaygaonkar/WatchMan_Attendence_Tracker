@@ -6,11 +6,10 @@ import { useAuthStore } from './stores/authStore';
 // Auth
 import LoginPage from './pages/auth/LoginPage';
 
-// Watchman pages (simple mobile-first)
-import WatchmanLayout from './pages/watchman/WatchmanLayout';
-import WatchmanHome from './pages/watchman/WatchmanHome';
+// Public QR Scan page (no auth required)
+import ScanPage from './pages/scan/ScanPage';
 
-// Agency pages (full dashboard)
+// Agency / Super Admin pages
 import AgencyLayout from './pages/agency/AgencyLayout';
 import AgencyDashboard from './pages/agency/AgencyDashboard';
 import SocietiesPage from './pages/agency/SocietiesPage';
@@ -20,11 +19,12 @@ import AssignmentsPage from './pages/agency/AssignmentsPage';
 import AttendancePage from './pages/agency/AttendancePage';
 import ReplacementsPage from './pages/agency/ReplacementsPage';
 import ReportsPage from './pages/agency/ReportsPage';
+import GatesPage from './pages/agency/GatesPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30 seconds (default for real-time app)
+      staleTime: 30 * 1000, // 30 seconds
       retry: 1,
     },
   },
@@ -45,8 +45,6 @@ function ProtectedRoute({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    // Redirect to role-appropriate home
-    if (user.role === 'watchman') return <Navigate to="/watchman" replace />;
     return <Navigate to="/agency" replace />;
   }
 
@@ -57,7 +55,6 @@ function ProtectedRoute({
 function RoleRedirect() {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'watchman') return <Navigate to="/watchman" replace />;
   return <Navigate to="/agency" replace />;
 }
 
@@ -66,25 +63,16 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Root → redirect by role */}
+          {/* Root redirect */}
           <Route path="/" element={<RoleRedirect />} />
 
-          {/* Login (shared) */}
+          {/* Login */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* ── WATCHMAN routes ──────────────────────────────── */}
-          <Route
-            path="/watchman"
-            element={
-              <ProtectedRoute allowedRoles={['watchman']}>
-                <WatchmanLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<WatchmanHome />} />
-          </Route>
+          {/* PUBLIC QR Scan page — no auth required */}
+          <Route path="/scan/:token" element={<ScanPage />} />
 
-          {/* ── AGENCY ADMIN routes ──────────────────────────── */}
+          {/* Super Admin / Agency Admin dashboard */}
           <Route
             path="/agency"
             element={
@@ -97,6 +85,7 @@ export default function App() {
             <Route path="societies" element={<SocietiesPage />} />
             <Route path="watchmen" element={<WatchmenPage />} />
             <Route path="shifts" element={<ShiftsPage />} />
+            <Route path="gates" element={<GatesPage />} />
             <Route path="assignments" element={<AssignmentsPage />} />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="replacements" element={<ReplacementsPage />} />
@@ -118,12 +107,8 @@ export default function App() {
             borderRadius: '12px',
             fontFamily: 'Inter, sans-serif',
           },
-          success: {
-            iconTheme: { primary: '#22c55e', secondary: '#1e293b' },
-          },
-          error: {
-            iconTheme: { primary: '#ef4444', secondary: '#1e293b' },
-          },
+          success: { iconTheme: { primary: '#22c55e', secondary: '#1e293b' } },
+          error: { iconTheme: { primary: '#ef4444', secondary: '#1e293b' } },
         }}
       />
     </QueryClientProvider>
