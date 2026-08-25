@@ -376,13 +376,53 @@ export default function ScanPage() {
               <ScanFace className="w-5 h-5 text-brand-400" />
               <h2 className="text-slate-100 text-lg font-bold">Face Verification</h2>
             </div>
-            <p className="text-slate-400 text-sm mb-4">Looking for a match...</p>
+            <p className="text-slate-400 text-sm mb-4">Please look at the camera to verify your identity.</p>
             <div className="rounded-xl overflow-hidden bg-surface-950 aspect-4/3 relative border border-surface-700">
               <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-              {/* Fake scanning overlay */}
               <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(59,130,246,0.2) 50%, transparent 60%)', backgroundSize: '100% 200%', animation: 'scan 2s linear infinite' }} />
             </div>
             <style>{`@keyframes scan { 0% { background-position: 0% -100%; } 100% { background-position: 0% 200%; } }`}</style>
+
+            <button 
+              onClick={async () => {
+                if (!videoRef.current) return;
+                const detection = await faceapi
+                  .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+                  .withFaceLandmarks(true)
+                  .withFaceDescriptor();
+                
+                if (detection && watchman?.face_descriptor) {
+                  const stored = new Float32Array(watchman.face_descriptor);
+                  const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
+                  if (distance < FACE_MATCH_THRESHOLD) {
+                    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+                    setFaceVerified(true);
+                    setFaceMatchScore(distance);
+                    toast.success('Face Verified!');
+                    if (mode === 'checkin') setStep('select_shift');
+                    else setStep('take_photo');
+                  } else {
+                    toast.error('Face does not match. Please try again.');
+                  }
+                } else {
+                  toast.error('No face detected. Ensure good lighting.');
+                }
+              }}
+              className="w-full p-4 rounded-xl font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-lg transition-all"
+            >
+              Verify Face
+            </button>
+            <button 
+              onClick={() => {
+                if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+                setFaceVerified(false);
+                if (mode === 'checkin') setStep('select_shift');
+                else setStep('take_photo');
+              }}
+              className="w-full p-3 rounded-xl font-semibold bg-surface-800 text-slate-400 hover:text-slate-300 transition-all border border-surface-700"
+            >
+              Skip (Requires Admin Review)
+            </button>
           </div>
         )}
 
