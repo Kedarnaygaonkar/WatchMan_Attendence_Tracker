@@ -21,10 +21,10 @@ const societySchema = z.object({
   notes: z.string().optional(),
 });
 
-function getAgencyId(req: Request): string {
+function getAgencyId(req: Request): string | null {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
-    if (!id) throw new AppError('agency_id required for super_admin', 400);
+    if (!id) return null; // super_admin can get all if no id provided
     return id as string;
   }
   return req.user!.agencyId!;
@@ -35,7 +35,10 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
   const { search, active } = req.query;
 
-  const matchStage: any = { agency_id: new (require('mongoose').Types.ObjectId)(agencyId) };
+  const matchStage: any = {};
+  if (agencyId) {
+    matchStage.agency_id = new (require('mongoose').Types.ObjectId)(agencyId);
+  }
   if (active !== undefined) {
     matchStage.is_active = active === 'true';
   }

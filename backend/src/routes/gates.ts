@@ -14,13 +14,14 @@ const gateSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
-// GET /api/gates — list all gates for this agency
+// GET /api/gates — list all gates
 router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const { user } = req as any;
     const filter: any = {};
-    if (user.role !== 'super_admin') filter.agency_id = user.agency_id;
+    // Agency admins only see their own gates; super_admin sees all
+    if (user.role !== 'super_admin') filter.agency_id = user.agencyId;
 
     const gates = await Gate.find(filter)
       .populate('society_id', 'name address')
@@ -43,10 +44,12 @@ router.post(
 
     const { society_id, name } = parse.data;
 
-    // Verify society belongs to this agency
+    // Verify society exists
     const society = await Society.findById(society_id).lean();
     if (!society) throw new AppError('Society not found', 404);
-    if (user.role !== 'super_admin' && String(society.agency_id) !== String(user.agency_id)) {
+
+    // Agency admin can only add gates to their own societies
+    if (user.role !== 'super_admin' && String(society.agency_id) !== String(user.agencyId)) {
       throw new AppError('Forbidden', 403);
     }
 
