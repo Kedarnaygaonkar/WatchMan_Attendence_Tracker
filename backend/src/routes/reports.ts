@@ -77,13 +77,14 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
     {
       $lookup: {
         from: 'attendances',
-        let: { aId: '$_id' },
+        let: { wId: '$watchman_id', sId: '$society_id' },
         pipeline: [
           {
             $match: {
               $expr: {
                 $and: [
-                  { $eq: [{ $toString: '$assignment_id' }, { $toString: '$$aId' }] },
+                  { $eq: [{ $toString: '$watchman_id' }, { $toString: '$$wId' }] },
+                  { $eq: [{ $toString: '$society_id' }, { $toString: '$$sId' }] },
                   {
                     $or: [
                       { $and: [{ $gte: ['$attendance_date', start] }, { $lte: ['$attendance_date', end] }] },
