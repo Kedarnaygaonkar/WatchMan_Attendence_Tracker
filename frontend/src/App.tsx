@@ -24,7 +24,7 @@ import GatesPage from './pages/agency/GatesPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30 seconds
+      staleTime: 0, // Fetch fresh data on filter change
       retry: 1,
     },
   },
