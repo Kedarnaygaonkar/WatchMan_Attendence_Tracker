@@ -50,6 +50,8 @@ export default function ScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Holds watchman data for face verification — avoids stale React closure issue
+  const verifyWatchmanRef = useRef<{ wm: WatchmanInfo; detectedMode: 'checkin' | 'checkout' } | null>(null);
 
   // 1. Initial Load: Get Gate info & load face models
   useEffect(() => {
@@ -108,7 +110,8 @@ export default function ScanPage() {
         setStep('face_registration');
         startRegistrationDetection();
       } else {
-        requestGPS();
+        // Pass wm directly — don't rely on async state update
+        requestGPS(wm, detectedMode);
       }
     } catch (e: any) {
       setStep('enter_id');
@@ -116,61 +119,45 @@ export default function ScanPage() {
     }
   }
 
-  // 3. GPS Fetch
-  function requestGPS() {
+  // 3. GPS Fetch — takes wm and detectedMode to avoid stale closure
+  function requestGPS(wm: WatchmanInfo, detectedMode: 'checkin' | 'checkout') {
     setStep('get_gps');
     if (!navigator.geolocation) {
       toast.error('Location services not supported on this device.');
-      startFaceVerificationFlow(); // Fallback if no GPS api
+      startFaceVerificationFlow(wm, detectedMode);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGpsData(pos.coords);
-        startFaceVerificationFlow();
+        startFaceVerificationFlow(wm, detectedMode);
       },
       (err) => {
         let msg = 'Please enable Location services to verify your attendance.';
         if (err.code === 1) msg = 'Location access denied. Please allow location in browser settings.';
         toast.error(msg);
-        startFaceVerificationFlow(); // Proceed anyway, backend might warn if GPS missing
+        startFaceVerificationFlow(wm, detectedMode);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }
 
-  // 4. Face Verification Flow
-  async function startFaceVerificationFlow() {
+  // 4. Face Verification Flow — wm passed directly to avoid stale React state in closure
+  async function startFaceVerificationFlow(wm: WatchmanInfo, detectedMode: 'checkin' | 'checkout') {
     await startCamera();
     setStep('face_verification');
-    
+
+    // Live face detection interval — only updates faceDetected badge
     detectionIntervalRef.current = setInterval(async () => {
       if (!videoRef.current || videoRef.current.readyState < 2) return;
       const detection = await faceapi
         .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
-        .withFaceLandmarks(true)
-        .withFaceDescriptor();
-      
+        .withFaceLandmarks(true);
       setFaceDetected(!!detection);
-
-      if (detection && watchman?.face_descriptor) {
-        // Compare with stored
-        const stored = new Float32Array(watchman.face_descriptor);
-        const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
-        
-        if (distance < FACE_MATCH_THRESHOLD) {
-          // Success!
-          clearInterval(detectionIntervalRef.current!);
-          detectionIntervalRef.current = null;
-          setFaceVerified(true);
-          setFaceMatchScore(distance);
-          toast.success('Face Verified!');
-          
-          if (mode === 'checkin') setStep('select_shift');
-          else setStep('take_photo'); // directly to photo for checkout
-        }
-      }
     }, 400);
+
+    // Store wm in a ref so the verify button handler can access it
+    verifyWatchmanRef.current = { wm, detectedMode };
   }
 
   // Face Registration Flow
@@ -429,21 +416,23 @@ export default function ScanPage() {
                 <button 
                   onClick={async () => {
                     if (!videoRef.current) return;
+                    const ctx = verifyWatchmanRef.current;
+                    if (!ctx) { toast.error('Verification context lost. Please rescan.'); return; }
                     setFaceVerified(null);
                     const detection = await faceapi
                       .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
                       .withFaceLandmarks(true)
                       .withFaceDescriptor();
                     
-                    if (detection && watchman?.face_descriptor) {
-                      const stored = new Float32Array(watchman.face_descriptor);
+                    if (detection && ctx.wm.face_descriptor) {
+                      const stored = new Float32Array(ctx.wm.face_descriptor);
                       const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
                       if (distance < FACE_MATCH_THRESHOLD) {
                         if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
                         setFaceVerified(true);
                         setFaceMatchScore(distance);
                         toast.success('Face Verified!');
-                        if (mode === 'checkin') setStep('select_shift');
+                        if (ctx.detectedMode === 'checkin') setStep('select_shift');
                         else setStep('take_photo');
                       } else {
                         setFaceVerified(false);
