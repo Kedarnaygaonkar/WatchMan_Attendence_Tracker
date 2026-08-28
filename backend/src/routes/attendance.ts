@@ -312,15 +312,32 @@ router.get(
 
     if (!isSuperAdmin && !agencyId) throw new AppError('agency_id required', 400);
 
-    const { date, societyId, watchmanId, status, page = '1', limit = '50' } = req.query;
+    const { date, societyId, society_id, watchmanId, watchman_id, status, page = '1', limit = '100' } = req.query;
+    const socId = (societyId || society_id) as string;
+    const wmId = (watchmanId || watchman_id) as string;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     const matchStage: any = {};
     if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
-    if (date) matchStage.attendance_date = new Date(date as string);
-    if (societyId) matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
-    if (watchmanId) matchStage.watchman_id = new mongoose.Types.ObjectId(watchmanId as string);
+    if (socId) matchStage.society_id = new mongoose.Types.ObjectId(socId);
+    if (wmId) matchStage.watchman_id = new mongoose.Types.ObjectId(wmId);
     if (status) matchStage.status = status;
+
+    if (date) {
+      const d = new Date(date as string);
+      const start = new Date(d);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(d);
+      end.setUTCHours(23, 59, 59, 999);
+      // Accommodate timezone offsets (e.g. IST UTC+5:30)
+      const wideStart = new Date(start.getTime() - 14 * 3600000);
+      const wideEnd = new Date(end.getTime() + 14 * 3600000);
+
+      matchStage.$or = [
+        { attendance_date: { $gte: start, $lte: end } },
+        { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+      ];
+    }
 
     const list = await Attendance.aggregate([
       { $match: matchStage },
@@ -332,7 +349,7 @@ router.get(
           as: 'watchman',
         },
       },
-      { $unwind: '$watchman' },
+      { $unwind: { path: '$watchman', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'societies',
@@ -341,7 +358,7 @@ router.get(
           as: 'society',
         },
       },
-      { $unwind: '$society' },
+      { $unwind: { path: '$society', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'shifts',
@@ -350,15 +367,15 @@ router.get(
           as: 'shift',
         },
       },
-      { $unwind: '$shift' },
+      { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
       {
         $addFields: {
-          watchman_name: '$watchman.full_name',
-          employee_id: '$watchman.employee_id',
-          society_name: '$society.name',
-          shift_name: '$shift.name',
-          start_time: '$shift.start_time',
-          end_time: '$shift.end_time',
+          watchman_name: { $ifNull: ['$watchman.full_name', 'Unknown Guard'] },
+          employee_id: { $ifNull: ['$watchman.employee_id', ''] },
+          society_name: { $ifNull: ['$society.name', 'Unknown Society'] },
+          shift_name: { $ifNull: ['$shift.name', 'Standard Shift'] },
+          start_time: { $ifNull: ['$shift.start_time', ''] },
+          end_time: { $ifNull: ['$shift.end_time', ''] },
         },
       },
       { $project: { watchman: 0, society: 0, shift: 0 } },

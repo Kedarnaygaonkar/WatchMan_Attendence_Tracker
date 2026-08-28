@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
-import { Assignment, Watchman, Attendance } from '../models';
+import { Watchman, Attendance } from '../models';
 import mongoose from 'mongoose';
 
 const router = Router();
@@ -23,17 +23,27 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
   const societyId = (req.query.society_id || req.query.societyId) as string;
   const dateStr = (req.query.date as string) || new Date().toISOString().split('T')[0];
-  const date = new Date(dateStr);
-
-  const matchObj: any = {
-    is_active: true,
-    start_date: { $lte: date },
-    $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: date } }],
-  };
+  
+  const matchObj: any = {};
   if (agencyId) matchObj.agency_id = new mongoose.Types.ObjectId(agencyId);
   if (societyId) matchObj.society_id = new mongoose.Types.ObjectId(societyId);
 
-  const assignments = await Assignment.aggregate([
+  if (dateStr) {
+    const d = new Date(dateStr);
+    const start = new Date(d);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(d);
+    end.setUTCHours(23, 59, 59, 999);
+    const wideStart = new Date(start.getTime() - 14 * 3600000);
+    const wideEnd = new Date(end.getTime() + 14 * 3600000);
+
+    matchObj.$or = [
+      { attendance_date: { $gte: start, $lte: end } },
+      { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+    ];
+  }
+
+  const attendances = await Attendance.aggregate([
     { $match: matchObj },
     {
       $lookup: {
@@ -43,7 +53,7 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
         as: 'watchman',
       },
     },
-    { $unwind: '$watchman' },
+    { $unwind: { path: '$watchman', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'societies',
@@ -52,7 +62,7 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
         as: 'society',
       },
     },
-    { $unwind: '$society' },
+    { $unwind: { path: '$society', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'shifts',
@@ -61,60 +71,26 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
         as: 'shift',
       },
     },
-    { $unwind: '$shift' },
-    {
-      $lookup: {
-        from: 'attendances',
-        let: { wId: '$watchman_id', sId: '$shift_id' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ['$watchman_id', '$$wId'] },
-                  { $eq: ['$shift_id', '$$sId'] },
-                  { $eq: ['$attendance_date', date] },
-                ],
-              },
-            },
-          },
-        ],
-        as: 'attendances',
-      },
-    },
+    { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
-        att: { $arrayElemAt: ['$attendances', 0] },
+        watchman_id: '$watchman_id',
+        full_name: { $ifNull: ['$watchman.full_name', 'Unknown Guard'] },
+        employee_id: { $ifNull: ['$watchman.employee_id', ''] },
+        society_name: { $ifNull: ['$society.name', 'Unknown Society'] },
+        shift_name: { $ifNull: ['$shift.name', 'Standard Shift'] },
+        start_time: { $ifNull: ['$shift.start_time', ''] },
+        end_time: { $ifNull: ['$shift.end_time', ''] },
+        attendance_id: '$_id',
+        final_status: '$status',
       },
     },
-    {
-      $addFields: {
-        watchman_id: '$watchman._id',
-        full_name: '$watchman.full_name',
-        employee_id: '$watchman.employee_id',
-        society_name: '$society.name',
-        shift_name: '$shift.name',
-        start_time: '$shift.start_time',
-        end_time: '$shift.end_time',
-        attendance_id: '$att._id',
-        check_in_time: '$att.check_in_time',
-        check_out_time: '$att.check_out_time',
-        duration_minutes: '$att.duration_minutes',
-        status: '$att.status',
-        verification_status: '$att.verification_status',
-        gps_flags: '$att.gps_flags',
-        distance_from_society: '$att.distance_from_society',
-        is_offline_sync: '$att.is_offline_sync',
-        manual_override: '$att.manual_override',
-        final_status: { $ifNull: ['$att.status', 'absent'] },
-      },
-    },
-    { $project: { watchman: 0, society: 0, shift: 0, attendances: 0, att: 0 } },
-    { $sort: { start_time: 1, full_name: 1 } },
+    { $project: { watchman: 0, society: 0, shift: 0 } },
+    { $sort: { check_in_time: -1 } },
   ]);
 
-  const formatted = assignments.map(a => {
-    a.watchman_id = a.watchman_id.toString();
+  const formatted = attendances.map(a => {
+    if (a.watchman_id) a.watchman_id = a.watchman_id.toString();
     if (a.attendance_id) a.attendance_id = a.attendance_id.toString();
     a.id = a._id.toString();
     delete a._id;
@@ -136,7 +112,7 @@ router.get('/monthly', asyncHandler(async (req: Request, res: Response) => {
   const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
 
   const startDate = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
-  const endDate = new Date(year, month, 0); // Last day of month
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999); // Last moment of month
 
   const matchObj: any = { status: 'active' };
   if (agencyId) matchObj.agency_id = new mongoose.Types.ObjectId(agencyId);
@@ -153,8 +129,12 @@ router.get('/monthly', asyncHandler(async (req: Request, res: Response) => {
               $expr: {
                 $and: [
                   { $eq: ['$watchman_id', '$$wId'] },
-                  { $gte: ['$attendance_date', startDate] },
-                  { $lte: ['$attendance_date', endDate] },
+                  {
+                    $or: [
+                      { $and: [{ $gte: ['$attendance_date', startDate] }, { $lte: ['$attendance_date', endDate] }] },
+                      { $and: [{ $gte: ['$check_in_time', startDate] }, { $lte: ['$check_in_time', endDate] }] },
+                    ],
+                  },
                   ...(societyId ? [{ $eq: ['$society_id', new mongoose.Types.ObjectId(societyId)] }] : []),
                 ],
               },
@@ -241,7 +221,7 @@ router.get('/watchman/:id', asyncHandler(async (req: Request, res: Response) => 
         as: 'society',
       },
     },
-    { $unwind: '$society' },
+    { $unwind: { path: '$society', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'shifts',
@@ -250,13 +230,13 @@ router.get('/watchman/:id', asyncHandler(async (req: Request, res: Response) => 
         as: 'shift',
       },
     },
-    { $unwind: '$shift' },
+    { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
-        society_name: '$society.name',
-        shift_name: '$shift.name',
-        start_time: '$shift.start_time',
-        end_time: '$shift.end_time',
+        society_name: { $ifNull: ['$society.name', 'Unknown Society'] },
+        shift_name: { $ifNull: ['$shift.name', 'Standard Shift'] },
+        start_time: { $ifNull: ['$shift.start_time', ''] },
+        end_time: { $ifNull: ['$shift.end_time', ''] },
       },
     },
     { $project: { society: 0, shift: 0 } },
@@ -306,7 +286,7 @@ router.get('/suspicious', asyncHandler(async (req: Request, res: Response) => {
         as: 'watchman',
       },
     },
-    { $unwind: '$watchman' },
+    { $unwind: { path: '$watchman', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'societies',
@@ -315,7 +295,7 @@ router.get('/suspicious', asyncHandler(async (req: Request, res: Response) => {
         as: 'society',
       },
     },
-    { $unwind: '$society' },
+    { $unwind: { path: '$society', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'shifts',
@@ -324,13 +304,13 @@ router.get('/suspicious', asyncHandler(async (req: Request, res: Response) => {
         as: 'shift',
       },
     },
-    { $unwind: '$shift' },
+    { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
-        watchman_name: '$watchman.full_name',
-        employee_id: '$watchman.employee_id',
-        society_name: '$society.name',
-        shift_name: '$shift.name',
+        watchman_name: { $ifNull: ['$watchman.full_name', 'Unknown Guard'] },
+        employee_id: { $ifNull: ['$watchman.employee_id', ''] },
+        society_name: { $ifNull: ['$society.name', 'Unknown Society'] },
+        shift_name: { $ifNull: ['$shift.name', 'Standard Shift'] },
       },
     },
     { $project: { watchman: 0, society: 0, shift: 0 } },
