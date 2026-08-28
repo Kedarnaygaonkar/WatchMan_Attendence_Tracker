@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
-import { Watchman, Attendance } from '../models';
+import { Watchman, Attendance, Assignment } from '../models';
 import mongoose from 'mongoose';
 
 const router = Router();
@@ -24,26 +24,28 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
   const societyId = (req.query.society_id || req.query.societyId) as string;
   const dateStr = (req.query.date as string) || new Date().toISOString().split('T')[0];
   
-  const matchObj: any = {};
+  const d = new Date(dateStr);
+  const start = new Date(d);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(d);
+  end.setUTCHours(23, 59, 59, 999);
+  const wideStart = new Date(start.getTime() - 14 * 3600000);
+  const wideEnd = new Date(end.getTime() + 14 * 3600000);
+
+  const matchObj: any = {
+    is_active: true,
+    start_date: { $lte: end },
+    $or: [
+      { end_date: { $exists: false } },
+      { end_date: null },
+      { end_date: { $gte: start } }
+    ]
+  };
+  
   if (agencyId) matchObj.agency_id = new mongoose.Types.ObjectId(agencyId);
   if (societyId) matchObj.society_id = new mongoose.Types.ObjectId(societyId);
 
-  if (dateStr) {
-    const d = new Date(dateStr);
-    const start = new Date(d);
-    start.setUTCHours(0, 0, 0, 0);
-    const end = new Date(d);
-    end.setUTCHours(23, 59, 59, 999);
-    const wideStart = new Date(start.getTime() - 14 * 3600000);
-    const wideEnd = new Date(end.getTime() + 14 * 3600000);
-
-    matchObj.$or = [
-      { attendance_date: { $gte: start, $lte: end } },
-      { check_in_time: { $gte: wideStart, $lte: wideEnd } },
-    ];
-  }
-
-  const attendances = await Attendance.aggregate([
+  const reportData = await Assignment.aggregate([
     { $match: matchObj },
     {
       $lookup: {
@@ -73,6 +75,33 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
     },
     { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
     {
+      $lookup: {
+        from: 'attendances',
+        let: { aId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$assignment_id', '$$aId'] },
+                  {
+                    $or: [
+                      { $and: [{ $gte: ['$attendance_date', start] }, { $lte: ['$attendance_date', end] }] },
+                      { $and: [{ $gte: ['$check_in_time', wideStart] }, { $lte: ['$check_in_time', wideEnd] }] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $sort: { check_in_time: -1 } },
+          { $limit: 1 }
+        ],
+        as: 'attendance',
+      },
+    },
+    { $unwind: { path: '$attendance', preserveNullAndEmptyArrays: true } },
+    {
       $addFields: {
         watchman_id: '$watchman_id',
         full_name: { $ifNull: ['$watchman.full_name', 'Unknown Guard'] },
@@ -81,15 +110,20 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
         shift_name: { $ifNull: ['$shift.name', 'Standard Shift'] },
         start_time: { $ifNull: ['$shift.start_time', ''] },
         end_time: { $ifNull: ['$shift.end_time', ''] },
-        attendance_id: '$_id',
-        final_status: '$status',
+        attendance_id: '$attendance._id',
+        check_in_time: { $ifNull: ['$attendance.check_in_time', null] },
+        check_out_time: { $ifNull: ['$attendance.check_out_time', null] },
+        duration_minutes: { $ifNull: ['$attendance.duration_minutes', null] },
+        verification_status: { $ifNull: ['$attendance.verification_status', null] },
+        is_offline_sync: { $ifNull: ['$attendance.is_offline_sync', false] },
+        final_status: { $ifNull: ['$attendance.status', 'absent'] },
       },
     },
-    { $project: { watchman: 0, society: 0, shift: 0 } },
-    { $sort: { check_in_time: -1 } },
+    { $project: { watchman: 0, society: 0, shift: 0, attendance: 0 } },
+    { $sort: { society_name: 1, full_name: 1 } },
   ]);
 
-  const formatted = attendances.map(a => {
+  const formatted = reportData.map(a => {
     if (a.watchman_id) a.watchman_id = a.watchman_id.toString();
     if (a.attendance_id) a.attendance_id = a.attendance_id.toString();
     a.id = a._id.toString();
