@@ -83,7 +83,7 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
             $match: {
               $expr: {
                 $and: [
-                  { $eq: ['$assignment_id', '$$aId'] },
+                  { $eq: [{ $toString: '$assignment_id' }, { $toString: '$$aId' }] },
                   {
                     $or: [
                       { $and: [{ $gte: ['$attendance_date', start] }, { $lte: ['$attendance_date', end] }] },
