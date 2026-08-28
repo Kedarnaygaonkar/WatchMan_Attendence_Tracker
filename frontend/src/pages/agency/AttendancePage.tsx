@@ -11,6 +11,8 @@ interface AttendanceRecord {
   society_name: string;
   shift_name: string;
   check_in_time: string;
+  check_out_time: string | null;
+  duration_minutes: number | null;
   status: string;
   verification_status: string;
   distance_from_society: number;
@@ -90,6 +92,7 @@ export default function AttendancePage() {
               <th>Guard</th>
               <th>Society / Shift</th>
               <th>Check-in</th>
+              <th>Check-out</th>
               <th>Status</th>
               <th>GPS</th>
               <th>Photo</th>
@@ -119,6 +122,21 @@ export default function AttendancePage() {
                   {new Date(r.check_in_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}
                   {r.is_offline_sync && <span className="ml-1 text-xs text-warning-400 block">Offline sync</span>}
                   {r.manual_override && <span className="ml-1 text-xs text-brand-400 block">Override</span>}
+                </td>
+                <td className="text-slate-300 text-sm whitespace-nowrap">
+                  {r.check_out_time
+                    ? (
+                      <div>
+                        <span>{new Date(r.check_out_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}</span>
+                        {r.duration_minutes != null && (
+                          <span className="text-xs text-slate-500 block">
+                            {Math.floor(r.duration_minutes / 60)}h {r.duration_minutes % 60}m
+                          </span>
+                        )}
+                      </div>
+                    )
+                    : <span className="text-slate-600 text-xs">Not checked out</span>
+                  }
                 </td>
                 <td>{getStatusBadge(r.status)}</td>
                 <td>

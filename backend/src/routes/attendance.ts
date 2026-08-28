@@ -305,16 +305,18 @@ router.get(
   '/',
   requireRole(['agency_admin', 'super_admin']),
   asyncHandler(async (req: Request, res: Response) => {
-    const agencyId = req.user!.role === 'super_admin'
-      ? (req.query.agency_id as string)
+    const isSuperAdmin = req.user!.role === 'super_admin';
+    const agencyId = isSuperAdmin
+      ? (req.query.agency_id as string | undefined)
       : req.user!.agencyId!;
 
-    if (!agencyId) throw new AppError('agency_id required', 400);
+    if (!isSuperAdmin && !agencyId) throw new AppError('agency_id required', 400);
 
     const { date, societyId, watchmanId, status, page = '1', limit = '50' } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    const matchStage: any = { agency_id: new mongoose.Types.ObjectId(agencyId) };
+    const matchStage: any = {};
+    if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
     if (date) matchStage.attendance_date = new Date(date as string);
     if (societyId) matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
     if (watchmanId) matchStage.watchman_id = new mongoose.Types.ObjectId(watchmanId as string);

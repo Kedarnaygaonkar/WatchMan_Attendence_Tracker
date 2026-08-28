@@ -85,14 +85,13 @@ export default function ScanPage() {
     return () => stopCamera();
   }, [token]);
 
-  // Handle stream attachment safely when the video element renders
-  useEffect(() => {
-    if ((step === 'face_registration' || step === 'face_verification' || step === 'take_photo') && videoRef.current && streamRef.current) {
-      if (videoRef.current.srcObject !== streamRef.current) {
-        videoRef.current.srcObject = streamRef.current;
-      }
+  // Callback ref — attaches the stream to video exactly when the element mounts (works across step changes)
+  const videoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
+    (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && streamRef.current) {
+      el.srcObject = streamRef.current;
     }
-  }, [step]);
+  }, []);
 
   // 2. Lookup Guard
   async function handleLookup() {
@@ -348,7 +347,7 @@ export default function ScanPage() {
             </div>
             <p className="text-slate-400 text-sm mb-4">Please look directly at the camera to register your face.</p>
             <div className={`rounded-xl overflow-hidden aspect-4/3 flex items-center justify-center relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-surface-700'}`}>
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+              <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
               {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-3 py-1 rounded-full text-sm backdrop-blur-sm">No face detected</p></div>}
             </div>
             <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-surface-800 text-slate-500 cursor-not-allowed'}`}>
@@ -396,7 +395,7 @@ export default function ScanPage() {
             ) : (
               <>
                 <div className="rounded-xl overflow-hidden bg-surface-950 aspect-[4/3] relative border border-surface-700">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                  <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                   {/* Oval guide */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className={`w-48 h-56 rounded-full border-4 transition-colors duration-300 ${
@@ -490,7 +489,7 @@ export default function ScanPage() {
               </div>
             )}
             <div className="rounded-xl overflow-hidden bg-surface-950 aspect-4/3 relative border border-surface-700">
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+              <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
             </div>
             <canvas ref={canvasRef} className="hidden" />
             <button onClick={capturePhoto} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${mode === 'checkin' ? 'bg-success-600 hover:bg-success-500' : 'bg-warning-600 hover:bg-warning-500'}`}>
