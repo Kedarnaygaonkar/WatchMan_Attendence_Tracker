@@ -103,6 +103,8 @@ export default function ScanPage() {
       setWatchman(wm);
       setExistingRecord(existing_record);
       setMode(detectedMode);
+      // Set ref immediately so registerFace / verify button can access wm without stale state
+      verifyWatchmanRef.current = { wm, detectedMode };
 
       if (!wm.face_registered) {
         await startCamera();
@@ -170,6 +172,8 @@ export default function ScanPage() {
 
   async function registerFace() {
     if (!videoRef.current) return;
+    const regCtx = verifyWatchmanRef.current;
+    if (!regCtx) { toast.error('Session lost. Please re-enter your Guard ID.'); return; }
     setStep('loading');
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
 
@@ -193,10 +197,12 @@ export default function ScanPage() {
       });
 
       toast.success('Face registered successfully!');
-      // Update local state and proceed to GPS
-      setWatchman(prev => prev ? { ...prev, face_registered: true, face_descriptor: Array.from(detection.descriptor) } : null);
+      const updatedWm: WatchmanInfo = { ...regCtx.wm, face_registered: true, face_descriptor: Array.from(detection.descriptor) };
+      setWatchman(updatedWm);
       stopCamera();
-      requestGPS();
+      // Update ref with the registered descriptor so verification works
+      verifyWatchmanRef.current = { wm: updatedWm, detectedMode: regCtx.detectedMode };
+      requestGPS(updatedWm, regCtx.detectedMode);
       
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to register face.');
@@ -384,8 +390,10 @@ export default function ScanPage() {
                 </p>
                 <button 
                   onClick={() => {
+                    const ctx = verifyWatchmanRef.current;
+                    if (!ctx) return;
                     setFaceVerified(null);
-                    startFaceVerificationFlow();
+                    startFaceVerificationFlow(ctx.wm, ctx.detectedMode);
                   }}
                   className="w-full mt-2 p-4 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all"
                 >
