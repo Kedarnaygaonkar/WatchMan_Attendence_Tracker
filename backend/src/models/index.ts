@@ -2,6 +2,7 @@ export { Agency } from './Agency';
 export { Assignment } from './Assignment';
 export { Attendance } from './Attendance';
 export { AuditLog } from './AuditLog';
+export { DeliveryVisit } from './DeliveryVisit';
 export { Gate } from './Gate';
 export { Notification } from './Notification';
 export { Replacement } from './Replacement';

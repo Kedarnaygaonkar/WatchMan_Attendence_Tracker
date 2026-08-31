@@ -20,6 +20,7 @@ import AttendancePage from './pages/agency/AttendancePage';
 import ReplacementsPage from './pages/agency/ReplacementsPage';
 import ReportsPage from './pages/agency/ReportsPage';
 import GatesPage from './pages/agency/GatesPage';
+import DeliveryPage from './pages/agency/DeliveryPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="replacements" element={<ReplacementsPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="delivery" element={<DeliveryPage />} />
           </Route>
 
           {/* 404 */}

@@ -21,6 +21,7 @@ import reportsRoutes from './routes/reports';
 import replacementsRoutes from './routes/replacements';
 import gatesRoutes from './routes/gates';
 import scanRoutes from './routes/scan';
+import deliveryRoutes from './routes/delivery';
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use('/api/scan', attendanceLimiter, scanRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/replacements', replacementsRoutes);
+app.use('/api/delivery', deliveryRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────
 app.use((_req, res) => {
