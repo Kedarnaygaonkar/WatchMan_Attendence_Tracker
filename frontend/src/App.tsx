@@ -12,6 +12,7 @@ import ScanPage from './pages/scan/ScanPage';
 // Agency / Super Admin pages
 import AgencyLayout from './pages/agency/AgencyLayout';
 import AgencyDashboard from './pages/agency/AgencyDashboard';
+import AgenciesPage from './pages/agency/AgenciesPage';
 import SocietiesPage from './pages/agency/SocietiesPage';
 import WatchmenPage from './pages/agency/WatchmenPage';
 import ShiftsPage from './pages/agency/ShiftsPage';
@@ -83,6 +84,7 @@ export default function App() {
             }
           >
             <Route index element={<AgencyDashboard />} />
+            <Route path="agencies" element={<AgenciesPage />} />
             <Route path="societies" element={<SocietiesPage />} />
             <Route path="watchmen" element={<WatchmenPage />} />
             <Route path="shifts" element={<ShiftsPage />} />

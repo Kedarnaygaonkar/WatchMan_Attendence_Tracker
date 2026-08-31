@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 
 const navItems = [
   { to: '/agency', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/agency/agencies', label: 'Agencies', icon: Building2, roles: ['super_admin'] },
   { to: '/agency/societies', label: 'Societies', icon: Building2 },
   { to: '/agency/watchmen', label: 'Watchmen', icon: Users },
   { to: '/agency/shifts', label: 'Shifts', icon: Clock },
@@ -60,20 +61,23 @@ export default function AgencyLayout() {
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                `nav-item ${isActive ? 'active' : ''}`
-              }
-            >
-              <item.icon className="w-4.5 h-4.5 shrink-0" style={{width:'18px',height:'18px'}} />
-              {item.label}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            if (item.roles && (!user || !item.roles.includes(user.role))) return null;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `nav-item ${isActive ? 'active' : ''}`
+                }
+              >
+                <item.icon className="w-4.5 h-4.5 shrink-0" style={{width:'18px',height:'18px'}} />
+                {item.label}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* User info + logout */}

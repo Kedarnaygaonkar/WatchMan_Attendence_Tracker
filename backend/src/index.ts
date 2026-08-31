@@ -22,6 +22,7 @@ import replacementsRoutes from './routes/replacements';
 import gatesRoutes from './routes/gates';
 import scanRoutes from './routes/scan';
 import deliveryRoutes from './routes/delivery';
+import agenciesRoutes from './routes/agencies';
 
 const app = express();
 
@@ -81,6 +82,7 @@ app.get('/api/health', (_req, res) => {
 
 // ── API Routes ────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/agencies', agenciesRoutes);
 app.use('/api/societies', societiesRoutes);
 app.use('/api/watchmen', watchmenRoutes);
 app.use('/api/shifts', shiftsRoutes);
