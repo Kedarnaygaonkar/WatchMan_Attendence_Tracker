@@ -19,6 +19,7 @@ const societySchema = z.object({
   requiredGuards: z.number().min(1).default(1),
   isActive: z.boolean().default(true),
   notes: z.string().optional(),
+  agencyId: z.string().optional(),
 });
 
 function getAgencyId(req: Request): string | null {
@@ -149,14 +150,18 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /api/societies/:id — update society */
 router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const agencyId = getAgencyId(req);
   const parse = societySchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ success: false, message: 'Validation failed', errors: parse.error.flatten().fieldErrors });
     return;
   }
 
-  const society = await Society.findOne({ _id: req.params.id, agency_id: agencyId });
+  const query: any = { _id: req.params.id };
+  if (req.user!.role !== 'super_admin') {
+    query.agency_id = req.user!.agencyId;
+  }
+
+  const society = await Society.findOne(query);
   if (!society) throw new AppError('Society not found', 404);
 
   const oldValues = society.toObject();
@@ -173,9 +178,13 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   society.is_active = d.isActive;
   society.notes = d.notes;
 
+  if (req.user!.role === 'super_admin' && d.agencyId) {
+    society.agency_id = d.agencyId as any;
+  }
+
   await society.save();
 
-  await logAudit(null as any, { agencyId, userId: req.user!.userId, action: 'update_society',
+  await logAudit(null as any, { agencyId: society.agency_id, userId: req.user!.userId, action: 'update_society',
     entityType: 'society', entityId: society.id, oldValues, newValues: d, req });
 
   res.json({ success: true, data: society });

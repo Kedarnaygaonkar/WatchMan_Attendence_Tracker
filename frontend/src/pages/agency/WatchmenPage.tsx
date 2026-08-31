@@ -17,6 +17,7 @@ interface Watchman {
   profile_photo_url: string | null;
   active_assignments: number;
   email: string;
+  agency_id?: string;
 }
 
 const defaultForm = {
@@ -83,7 +84,7 @@ export default function WatchmenPage() {
       employeeId: w.employee_id, fullName: w.full_name, phone: w.phone,
       address: w.address || '', joiningDate: w.joining_date?.split('T')[0] || '',
       status: w.status,
-      agencyId: '',
+      agencyId: w.agency_id || '',
     });
     setEditWatchman(w);
     setShowModal(true);
@@ -210,7 +211,7 @@ export default function WatchmenPage() {
                   <label className="label">Mobile Number *</label>
                   <input className="input" type="tel" value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} placeholder="9XXXXXXXXX" />
                 </div>
-                {user?.role === 'super_admin' && !editWatchman && (
+                {user?.role === 'super_admin' && (
                   <div className="form-group col-span-2">
                     <label className="label">Assign Agency *</label>
                     <select className="input" value={form.agencyId} onChange={e => setForm(f => ({...f, agencyId: e.target.value}))}>
@@ -243,7 +244,7 @@ export default function WatchmenPage() {
               <button onClick={closeModal} className="btn-ghost px-5 py-2.5">Cancel</button>
               <button
                 onClick={() => mutation.mutate(form)}
-                disabled={mutation.isPending || !form.fullName || !form.phone || (!editWatchman && user?.role === 'super_admin' && !form.agencyId)}
+                disabled={mutation.isPending || !form.fullName || !form.phone || (user?.role === 'super_admin' && !form.agencyId)}
                 className="btn-primary px-5 py-2.5 ml-auto"
               >
                 {mutation.isPending ? 'Saving...' : editWatchman ? 'Update' : 'Add Watchman'}

@@ -240,14 +240,18 @@ router.post('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(asyn
 
 /** PUT /api/watchmen/:id */
 router.put('/:id', requireRole(['agency_admin', 'super_admin']), asyncHandler(async (req: Request, res: Response) => {
-  const agencyId = getAgencyId(req);
   const parse = watchmanSchema.partial().safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ success: false, message: 'Validation failed', errors: parse.error.flatten().fieldErrors });
     return;
   }
 
-  const watchman = await Watchman.findOne({ _id: req.params.id, agency_id: agencyId });
+  const query: any = { _id: req.params.id };
+  if (req.user!.role !== 'super_admin') {
+    query.agency_id = req.user!.agencyId;
+  }
+
+  const watchman = await Watchman.findOne(query);
   if (!watchman) throw new AppError('Watchman not found', 404);
 
   const oldValues = watchman.toObject();
@@ -260,14 +264,22 @@ router.put('/:id', requireRole(['agency_admin', 'super_admin']), asyncHandler(as
   if (d.joiningDate !== undefined) watchman.joining_date = new Date(d.joiningDate);
   if (d.status !== undefined) watchman.status = d.status as any;
 
+  if (req.user!.role === 'super_admin' && d.agencyId) {
+    watchman.agency_id = d.agencyId as any;
+  }
+
   await watchman.save();
 
   // Update user is_active based on watchman status
   if (d.status !== undefined) {
     await User.updateOne({ _id: watchman.user_id }, { is_active: d.status === 'active' });
   }
+  
+  if (req.user!.role === 'super_admin' && d.agencyId) {
+    await User.updateOne({ _id: watchman.user_id }, { agency_id: watchman.agency_id });
+  }
 
-  await logAudit(null as any, { agencyId, userId: req.user!.userId, action: 'update_watchman',
+  await logAudit(null as any, { agencyId: watchman.agency_id, userId: req.user!.userId, action: 'update_watchman',
     entityType: 'watchman', entityId: watchman.id,
     oldValues, newValues: d, req });
 

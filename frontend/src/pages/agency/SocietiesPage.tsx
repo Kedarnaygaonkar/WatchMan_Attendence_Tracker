@@ -35,6 +35,7 @@ interface Society {
   required_guards: number;
   is_active: boolean;
   active_assignments: number;
+  agency_id?: string;
 }
 
 const defaultForm = {
@@ -112,7 +113,7 @@ export default function SocietiesPage() {
       contactPerson: s.contact_person || '', contactPhone: s.contact_phone || '',
       latitude: parseFloat(String(s.latitude)), longitude: parseFloat(String(s.longitude)),
       geofenceRadius: s.geofence_radius, requiredGuards: s.required_guards,
-      isActive: s.is_active, notes: '', agencyId: '',
+      isActive: s.is_active, notes: '', agencyId: s.agency_id || '',
     });
     setMapCenter([parseFloat(String(s.latitude)), parseFloat(String(s.longitude))]);
     setEditSociety(s);
@@ -220,7 +221,7 @@ export default function SocietiesPage() {
                   <label className="label">Society Name *</label>
                   <input className="input" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder="Sunrise Residency" />
                 </div>
-                {user?.role === 'super_admin' && !editSociety && (
+                {user?.role === 'super_admin' && (
                   <div className="form-group">
                     <label className="label">Assign Agency *</label>
                     <select className="input" value={form.agencyId} onChange={e => setForm(f => ({...f, agencyId: e.target.value}))}>
@@ -299,7 +300,7 @@ export default function SocietiesPage() {
               )}
               <button
                 onClick={() => mutation.mutate(form)}
-                disabled={mutation.isPending || !form.name || !form.latitude || (!editSociety && user?.role === 'super_admin' && !form.agencyId)}
+                disabled={mutation.isPending || !form.name || !form.latitude || (user?.role === 'super_admin' && !form.agencyId)}
                 className="btn-primary px-5 py-2.5 ml-auto"
               >
                 {mutation.isPending ? 'Saving...' : editSociety ? 'Update Society' : 'Add Society'}
