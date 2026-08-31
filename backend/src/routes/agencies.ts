@@ -38,7 +38,7 @@ router.get(
       ];
     }
 
-    const agencies = await Agency.find(filter).sort({ name: 1 }).lean();
+    const agencies = await Agency.find(filter).sort({ name: 1 });
     res.json({ success: true, data: agencies });
   })
 );
