@@ -51,7 +51,7 @@ export default function AssignmentsPage() {
   });
 
   const deactivateMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/assignments/${id}`),
+    mutationFn: (id: string) => api.patch(`/assignments/${id}/end`),
     onSuccess: () => { queryClient.invalidateQueries({queryKey:['assignments']}); toast.success('Assignment ended'); },
   });
 
