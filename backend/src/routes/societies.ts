@@ -24,8 +24,9 @@ const societySchema = z.object({
 function getAgencyId(req: Request): string | null {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
-    if (!id) return null; // super_admin can get all if no id provided
-    return id as string;
+    if (id) return id as string;
+    if (req.user!.agencyId) return req.user!.agencyId;
+    return null; // super_admin can get all if no id provided
   }
   return req.user!.agencyId!;
 }

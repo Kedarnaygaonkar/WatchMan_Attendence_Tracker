@@ -10,7 +10,10 @@ router.use(requireRole(['agency_admin', 'super_admin']));
 
 function getAgencyId(req: Request): string | undefined {
   if (req.user!.role === 'super_admin') {
-    return (req.query.agency_id as string) || undefined;
+    const id = req.query.agency_id || req.body.agencyId;
+    if (id) return id as string;
+    if (req.user!.agencyId) return req.user!.agencyId;
+    return undefined;
   }
   return req.user!.agencyId!;
 }
