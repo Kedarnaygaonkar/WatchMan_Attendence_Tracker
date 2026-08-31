@@ -279,7 +279,7 @@ router.put('/:id', requireRole(['agency_admin', 'super_admin']), asyncHandler(as
     await User.updateOne({ _id: watchman.user_id }, { agency_id: watchman.agency_id });
   }
 
-  await logAudit(null as any, { agencyId: watchman.agency_id, userId: req.user!.userId, action: 'update_watchman',
+  await logAudit(null as any, { agencyId: watchman.agency_id as any, userId: req.user!.userId, action: 'update_watchman',
     entityType: 'watchman', entityId: watchman.id,
     oldValues, newValues: d, req });
 

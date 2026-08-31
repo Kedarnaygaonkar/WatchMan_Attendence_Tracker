@@ -184,7 +184,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
 
   await society.save();
 
-  await logAudit(null as any, { agencyId: society.agency_id, userId: req.user!.userId, action: 'update_society',
+  await logAudit(null as any, { agencyId: society.agency_id as any, userId: req.user!.userId, action: 'update_society',
     entityType: 'society', entityId: society.id, oldValues, newValues: d, req });
 
   res.json({ success: true, data: society });

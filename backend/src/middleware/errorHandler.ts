@@ -26,9 +26,7 @@ export function errorHandler(
       success: false,
       message: isWatchman
         ? 'Something went wrong. Please try again.'
-        : config.isDev
-        ? err.message
-        : 'Internal server error',
+        : `Server Error: ${err.message}`,
     });
     return;
   }
