@@ -120,12 +120,12 @@ export default function ScanPage() {
 
   function requestGPS(wm: WatchmanInfo, detectedMode: 'checkin' | 'checkout') {
     setStep('get_gps');
-    if (!navigator.geolocation) { toast.error('Location services not supported.'); startFaceVerificationFlow(wm, detectedMode); return; }
+    if (!navigator.geolocation) { toast.error('Location services not supported.'); setStep('enter_id'); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => { setGpsData(pos.coords); startFaceVerificationFlow(wm, detectedMode); },
       (err) => {
-        toast.error(err.code === 1 ? 'Location access denied.' : 'Please enable location services.');
-        startFaceVerificationFlow(wm, detectedMode);
+        toast.error(err.code === 1 ? 'Location access denied. Please enable it in browser settings.' : 'Please enable location services.');
+        setStep('enter_id');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );

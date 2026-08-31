@@ -195,6 +195,12 @@ router.post(
         { latitude, longitude },
         { latitude: society.latitude, longitude: society.longitude }
       );
+      
+      if (distanceFromSociety > society.geofence_radius) {
+        throw new AppError(`You are ${Math.round(distanceFromSociety)}m away from the society. You must be inside to mark attendance.`, 400);
+      }
+    } else {
+      throw new AppError('GPS location is required to mark attendance', 400);
     }
 
     const now = new Date();
@@ -306,7 +312,14 @@ router.post(
          { latitude, longitude },
          { latitude: (gate.society_id as any).latitude, longitude: (gate.society_id as any).longitude }
        );
+       
+       if (dist > (gate.society_id as any).geofence_radius) {
+         throw new AppError(`You are ${Math.round(dist)}m away from the society. You must be inside to mark attendance.`, 400);
+       }
+       
        record.set('distance_from_society', dist);
+    } else {
+      throw new AppError('GPS location is required to checkout', 400);
     }
     
     if (face_verified === false) {
