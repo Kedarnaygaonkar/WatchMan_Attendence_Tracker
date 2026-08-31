@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Edit2, Users, X, UserCheck, UserX } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Watchman {
   id: string;
@@ -19,9 +20,10 @@ interface Watchman {
 }
 
 const defaultForm = {
-  employeeId: '', fullName: '', phone: '', email: '',
-  password: '', emergencyContact: '', address: '',
+  employeeId: '', fullName: '', phone: '',
+  address: '',
   joiningDate: new Date().toISOString().split('T')[0], status: 'active' as 'active' | 'inactive' | 'suspended',
+  agencyId: '',
 };
 
 export default function WatchmenPage() {
@@ -31,6 +33,16 @@ export default function WatchmenPage() {
   const [showModal, setShowModal] = useState(false);
   const [editWatchman, setEditWatchman] = useState<Watchman | null>(null);
   const [form, setForm] = useState(defaultForm);
+  const { user } = useAuthStore();
+
+  const { data: agencies } = useQuery({
+    queryKey: ['agencies'],
+    queryFn: async () => {
+      const { data } = await api.get('/agencies');
+      return data.data;
+    },
+    enabled: user?.role === 'super_admin',
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['watchmen', search, statusFilter],
@@ -69,9 +81,9 @@ export default function WatchmenPage() {
   function openEdit(w: Watchman) {
     setForm({
       employeeId: w.employee_id, fullName: w.full_name, phone: w.phone,
-      email: w.email, password: '', emergencyContact: w.emergency_contact || '',
       address: w.address || '', joiningDate: w.joining_date?.split('T')[0] || '',
       status: w.status,
+      agencyId: '',
     });
     setEditWatchman(w);
     setShowModal(true);
@@ -195,23 +207,20 @@ export default function WatchmenPage() {
                   <input className="input" value={form.employeeId} onChange={e => setForm(f => ({...f, employeeId: e.target.value}))} placeholder="PSS-001" disabled={!!editWatchman} />
                 </div>
                 <div className="form-group">
-                  <label className="label">Email *</label>
-                  <input className="input" type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} placeholder="ramesh@agency.com" disabled={!!editWatchman} />
-                </div>
-                <div className="form-group">
                   <label className="label">Mobile Number *</label>
                   <input className="input" type="tel" value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} placeholder="9XXXXXXXXX" />
                 </div>
-                {!editWatchman && (
-                  <div className="form-group">
-                    <label className="label">Password</label>
-                    <input className="input" type="password" value={form.password} onChange={e => setForm(f => ({...f, password: e.target.value}))} placeholder="Default: Guard@123" />
+                {user?.role === 'super_admin' && !editWatchman && (
+                  <div className="form-group col-span-2">
+                    <label className="label">Assign Agency *</label>
+                    <select className="input" value={form.agencyId} onChange={e => setForm(f => ({...f, agencyId: e.target.value}))}>
+                      <option value="">Select an Agency</option>
+                      {agencies?.map((a: any) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
-                <div className="form-group">
-                  <label className="label">Emergency Contact</label>
-                  <input className="input" type="tel" value={form.emergencyContact} onChange={e => setForm(f => ({...f, emergencyContact: e.target.value}))} />
-                </div>
                 <div className="form-group">
                   <label className="label">Joining Date</label>
                   <input className="input" type="date" value={form.joiningDate} onChange={e => setForm(f => ({...f, joiningDate: e.target.value}))} />
@@ -229,17 +238,12 @@ export default function WatchmenPage() {
                   <input className="input" value={form.address} onChange={e => setForm(f => ({...f, address: e.target.value}))} placeholder="Full address" />
                 </div>
               </div>
-              {!editWatchman && (
-                <p className="text-xs text-slate-500 bg-surface-700/50 rounded-lg p-3">
-                  💡 A login account will be created for this watchman using their email and password (default: Guard@123).
-                </p>
-              )}
             </div>
             <div className="flex gap-3 p-5 border-t border-surface-700">
               <button onClick={closeModal} className="btn-ghost px-5 py-2.5">Cancel</button>
               <button
                 onClick={() => mutation.mutate(form)}
-                disabled={mutation.isPending || !form.fullName || !form.phone || (!editWatchman && !form.email)}
+                disabled={mutation.isPending || !form.fullName || !form.phone || (!editWatchman && user?.role === 'super_admin' && !form.agencyId)}
                 className="btn-primary px-5 py-2.5 ml-auto"
               >
                 {mutation.isPending ? 'Saving...' : editWatchman ? 'Update' : 'Add Watchman'}

@@ -34,12 +34,13 @@ const watchmanSchema = z.object({
   employeeId: z.string().min(1).max(50),
   fullName: z.string().min(2).max(200),
   phone: z.string().min(10).max(20),
-  email: z.string().email(),
+  email: z.string().email().optional(),
   password: z.string().min(6).optional(),
   emergencyContact: z.string().optional(),
   address: z.string().optional(),
   joiningDate: z.string().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).default('active'),
+  agencyId: z.string().optional(),
 });
 
 function getAgencyId(req: Request): string {
@@ -193,10 +194,11 @@ router.post('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(asyn
     return;
   }
 
-  // Check email uniqueness
-  const emailCheck = await User.findOne({ email: d.email.toLowerCase() });
+  // Check email uniqueness only if email was explicitly provided
+  const emailStr = d.email ? d.email.toLowerCase() : `${d.employeeId.toLowerCase().replace(/[^a-z0-9]/g, '')}@watchtrack.local`;
+  const emailCheck = await User.findOne({ email: emailStr });
   if (emailCheck) {
-    res.status(409).json({ success: false, message: 'Email already in use' });
+    res.status(409).json({ success: false, message: 'Email already in use (or employee ID conflict)' });
     return;
   }
 
@@ -204,7 +206,7 @@ router.post('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(asyn
   
   const user = new User({
     agency_id: agencyId,
-    email: d.email.toLowerCase(),
+    email: emailStr,
     password_hash: passwordHash,
     role: 'watchman',
     name: d.fullName,

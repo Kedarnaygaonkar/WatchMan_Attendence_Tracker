@@ -13,6 +13,7 @@ import {
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
+import { useAuthStore } from '../../stores/authStore';
 
 // Fix leaflet marker icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -38,7 +39,8 @@ interface Society {
 
 const defaultForm = {
   name: '', address: '', contactPerson: '', contactPhone: '',
-  latitude: 18.5204, longitude: 73.8567, geofenceRadius: 100, requiredGuards: 1, isActive: true, notes: ''
+  latitude: 18.5204, longitude: 73.8567, geofenceRadius: 100, requiredGuards: 1, isActive: true, notes: '',
+  agencyId: '',
 };
 
 function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
@@ -53,6 +55,16 @@ export default function SocietiesPage() {
   const [editSociety, setEditSociety] = useState<Society | null>(null);
   const [form, setForm] = useState(defaultForm);
   const [mapCenter, setMapCenter] = useState<[number, number]>([18.5204, 73.8567]);
+  const { user } = useAuthStore();
+
+  const { data: agencies } = useQuery({
+    queryKey: ['agencies'],
+    queryFn: async () => {
+      const { data } = await api.get('/agencies');
+      return data.data;
+    },
+    enabled: user?.role === 'super_admin',
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['societies', search],
@@ -100,7 +112,7 @@ export default function SocietiesPage() {
       contactPerson: s.contact_person || '', contactPhone: s.contact_phone || '',
       latitude: parseFloat(String(s.latitude)), longitude: parseFloat(String(s.longitude)),
       geofenceRadius: s.geofence_radius, requiredGuards: s.required_guards,
-      isActive: s.is_active, notes: '',
+      isActive: s.is_active, notes: '', agencyId: '',
     });
     setMapCenter([parseFloat(String(s.latitude)), parseFloat(String(s.longitude))]);
     setEditSociety(s);
@@ -208,6 +220,17 @@ export default function SocietiesPage() {
                   <label className="label">Society Name *</label>
                   <input className="input" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} placeholder="Sunrise Residency" />
                 </div>
+                {user?.role === 'super_admin' && !editSociety && (
+                  <div className="form-group">
+                    <label className="label">Assign Agency *</label>
+                    <select className="input" value={form.agencyId} onChange={e => setForm(f => ({...f, agencyId: e.target.value}))}>
+                      <option value="">Select an Agency</option>
+                      {agencies?.map((a: any) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="label">Required Guards</label>
                   <input className="input" type="number" min={1} value={form.requiredGuards} onChange={e => setForm(f => ({...f, requiredGuards: parseInt(e.target.value)}))} />
@@ -276,7 +299,7 @@ export default function SocietiesPage() {
               )}
               <button
                 onClick={() => mutation.mutate(form)}
-                disabled={mutation.isPending || !form.name || !form.latitude}
+                disabled={mutation.isPending || !form.name || !form.latitude || (!editSociety && user?.role === 'super_admin' && !form.agencyId)}
                 className="btn-primary px-5 py-2.5 ml-auto"
               >
                 {mutation.isPending ? 'Saving...' : editSociety ? 'Update Society' : 'Add Society'}
