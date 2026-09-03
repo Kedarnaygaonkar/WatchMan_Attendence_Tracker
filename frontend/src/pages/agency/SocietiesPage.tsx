@@ -237,7 +237,7 @@ export default function SocietiesPage() {
                   <input className="input" type="number" min={1} value={form.requiredGuards} onChange={e => setForm(f => ({...f, requiredGuards: parseInt(e.target.value)}))} />
                 </div>
                 <div className="form-group md:col-span-2">
-                  <label className="label">Address</label>
+                  <label className="label">Address *</label>
                   <input className="input" value={form.address} onChange={e => setForm(f => ({...f, address: e.target.value}))} placeholder="Full address" />
                 </div>
                 <div className="form-group">
@@ -300,7 +300,7 @@ export default function SocietiesPage() {
               )}
               <button
                 onClick={() => mutation.mutate(form)}
-                disabled={mutation.isPending || !form.name || !form.latitude || (user?.role === 'super_admin' && !form.agencyId)}
+                disabled={mutation.isPending || !form.name || !form.address.trim() || !form.latitude || (user?.role === 'super_admin' && !form.agencyId)}
                 className="btn-primary px-5 py-2.5 ml-auto"
               >
                 {mutation.isPending ? 'Saving...' : editSociety ? 'Update Society' : 'Add Society'}
