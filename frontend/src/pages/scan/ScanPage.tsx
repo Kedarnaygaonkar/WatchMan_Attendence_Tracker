@@ -33,13 +33,8 @@ interface WatchmanInfo {
   face_descriptor: number[] | null;
 }
 
-type Step =
-  | 'loading' | 'error' | 'mode_select' | 'enter_id' | 'get_gps'
-  | 'face_registration' | 'face_verification' | 'select_location' | 'select_shift' | 'take_photo'
-  | 'submitting' | 'success'
-  | 'delivery_form' | 'delivery_checkout' | 'delivery_submitting' | 'delivery_success';
-
-const VISIT_KEY = (token: string) => `delivery_visit_${token}`;
+type Step = 'loading' | 'error' | 'mode_select' | 'enter_id' | 'get_gps' | 'face_registration' | 'face_verification' | 'select_location' | 'select_shift' | 'take_photo' | 'submitting' | 'success'
+  | 'delivery_form' | 'delivery_submitting' | 'delivery_success';
 
 export default function ScanPage() {
   const { token } = useParams<{ token: string }>();
@@ -60,7 +55,6 @@ export default function ScanPage() {
   const [selectedGate, setSelectedGate] = useState('');
   const [selectedWing, setSelectedWing] = useState('');
 
-  // Delivery state
   const [deliveryForm, setDeliveryForm] = useState({
     visitor_name: '',
     visitor_phone: '',
@@ -68,7 +62,6 @@ export default function ScanPage() {
     delivery_company: 'Zomato' as typeof DELIVERY_COMPANIES[number],
   });
   const [deliveryResult, setDeliveryResult] = useState<any>(null);
-  const [pendingVisit, setPendingVisit] = useState<{ visit_id: string; check_in_time: string; visitor_name: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -78,11 +71,6 @@ export default function ScanPage() {
 
   useEffect(() => {
     if (!token) { setStep('error'); setErrorMsg('Invalid QR code'); return; }
-
-    const storedVisit = localStorage.getItem(VISIT_KEY(token));
-    if (storedVisit) {
-      try { setPendingVisit(JSON.parse(storedVisit)); } catch { localStorage.removeItem(VISIT_KEY(token)); }
-    }
 
     axios.get(`${API}/scan/${token}`)
       .then(r => { setGateInfo(r.data.data); setStep('mode_select'); })
@@ -223,21 +211,8 @@ export default function ScanPage() {
         vehicle_number: deliveryForm.vehicle_number.trim() || undefined,
         delivery_company,
       });
-      const visitData = { visit_id: r.data.data.visit_id, check_in_time: r.data.data.check_in_time, visitor_name: visitor_name.trim() };
-      localStorage.setItem(VISIT_KEY(token!), JSON.stringify(visitData));
       setDeliveryResult(r.data.data); setStep('delivery_success');
     } catch (e: any) { toast.error(e.response?.data?.message || 'Check-in failed'); setStep('delivery_form'); }
-  }
-
-  async function handleDeliveryCheckout() {
-    if (!pendingVisit) return;
-    setStep('delivery_submitting');
-    try {
-      const r = await axios.post(`${API}/delivery/checkout/${pendingVisit.visit_id}`);
-      localStorage.removeItem(VISIT_KEY(token!));
-      setPendingVisit(null);
-      setDeliveryResult(r.data.data); setStep('delivery_success');
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Check-out failed'); setStep('delivery_checkout'); }
   }
 
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -262,7 +237,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Loading */}
         {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
           <div className="text-center py-10">
             <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
@@ -272,7 +246,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Error */}
         {step === 'error' && (
           <div className="text-center py-6">
             <AlertTriangle className="w-12 h-12 text-danger-400 mx-auto mb-3" />
@@ -281,17 +254,9 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Mode Select */}
         {step === 'mode_select' && (
           <div className="space-y-4">
             <h2 className="text-slate-100 text-lg font-bold text-center mb-6">Who are you?</h2>
-            {pendingVisit && (
-              <div className="bg-warning-500/10 border border-warning-500/30 rounded-xl p-4 mb-2">
-                <p className="text-warning-400 font-bold text-sm mb-1">⏱ Active Visit Detected</p>
-                <p className="text-slate-300 text-sm">{pendingVisit.visitor_name}</p>
-                <p className="text-slate-500 text-xs mt-0.5">Checked in at {new Date(pendingVisit.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
-              </div>
-            )}
             <button onClick={() => setStep('enter_id')} className="w-full p-5 rounded-xl border-2 border-brand-500/30 bg-brand-500/5 hover:bg-brand-500/10 text-left flex items-center gap-4 transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-500/20 flex items-center justify-center shrink-0 group-hover:bg-brand-500/30 transition-colors">
                 <ShieldCheck className="w-6 h-6 text-brand-400" />
@@ -301,18 +266,8 @@ export default function ScanPage() {
                 <p className="text-slate-400 text-sm">Mark attendance with Guard ID</p>
               </div>
             </button>
-
-            {pendingVisit ? (
-              <button onClick={() => setStep('delivery_checkout')} className="w-full p-5 rounded-xl border-2 border-warning-500/40 bg-warning-500/10 hover:bg-warning-500/15 text-left flex items-center gap-4 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-warning-500/20 flex items-center justify-center shrink-0">
-                  <LogOut className="w-6 h-6 text-warning-400" />
-                </div>
-                <div>
-                  <p className="text-slate-100 font-bold">Delivery Boy — Check Out</p>
-                  <p className="text-slate-400 text-sm">Tap to record your departure</p>
-                </div>
-              </button>
-            ) : (
+            <div className="pt-4 border-t border-surface-700/50">
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">Visitors & Delivery</h3>
               <button onClick={() => setStep('delivery_form')} className="w-full p-5 rounded-xl border-2 border-surface-700 bg-surface-800/50 hover:bg-surface-800 text-left flex items-center gap-4 transition-all group">
                 <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0 group-hover:bg-orange-500/30 transition-colors">
                   <Bike className="w-6 h-6 text-orange-400" />
@@ -322,11 +277,10 @@ export default function ScanPage() {
                   <p className="text-slate-400 text-sm">Zomato, Swiggy, Amazon, etc.</p>
                 </div>
               </button>
-            )}
+            </div>
           </div>
         )}
 
-        {/* Guard: Enter ID */}
         {step === 'enter_id' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2.5 mb-2">
@@ -340,7 +294,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: GPS */}
         {step === 'get_gps' && (
           <div className="text-center py-10">
             <MapPin className="w-12 h-12 text-brand-500 mx-auto mb-4 animate-bounce" />
@@ -349,7 +302,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: Face Registration */}
         {step === 'face_registration' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
@@ -367,7 +319,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: Face Verification */}
         {step === 'face_verification' && (
           <div className="space-y-4">
             <div className="text-center">
@@ -430,10 +381,8 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: Select Gate, Wing & Shift — all on one screen */}
         {step === 'select_shift' && watchman && (
           <div className="space-y-5">
-            {/* Watchman info card */}
             <div className="bg-success-500/10 border border-success-500/20 rounded-xl p-4 flex items-center gap-3">
               <CheckCircle className="w-6 h-6 text-success-400 shrink-0" />
               <div>
@@ -442,7 +391,6 @@ export default function ScanPage() {
               </div>
             </div>
 
-            {/* Gate selection */}
             {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
               <div>
                 <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Gate *</label>
@@ -461,7 +409,6 @@ export default function ScanPage() {
               </div>
             )}
 
-            {/* Wing selection */}
             {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
               <div>
                 <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Wing <span className="text-slate-600 font-normal normal-case">(optional)</span></label>
@@ -480,7 +427,6 @@ export default function ScanPage() {
               </div>
             )}
 
-            {/* Shift selection */}
             <div>
               <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Shift *</label>
               <div className="space-y-2">
@@ -511,7 +457,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: Take Photo */}
         {step === 'take_photo' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
@@ -533,7 +478,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: Success */}
         {step === 'success' && (
           <div className="text-center py-6">
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${successMsg.includes('LATE') ? 'bg-warning-500/10 text-warning-400' : 'bg-success-500/10 text-success-400'}`}>
@@ -544,7 +488,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Delivery: Form */}
         {step === 'delivery_form' && (
           <div className="space-y-4">
             <div className="flex items-center gap-2.5 mb-2">
@@ -581,50 +524,18 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Delivery: Checkout Confirmation */}
-        {step === 'delivery_checkout' && pendingVisit && (
-          <div className="space-y-4">
-            <div className="text-center mb-2">
-              <div className="w-16 h-16 rounded-full bg-warning-500/10 border-2 border-warning-500/30 flex items-center justify-center mx-auto mb-4">
-                <LogOut className="w-8 h-8 text-warning-400" />
-              </div>
-              <h2 className="text-slate-100 text-xl font-bold">Confirm Departure</h2>
-            </div>
-            <div className="bg-surface-800 rounded-xl p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-slate-500 text-sm">Visitor</span>
-                <span className="text-slate-200 font-semibold text-sm">{pendingVisit.visitor_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 text-sm">Checked in at</span>
-                <span className="text-slate-200 text-sm">{new Date(pendingVisit.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-              </div>
-            </div>
-            <button onClick={handleDeliveryCheckout} className="w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 bg-warning-600 hover:bg-warning-500 text-white shadow-lg transition-all">
-              <LogOut className="w-5 h-5" /> Confirm Check-Out
-            </button>
-            <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-500 text-sm hover:text-slate-300 transition-colors py-1">← Back</button>
-          </div>
-        )}
-
-        {/* Delivery: Success */}
         {step === 'delivery_success' && deliveryResult && (
           <div className="text-center py-6">
             <div className="w-20 h-20 rounded-full bg-success-500/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-10 h-10 text-success-400" />
             </div>
-            <h2 className="text-slate-100 text-2xl font-bold mb-2">{deliveryResult.check_out_time ? 'Goodbye!' : 'Welcome!'}</h2>
-            <p className="text-slate-400 text-sm mb-6">
-              {deliveryResult.check_out_time
-                ? `Check-out recorded. Duration: ${deliveryResult.duration_minutes} min.`
-                : `Check-in recorded at ${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}. Scan again when you leave.`}
+            <h2 className="text-slate-100 text-2xl font-bold mb-2">Welcome!</h2>
+            <p className="text-slate-400 mb-6">
+              {`Check-in recorded at ${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
             </p>
-            {!deliveryResult.check_out_time && (
-              <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl p-4">
-                <Package className="w-6 h-6 text-brand-400 mx-auto mb-2" />
-                <p className="text-slate-400 text-xs">Scan this QR code again when you leave to record your departure.</p>
-              </div>
-            )}
+            <button onClick={() => window.location.reload()} className="w-full p-4 rounded-xl font-bold bg-surface-800 hover:bg-surface-700 text-slate-300 transition-all">
+              Done
+            </button>
           </div>
         )}
       </div>

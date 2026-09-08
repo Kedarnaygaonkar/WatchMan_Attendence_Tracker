@@ -51,6 +51,8 @@ router.post(
       vehicle_number: vehicle_number?.trim(),
       delivery_company,
       check_in_time: now,
+      check_out_time: new Date(now.getTime() + 20 * 60000), // Auto-checkout in 20 minutes
+      duration_minutes: 20,
       visit_date: visitDate,
       notes: notes?.trim(),
     });
@@ -67,44 +69,6 @@ router.post(
   })
 );
 
-// ── POST /api/delivery/checkout/:visitId ──────────────────────────────
-// Public — no auth required
-router.post(
-  '/checkout/:visitId',
-  asyncHandler(async (req: Request, res: Response) => {
-    const { visitId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(visitId)) {
-      throw new AppError('Invalid visit ID', 400);
-    }
-
-    const visit = await DeliveryVisit.findById(visitId);
-    if (!visit) throw new AppError('Visit not found', 404);
-    if (visit.check_out_time) {
-      throw new AppError('Already checked out at ' + visit.check_out_time.toLocaleTimeString('en-IN'), 400);
-    }
-
-    const now = new Date();
-    const durationMs = now.getTime() - visit.check_in_time.getTime();
-    const durationMinutes = Math.round(durationMs / 60000);
-
-    visit.check_out_time = now;
-    visit.duration_minutes = durationMinutes;
-    await visit.save();
-
-    res.json({
-      success: true,
-      message: `Check-out recorded. Duration: ${durationMinutes} min`,
-      data: {
-        visit_id: visit._id,
-        visitor_name: visit.visitor_name,
-        check_in_time: visit.check_in_time,
-        check_out_time: visit.check_out_time,
-        duration_minutes: durationMinutes,
-      },
-    });
-  })
-);
 
 // ── GET /api/delivery/visits ──────────────────────────────────────────
 // Auth required — agency admin / super admin
