@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { Gate, Watchman, Attendance, Shift, Assignment } from '../models';
+import { Gate, Watchman, Attendance, Shift, Assignment, Agency } from '../models';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { getDistance } from 'geolib';
 
@@ -21,6 +21,7 @@ router.get(
 
     const society = gate.society_id as any;
     const shifts = await Shift.find({ agency_id: gate.agency_id, is_active: true }).lean();
+    const agency = await Agency.findById(gate.agency_id).lean();
 
     res.json({
       success: true,
@@ -43,6 +44,9 @@ router.get(
           end_time: s.end_time,
           is_overnight: s.is_overnight,
         })),
+        agency: {
+          logo_url: agency?.logo_url || null
+        }
       },
     });
   })
