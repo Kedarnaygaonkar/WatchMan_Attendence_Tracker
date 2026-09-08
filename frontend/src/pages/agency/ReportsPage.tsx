@@ -8,12 +8,12 @@ import toast from 'react-hot-toast';
 type ReportTab = 'daily' | 'monthly' | 'suspicious';
 
 interface Society {
-  _id: string;
+  id: string;
   name: string;
 }
 
 interface Agency {
-  _id: string;
+  id: string;
   name: string;
 }
 
@@ -292,7 +292,7 @@ export default function ReportsPage() {
             >
               <option value="">All Agencies</option>
               {agencies?.map((a) => (
-                <option key={a._id} value={a._id}>
+                <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
@@ -307,7 +307,7 @@ export default function ReportsPage() {
           >
             <option value="">All Societies</option>
             {societies?.map((s) => (
-              <option key={s._id} value={s._id}>
+              <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
