@@ -128,4 +128,28 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: shift });
 }));
 
+/** DELETE /api/shifts/:id — delete shift if no active assignments */
+router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
+  const agencyId = getAgencyId(req);
+
+  const shift = await Shift.findOne({ _id: req.params.id, agency_id: agencyId });
+  if (!shift) throw new AppError('Shift not found', 404);
+
+  const activeAssignments = await Assignment.countDocuments({
+    shift_id: req.params.id,
+    agency_id: agencyId,
+    is_active: true,
+  });
+  if (activeAssignments > 0) {
+    throw new AppError(`Cannot delete shift with ${activeAssignments} active assignment(s). End them first.`, 400);
+  }
+
+  await Shift.findByIdAndDelete(req.params.id);
+
+  await logAudit(null as any, { agencyId, userId: req.user!.userId, action: 'delete_shift',
+    entityType: 'shift', entityId: req.params.id, req });
+
+  res.json({ success: true, message: 'Shift deleted successfully' });
+}));
+
 export default router;

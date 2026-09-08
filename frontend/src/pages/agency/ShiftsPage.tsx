@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Clock, X, Sun, Moon } from 'lucide-react';
+import { Plus, Edit2, Clock, X, Sun, Moon, Trash2 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 
@@ -38,6 +38,17 @@ export default function ShiftsPage() {
     mutationFn: (payload: typeof form) => editShift ? api.put(`/shifts/${editShift.id}`, payload) : api.post('/shifts', payload),
     onSuccess: () => { queryClient.invalidateQueries({queryKey:['shifts']}); queryClient.invalidateQueries({queryKey:['shifts-list']}); queryClient.invalidateQueries({queryKey:['shift-all']}); toast.success('Shift saved!'); closeModal(); },
     onError: (err: unknown) => toast.error((err as {response?:{data?:{message?:string}}})?.response?.data?.message || 'Failed'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/shifts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey:['shifts']});
+      queryClient.invalidateQueries({queryKey:['shifts-list']});
+      toast.success('Shift deleted!');
+      closeModal();
+    },
+    onError: (err: unknown) => toast.error((err as {response?:{data?:{message?:string}}})?.response?.data?.message || 'Failed to delete shift'),
   });
 
   function openEdit(s: Shift) {
@@ -131,6 +142,15 @@ export default function ShiftsPage() {
             </div>
             <div className="flex gap-3 p-5 border-t border-surface-700">
               <button onClick={closeModal} className="btn-ghost px-5 py-2.5">Cancel</button>
+              {editShift && (
+                <button
+                  onClick={() => { if (confirm(`Delete shift "${editShift.name}"? This cannot be undone.`)) deleteMutation.mutate(editShift.id); }}
+                  disabled={deleteMutation.isPending}
+                  className="btn-ghost px-5 py-2.5 text-danger-400 hover:text-danger-300 hover:bg-danger-500/10 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
               <button onClick={() => mutation.mutate(form)} disabled={mutation.isPending || !form.name} className="btn-primary px-5 py-2.5 ml-auto">
                 {mutation.isPending ? 'Saving...' : 'Save Shift'}
               </button>
