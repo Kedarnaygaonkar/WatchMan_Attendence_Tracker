@@ -511,13 +511,16 @@ export default function ScanPage() {
             </div>
             <div>
               <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-1.5">Phone Number *</label>
-              <input type="tel" placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => setDeliveryForm(f => ({ ...f, visitor_phone: e.target.value }))} className="w-full p-3.5 rounded-xl border border-surface-700 bg-surface-800 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
+              <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                setDeliveryForm(f => ({ ...f, visitor_phone: val }));
+              }} className="w-full p-3.5 rounded-xl border border-surface-700 bg-surface-800 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
             <div>
               <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-1.5">Vehicle Number <span className="text-slate-600 font-normal normal-case">(optional)</span></label>
               <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-surface-700 bg-surface-800 text-slate-100 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
-            <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || !deliveryForm.visitor_phone.trim()} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.trim() ? 'bg-orange-600 hover:bg-orange-500' : 'bg-surface-800 text-slate-500 cursor-not-allowed'}`}>
+            <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-surface-800 text-slate-500 cursor-not-allowed'}`}>
               <LogIn className="w-5 h-5" /> Mark Entry
             </button>
             <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-500 text-sm hover:text-slate-300 transition-colors py-1">← Back</button>

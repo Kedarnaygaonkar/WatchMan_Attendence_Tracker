@@ -12,7 +12,7 @@ const router = Router();
 const checkinSchema = z.object({
   gate_token: z.string().min(1),
   visitor_name: z.string().min(1).max(100),
-  visitor_phone: z.string().min(7).max(20),
+  visitor_phone: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
   vehicle_number: z.string().max(20).optional(),
   delivery_company: z.enum(['Zomato', 'Swiggy', 'Amazon', 'Flipkart', 'DTDC', 'BlueDart', 'FedEx', 'Meesho', 'Other']).default('Other'),
   notes: z.string().max(300).optional(),
