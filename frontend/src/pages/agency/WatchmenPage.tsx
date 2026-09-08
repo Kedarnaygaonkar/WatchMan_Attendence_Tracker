@@ -209,7 +209,10 @@ export default function WatchmenPage() {
                 </div>
                 <div className="form-group">
                   <label className="label">Mobile Number *</label>
-                  <input className="input" type="tel" value={form.phone} onChange={e => setForm(f => ({...f, phone: e.target.value}))} placeholder="9XXXXXXXXX" />
+                  <input className="input" type="tel" maxLength={10} value={form.phone} onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setForm(f => ({...f, phone: val}));
+                  }} placeholder="10-digit mobile number" />
                 </div>
                 {user?.role === 'super_admin' && (
                   <div className="form-group col-span-2">
@@ -244,7 +247,7 @@ export default function WatchmenPage() {
               <button onClick={closeModal} className="btn-ghost px-5 py-2.5">Cancel</button>
               <button
                 onClick={() => mutation.mutate(form)}
-                disabled={mutation.isPending || !form.fullName || !form.phone || (user?.role === 'super_admin' && !form.agencyId)}
+                disabled={mutation.isPending || !form.fullName || form.phone.length !== 10 || (user?.role === 'super_admin' && !form.agencyId)}
                 className="btn-primary px-5 py-2.5 ml-auto"
               >
                 {mutation.isPending ? 'Saving...' : editWatchman ? 'Update' : 'Add Watchman'}

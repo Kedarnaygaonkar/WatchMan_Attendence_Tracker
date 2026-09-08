@@ -33,7 +33,7 @@ const upload = multer({
 const watchmanSchema = z.object({
   employeeId: z.string().min(1).max(50),
   fullName: z.string().min(2).max(200),
-  phone: z.string().min(10).max(20),
+  phone: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
   emergencyContact: z.string().optional(),
