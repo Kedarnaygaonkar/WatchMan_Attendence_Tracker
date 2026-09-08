@@ -14,7 +14,7 @@ router.get(
   '/:token',
   asyncHandler(async (req: Request, res: Response) => {
     const gate = await Gate.findOne({ qr_token: req.params.token, is_active: true })
-      .populate<{ society_id: any }>('society_id', 'name address wings geofence_radius latitude longitude')
+      .populate<{ society_id: any }>('society_id', 'name address wings gates geofence_radius latitude longitude')
       .lean();
 
     if (!gate) throw new AppError('Invalid or expired QR code', 404);
