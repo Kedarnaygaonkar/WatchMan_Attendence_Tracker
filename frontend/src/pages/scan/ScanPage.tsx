@@ -20,7 +20,7 @@ const COMPANY_COLORS: Record<string, string> = {
 
 interface GateInfo {
   gate: { id: string; name: string };
-  society: { id: string; name: string; address: string; wings: string[]; latitude: number; longitude: number; geofence_radius: number };
+  society: { id: string; name: string; address: string; wings: string[]; gates: string[]; latitude: number; longitude: number; geofence_radius: number };
   shifts: { id: string; name: string; start_time: string; end_time: string }[];
 }
 
@@ -35,7 +35,7 @@ interface WatchmanInfo {
 
 type Step =
   | 'loading' | 'error' | 'mode_select' | 'enter_id' | 'get_gps'
-  | 'face_registration' | 'face_verification' | 'select_shift' | 'take_photo'
+  | 'face_registration' | 'face_verification' | 'select_location' | 'select_shift' | 'take_photo'
   | 'submitting' | 'success'
   | 'delivery_form' | 'delivery_checkout' | 'delivery_submitting' | 'delivery_success';
 
@@ -57,6 +57,8 @@ export default function ScanPage() {
   const [faceMatchScore, setFaceMatchScore] = useState<number | null>(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [faceDetected, setFaceDetected] = useState(false);
+  const [selectedGate, setSelectedGate] = useState('');
+  const [selectedWing, setSelectedWing] = useState('');
 
   // Delivery state
   const [deliveryForm, setDeliveryForm] = useState({
@@ -199,7 +201,11 @@ export default function ScanPage() {
     try {
       const endpoint = mode === 'checkin' ? '/scan/checkin' : '/scan/checkout';
       const body: any = { employee_id: employeeId.trim(), gate_token: token, selfie_url: photoUrl, latitude: gpsData?.latitude, longitude: gpsData?.longitude, gps_accuracy: gpsData?.accuracy, face_verified: faceVerified, face_match_score: faceMatchScore };
-      if (mode === 'checkin') body.shift_id = selectedShiftId;
+      if (mode === 'checkin') {
+        body.shift_id = selectedShiftId;
+        if (selectedGate) body.selected_gate = selectedGate;
+        if (selectedWing) body.selected_wing = selectedWing;
+      }
       const r = await axios.post(`${API}${endpoint}`, body);
       setSuccessMsg(r.data.message); setStep('success');
     } catch (e: any) { toast.error(e.response?.data?.message || 'Submission failed.'); setStep('take_photo'); startCamera(); }
@@ -406,7 +412,13 @@ export default function ScanPage() {
                         if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
                         setFaceVerified(true); setFaceMatchScore(distance);
                         toast.success('Face Verified!');
-                        if (ctx.detectedMode === 'checkin') setStep('select_shift');
+                        if (ctx.detectedMode === 'checkin') {
+                          if ((gateInfo?.society.gates && gateInfo.society.gates.length > 0) || (gateInfo?.society.wings && gateInfo.society.wings.length > 0)) {
+                            setStep('select_location');
+                          } else {
+                            setStep('select_shift');
+                          }
+                        }
                         else setStep('take_photo');
                       } else { setFaceVerified(false); }
                     } else { toast.error('No face detected. Ensure good lighting.'); }
@@ -418,6 +430,44 @@ export default function ScanPage() {
                 </button>
               </>
             )}
+          </div>
+        )}
+
+        {/* Guard: Select Gate & Wing */}
+        {step === 'select_location' && (
+          <div className="space-y-4">
+            <h2 className="text-slate-100 text-lg font-bold">Select Location</h2>
+            {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
+              <div>
+                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Which Gate? *</label>
+                <div className="flex flex-wrap gap-2">
+                  {gateInfo.society.gates.map(g => (
+                    <button key={g} onClick={() => setSelectedGate(g)} className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-500/10 text-brand-400' : 'border-surface-700 text-slate-400 bg-surface-800 hover:border-surface-600'}`}>
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
+              <div>
+                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Which Wing? (Optional)</label>
+                <div className="flex flex-wrap gap-2">
+                  {gateInfo.society.wings.map(w => (
+                    <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)} className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-500/10 text-brand-400' : 'border-surface-700 text-slate-400 bg-surface-800 hover:border-surface-600'}`}>
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => setStep('select_shift')}
+              disabled={!!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
+              className={`w-full mt-4 p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate) ? 'bg-surface-800 text-slate-500' : 'bg-brand-600 hover:bg-brand-500 text-white'}`}
+            >
+              Continue to Shift &rarr;
+            </button>
           </div>
         )}
 

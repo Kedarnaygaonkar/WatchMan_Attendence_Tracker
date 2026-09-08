@@ -35,6 +35,10 @@ export interface IAttendance extends Document {
   face_verified?: boolean;
   /** Euclidean distance score (lower = better match, < 0.6 = same person) */
   face_match_score?: number;
+  /** Gate name selected by the watchman during scan (e.g. "Main Gate") */
+  selected_gate?: string;
+  /** Wing selected by the watchman during scan (e.g. "A Wing") */
+  selected_wing?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -80,6 +84,8 @@ const attendanceSchema = new Schema<IAttendance>(
     override_at: { type: Date },
     face_verified: { type: Boolean, default: null },
     face_match_score: { type: Number, default: null },
+    selected_gate: { type: String },
+    selected_wing: { type: String },
   },
   { timestamps: true }
 );

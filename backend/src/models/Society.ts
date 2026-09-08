@@ -13,6 +13,7 @@ export interface ISociety extends Document {
   required_guards: number;
   is_active: boolean;
   wings: string[];
+  gates: string[];
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +32,7 @@ const societySchema = new Schema<ISociety>(
     required_guards: { type: Number, default: 1 },
     is_active: { type: Boolean, default: true },
     wings: { type: [String], default: [] },
+    gates: { type: [String], default: [] },
     notes: { type: String },
   },
   { timestamps: true }

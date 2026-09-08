@@ -20,6 +20,8 @@ const societySchema = z.object({
   isActive: z.boolean().default(true),
   notes: z.string().optional(),
   agencyId: z.string().optional(),
+  wings: z.array(z.string()).optional(),
+  gates: z.array(z.string()).optional(),
 });
 
 function getAgencyId(req: Request): string | null {
@@ -137,6 +139,8 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     geofence_radius: d.geofenceRadius,
     required_guards: d.requiredGuards,
     is_active: d.isActive,
+    wings: d.wings || [],
+    gates: d.gates || [],
     notes: d.notes,
   });
 
@@ -176,6 +180,8 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   society.geofence_radius = d.geofenceRadius;
   society.required_guards = d.requiredGuards;
   society.is_active = d.isActive;
+  if (d.wings !== undefined) society.wings = d.wings;
+  if (d.gates !== undefined) society.gates = d.gates;
   society.notes = d.notes;
 
   if (req.user!.role === 'super_admin' && d.agencyId) {

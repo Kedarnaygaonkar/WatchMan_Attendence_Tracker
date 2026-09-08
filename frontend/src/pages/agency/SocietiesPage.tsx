@@ -36,12 +36,16 @@ interface Society {
   is_active: boolean;
   active_assignments: number;
   agency_id?: string;
+  wings?: string[];
+  gates?: string[];
 }
 
 const defaultForm = {
   name: '', address: '', contactPerson: '', contactPhone: '',
   latitude: 18.5204, longitude: 73.8567, geofenceRadius: 100, requiredGuards: 1, isActive: true, notes: '',
   agencyId: '',
+  wings: [] as string[],
+  gates: [] as string[],
 };
 
 function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
@@ -114,6 +118,7 @@ export default function SocietiesPage() {
       latitude: parseFloat(String(s.latitude)), longitude: parseFloat(String(s.longitude)),
       geofenceRadius: s.geofence_radius, requiredGuards: s.required_guards,
       isActive: s.is_active, notes: '', agencyId: s.agency_id || '',
+      wings: s.wings || [], gates: s.gates || [],
     });
     setMapCenter([parseFloat(String(s.latitude)), parseFloat(String(s.longitude))]);
     setEditSociety(s);
@@ -247,6 +252,22 @@ export default function SocietiesPage() {
                 <div className="form-group">
                   <label className="label">Contact Phone</label>
                   <input className="input" value={form.contactPhone} onChange={e => setForm(f => ({...f, contactPhone: e.target.value}))} />
+                </div>
+                <div className="form-group">
+                  <label className="label">Wings</label>
+                  <input className="input" placeholder="e.g. A, B, C (comma separated)"
+                    value={form.wings.join(', ')}
+                    onChange={e => setForm(f => ({...f, wings: e.target.value.split(',').map(s => s.trim()).filter(Boolean)}))}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Optional. E.g. A Wing, B Wing</p>
+                </div>
+                <div className="form-group">
+                  <label className="label">Gates</label>
+                  <input className="input" placeholder="e.g. Main Gate, North Gate (comma separated)"
+                    value={form.gates.join(', ')}
+                    onChange={e => setForm(f => ({...f, gates: e.target.value.split(',').map(s => s.trim()).filter(Boolean)}))}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Optional. Defines specific check-in points.</p>
                 </div>
               </div>
 

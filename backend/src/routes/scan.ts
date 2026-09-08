@@ -31,6 +31,7 @@ router.get(
           name: society.name,
           address: society.address,
           wings: society.wings || [],
+          gates: society.gates || [],
           latitude: society.latitude,
           longitude: society.longitude,
           geofence_radius: society.geofence_radius,
@@ -166,6 +167,8 @@ const checkinSchema = z.object({
   gps_accuracy: z.number().optional(),
   face_verified: z.boolean().optional(),
   face_match_score: z.number().optional(),
+  selected_gate: z.string().optional(),
+  selected_wing: z.string().optional(),
 });
 
 router.post(
@@ -174,7 +177,7 @@ router.post(
     const parse = checkinSchema.safeParse(req.body);
     if (!parse.success) throw new AppError('Invalid data', 400);
 
-    const { employee_id, gate_token, shift_id, selfie_url, latitude, longitude, gps_accuracy, face_verified, face_match_score } = parse.data;
+    const { employee_id, gate_token, shift_id, selfie_url, latitude, longitude, gps_accuracy, face_verified, face_match_score, selected_gate, selected_wing } = parse.data;
 
     const gate = await Gate.findOne({ qr_token: gate_token, is_active: true })
       .populate<{ society_id: any }>('society_id', 'latitude longitude geofence_radius')
@@ -256,6 +259,8 @@ router.post(
       distance_from_society: distanceFromSociety,
       face_verified: face_verified ?? undefined,
       face_match_score: face_match_score ?? undefined,
+      selected_gate: selected_gate ?? undefined,
+      selected_wing: selected_wing ?? undefined,
       status: isLate ? 'late' : 'present',
       verification_status: face_verified === false ? 'review_required' : 'verified',
       gps_flags: [],
