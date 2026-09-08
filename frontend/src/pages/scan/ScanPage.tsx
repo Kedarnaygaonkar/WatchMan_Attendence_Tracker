@@ -223,7 +223,7 @@ export default function ScanPage() {
       <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover -z-20">
         <source src="/watchmen_background.mp4" type="video/mp4" />
       </video>
-      <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-xl -z-10" />
+      <div className="absolute inset-0 bg-white/20 backdrop-blur-sm -z-10" />
 
       <div className="text-center mb-6 mt-2">
         {gateInfo?.agency?.logo_url ? (
@@ -269,7 +269,7 @@ export default function ScanPage() {
         {step === 'mode_select' && (
           <div className="space-y-4">
             <h2 className="text-slate-100 text-2xl font-bold text-center mb-6">Who are you?</h2>
-            <button onClick={() => setStep('enter_id')} className="w-full p-5 rounded-2xl border border-slate-800 bg-white hover:border-brand-200 hover:shadow-md text-left flex items-center justify-between transition-all group shadow-sm">
+            <button onClick={() => setStep('enter_id')} className="w-full p-5 rounded-2xl border border-white/60 bg-white/50 backdrop-blur-sm/60 backdrop-blur-md hover:bg-white/80 border-white/50 hover:border-brand-300 hover:shadow-md text-left flex items-center justify-between transition-all group shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
                   <ShieldCheck className="w-6 h-6 text-brand-500" />
@@ -286,7 +286,7 @@ export default function ScanPage() {
               <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Visitors & Delivery</h3>
               <div className="flex-1 h-px bg-slate-800"></div>
             </div>
-            <button onClick={() => setStep('delivery_form')} className="w-full p-5 rounded-2xl border border-slate-800 bg-white hover:border-orange-200 hover:shadow-md text-left flex items-center justify-between transition-all group shadow-sm">
+            <button onClick={() => setStep('delivery_form')} className="w-full p-5 rounded-2xl border border-white/60 bg-white/50 backdrop-blur-sm/60 backdrop-blur-md hover:bg-white/80 border-white/50 hover:border-orange-300 hover:shadow-md text-left flex items-center justify-between transition-all group shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
                   <Bike className="w-6 h-6 text-orange-500" />
@@ -303,13 +303,13 @@ export default function ScanPage() {
 
         {step === 'enter_id' && (
           <div className="space-y-4">
-            <div className="bg-white border border-slate-800 rounded-[1.5rem] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
+            <div className="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
               <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
                 <User className="w-5 h-5 text-brand-500" />
               </div>
               <h2 className="text-slate-100 text-[19px] font-bold tracking-tight mb-6">Enter Your Guard ID</h2>
               {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-4">{errorMsg}</div>}
-              <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-4 rounded-2xl border border-slate-800 bg-white text-slate-100 text-[15px] font-semibold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-6 shadow-sm" />
+              <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-4 rounded-2xl border border-white/60 bg-white/50 backdrop-blur-sm text-slate-100 text-[15px] font-semibold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-6 shadow-sm" />
               <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>Continue <ChevronRight className="w-4 h-4" /></button>
             </div>
             <button onClick={() => setStep('mode_select')} className="w-full mt-6 text-center text-slate-500 text-sm font-medium hover:text-slate-600 transition-colors py-2 flex justify-center items-center gap-1"><ChevronRight className="w-4 h-4 rotate-180" /> Back</button>
@@ -413,7 +413,7 @@ export default function ScanPage() {
 
         {step === 'select_shift' && watchman && (
           <div className="space-y-5">
-            <div className="bg-white border border-slate-800 rounded-[1.5rem] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex items-center gap-4">
+            <div className="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
                 <CheckCircle className="w-5 h-5 text-brand-500" />
               </div>
@@ -429,7 +429,7 @@ export default function ScanPage() {
                 <div className="flex flex-wrap gap-2">
                   {gateInfo.society.gates.map(g => (
                     <button key={g} onClick={() => setSelectedGate(g)}
-                      className={`px-6 py-3 rounded-2xl text-[14px] font-bold border transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-slate-800 bg-white text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
+                      className={`px-6 py-3 rounded-2xl text-[14px] font-bold border transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/50 backdrop-blur-sm text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
                       {g}
                     </button>
                   ))}
@@ -443,7 +443,7 @@ export default function ScanPage() {
                 <div className="flex flex-wrap gap-2">
                   {gateInfo.society.wings.map(w => (
                     <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
-                      className={`px-6 py-3 rounded-2xl text-[14px] font-bold border transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-slate-800 bg-white text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
+                      className={`px-6 py-3 rounded-2xl text-[14px] font-bold border transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/50 backdrop-blur-sm text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
                       {w}
                     </button>
                   ))}
@@ -456,7 +456,7 @@ export default function ScanPage() {
               <div className="space-y-2">
                 {gateInfo?.shifts.map(s => (
                   <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
-                    className={`w-full p-5 rounded-2xl border text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm' : 'border-slate-800 bg-white text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
+                    className={`w-full p-5 rounded-2xl border text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm' : 'border-white/60 bg-white/50 backdrop-blur-sm text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
                     <div className="flex items-center gap-3"><Clock className="w-4 h-4" /><span className="font-bold text-[15px]">{s.name}</span></div>
                     <span className="text-slate-500 text-xs">{s.start_time} &ndash; {s.end_time}</span>
                   </button>
