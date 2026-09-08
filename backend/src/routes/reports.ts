@@ -157,6 +157,21 @@ router.get('/monthly', asyncHandler(async (req: Request, res: Response) => {
 
   const watchmen = await Watchman.aggregate([
     { $match: matchObj },
+    ...(societyId ? [
+      {
+        $lookup: {
+          from: 'assignments',
+          localField: '_id',
+          foreignField: 'watchman_id',
+          as: 'assignments'
+        }
+      },
+      {
+        $match: {
+          'assignments.society_id': new mongoose.Types.ObjectId(societyId)
+        }
+      }
+    ] : []),
     {
       $lookup: {
         from: 'attendances',
@@ -207,7 +222,7 @@ router.get('/monthly', asyncHandler(async (req: Request, res: Response) => {
         total_records: { $size: '$attendances' },
       },
     },
-    { $project: { attendances: 0 } },
+    { $project: { attendances: 0, assignments: 0 } },
     { $sort: { full_name: 1 } },
   ]);
 
