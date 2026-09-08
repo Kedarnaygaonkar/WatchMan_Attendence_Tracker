@@ -499,7 +499,7 @@ export default function ScanPage() {
             </div>
 
             <button
-              onClick={() => { startCamera(); setStep('take_photo'); }}
+              onClick={async () => { await startCamera(); setStep('take_photo'); }}
               disabled={!selectedShiftId || !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
               className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
                 selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
