@@ -413,11 +413,8 @@ export default function ScanPage() {
                         setFaceVerified(true); setFaceMatchScore(distance);
                         toast.success('Face Verified!');
                         if (ctx.detectedMode === 'checkin') {
-                          if ((gateInfo?.society.gates && gateInfo.society.gates.length > 0) || (gateInfo?.society.wings && gateInfo.society.wings.length > 0)) {
-                            setStep('select_location');
-                          } else {
-                            setStep('select_shift');
-                          }
+                          stopCamera();
+                          setStep('select_shift');
                         }
                         else setStep('take_photo');
                       } else { setFaceVerified(false); }
@@ -433,64 +430,82 @@ export default function ScanPage() {
           </div>
         )}
 
-        {/* Guard: Select Gate & Wing */}
-        {step === 'select_location' && (
-          <div className="space-y-4">
-            <h2 className="text-slate-100 text-lg font-bold">Select Location</h2>
+        {/* Guard: Select Gate, Wing & Shift — all on one screen */}
+        {step === 'select_shift' && watchman && (
+          <div className="space-y-5">
+            {/* Watchman info card */}
+            <div className="bg-success-500/10 border border-success-500/20 rounded-xl p-4 flex items-center gap-3">
+              <CheckCircle className="w-6 h-6 text-success-400 shrink-0" />
+              <div>
+                <p className="text-success-400 font-bold">{watchman.full_name}</p>
+                <p className="text-slate-400 text-xs mt-0.5">ID: {watchman.employee_id}</p>
+              </div>
+            </div>
+
+            {/* Gate selection */}
             {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
               <div>
-                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Which Gate? *</label>
+                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Gate *</label>
                 <div className="flex flex-wrap gap-2">
                   {gateInfo.society.gates.map(g => (
-                    <button key={g} onClick={() => setSelectedGate(g)} className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-500/10 text-brand-400' : 'border-surface-700 text-slate-400 bg-surface-800 hover:border-surface-600'}`}>
+                    <button key={g} onClick={() => setSelectedGate(g)}
+                      className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                        selectedGate === g
+                          ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                          : 'border-surface-700 text-slate-400 bg-surface-800 hover:border-surface-600'
+                      }`}>
                       {g}
                     </button>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Wing selection */}
             {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
               <div>
-                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Which Wing? (Optional)</label>
+                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Wing <span className="text-slate-600 font-normal normal-case">(optional)</span></label>
                 <div className="flex flex-wrap gap-2">
                   {gateInfo.society.wings.map(w => (
-                    <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)} className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-500/10 text-brand-400' : 'border-surface-700 text-slate-400 bg-surface-800 hover:border-surface-600'}`}>
+                    <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
+                      className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                        selectedWing === w
+                          ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                          : 'border-surface-700 text-slate-400 bg-surface-800 hover:border-surface-600'
+                      }`}>
                       {w}
                     </button>
                   ))}
                 </div>
               </div>
             )}
-            <button
-              onClick={() => setStep('select_shift')}
-              disabled={!!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
-              className={`w-full mt-4 p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate) ? 'bg-surface-800 text-slate-500' : 'bg-brand-600 hover:bg-brand-500 text-white'}`}
-            >
-              Continue to Shift &rarr;
-            </button>
-          </div>
-        )}
 
-        {/* Guard: Select Shift */}
-        {step === 'select_shift' && watchman && (
-          <div className="space-y-4">
-            <div className="bg-success-500/10 border border-success-500/20 rounded-xl p-4 flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 text-success-400 shrink-0" />
-              <div>
-                <p className="text-success-400 font-bold">{watchman.full_name}</p>
-                <p className="text-slate-400 text-xs mt-0.5">ID: {watchman.employee_id}{watchman.wing ? ` · ${watchman.wing}` : ''}</p>
+            {/* Shift selection */}
+            <div>
+              <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Shift *</label>
+              <div className="space-y-2">
+                {gateInfo?.shifts.map(s => (
+                  <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
+                    className={`w-full p-4 rounded-xl border-2 text-left flex justify-between items-center transition-all ${
+                      selectedShiftId === s.id
+                        ? 'border-brand-500 bg-brand-500/10 text-slate-100'
+                        : 'border-surface-700 bg-surface-800/50 text-slate-300'
+                    }`}>
+                    <span className="font-semibold">{s.name}</span>
+                    <span className="text-slate-400 text-xs">{s.start_time} &ndash; {s.end_time}</span>
+                  </button>
+                ))}
               </div>
             </div>
-            <h2 className="text-slate-100 text-base font-bold mb-2">Select Your Shift</h2>
-            <div className="space-y-2">
-              {gateInfo?.shifts.map(s => (
-                <button key={s.id} onClick={() => setSelectedShiftId(s.id)} className={`w-full p-4 rounded-xl border-2 text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-500/10 text-slate-100' : 'border-surface-700 bg-surface-800/50 text-slate-300'}`}>
-                  <span className="font-semibold">{s.name}</span>
-                  <span className="text-slate-400 text-xs">{s.start_time} &ndash; {s.end_time}</span>
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setStep('take_photo')} disabled={!selectedShiftId} className={`w-full mt-4 p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${selectedShiftId ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-surface-800 text-slate-500'}`}>
+
+            <button
+              onClick={() => { startCamera(); setStep('take_photo'); }}
+              disabled={!selectedShiftId || !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
+              className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
+                  ? 'bg-brand-600 hover:bg-brand-500 text-white'
+                  : 'bg-surface-800 text-slate-500 cursor-not-allowed'
+              }`}>
               <Camera className="w-5 h-5" /> Take Check-in Photo &rarr;
             </button>
           </div>
