@@ -158,4 +158,26 @@ router.patch('/:id/end', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: assignment });
 }));
 
+/** PATCH /api/assignments/:id/shift — change shift only */
+router.patch('/:id/shift', asyncHandler(async (req: Request, res: Response) => {
+  const agencyId = getAgencyId(req);
+  const { shiftId } = req.body;
+  if (!shiftId) throw new AppError('shiftId is required', 400);
+
+  const assignment = await Assignment.findOne({ _id: req.params.id, agency_id: agencyId, is_active: true });
+  if (!assignment) throw new AppError('Active assignment not found', 404);
+
+  const shift = await Shift.findOne({ _id: shiftId, agency_id: agencyId });
+  if (!shift) throw new AppError('Shift not found', 404);
+
+  const oldValues = assignment.toObject();
+  assignment.shift_id = shiftId as any;
+  await assignment.save();
+
+  await logAudit(null as any, { agencyId, userId: req.user!.userId, action: 'update_assignment_shift',
+    entityType: 'assignment', entityId: req.params.id, oldValues, newValues: { shiftId }, req });
+
+  res.json({ success: true, data: assignment });
+}));
+
 export default router;

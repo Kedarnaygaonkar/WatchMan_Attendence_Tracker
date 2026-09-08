@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X, GitBranch, Calendar, ChevronRight } from 'lucide-react';
+import { Plus, X, GitBranch, Calendar, ChevronRight, Edit2 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 
@@ -9,6 +9,7 @@ interface Assignment {
   watchman_name: string;
   employee_id: string;
   society_name: string;
+  shift_id: string;
   shift_name: string;
   start_time: string;
   end_time: string;
@@ -38,6 +39,8 @@ export default function AssignmentsPage() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(defaultForm);
+  const [editAssignment, setEditAssignment] = useState<Assignment | null>(null);
+  const [editShiftId, setEditShiftId] = useState('');
 
   const { data } = useQuery({ queryKey: ['assignments'], queryFn: async () => { const {data} = await api.get('/assignments', {params:{active:true}}); return data.data as Assignment[]; } });
   const { data: watchmen } = useQuery({ queryKey: ['watchmen-list'], queryFn: async () => { const {data} = await api.get('/watchmen', {params:{status:'active'}}); return data.data as Watchman[]; } });
@@ -47,6 +50,16 @@ export default function AssignmentsPage() {
   const mutation = useMutation({
     mutationFn: (payload: typeof form) => api.post('/assignments', { ...payload, endDate: payload.endDate || undefined }),
     onSuccess: () => { queryClient.invalidateQueries({queryKey:['assignments']}); toast.success('Assignment created!'); setShowModal(false); setForm(defaultForm); },
+    onError: (err: unknown) => toast.error((err as {response?:{data?:{message?:string}}})?.response?.data?.message || 'Failed'),
+  });
+
+  const editShiftMutation = useMutation({
+    mutationFn: ({ id, shiftId }: { id: string; shiftId: string }) => api.patch(`/assignments/${id}/shift`, { shiftId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey:['assignments']});
+      toast.success('Shift updated!');
+      setEditAssignment(null);
+    },
     onError: (err: unknown) => toast.error((err as {response?:{data?:{message?:string}}})?.response?.data?.message || 'Failed'),
   });
 
@@ -112,12 +125,20 @@ export default function AssignmentsPage() {
                   </span>
                 </td>
                 <td>
-                  {a.is_active && (
-                    <button onClick={() => { if(confirm('End this assignment?')) deactivateMutation.mutate(a.id); }}
-                      className="text-xs text-danger-400 hover:text-danger-300 px-2 py-1 rounded hover:bg-danger-500/10">
-                      End
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {a.is_active && (
+                      <button onClick={() => { setEditAssignment(a); setEditShiftId(a.shift_id || ''); }}
+                        className="text-xs text-brand-400 hover:text-brand-300 px-2 py-1 rounded hover:bg-brand-500/10 flex items-center gap-1">
+                        <Edit2 className="w-3 h-3" /> Edit
+                      </button>
+                    )}
+                    {a.is_active && (
+                      <button onClick={() => { if(confirm('End this assignment?')) deactivateMutation.mutate(a.id); }}
+                        className="text-xs text-danger-400 hover:text-danger-300 px-2 py-1 rounded hover:bg-danger-500/10">
+                        End
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -181,6 +202,43 @@ export default function AssignmentsPage() {
                 disabled={mutation.isPending || !form.watchmanId || !form.societyId || !form.shiftId}
                 className="btn-primary px-5 py-2.5 ml-auto">
                 {mutation.isPending ? 'Creating...' : 'Create Assignment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Shift Modal */}
+      {editAssignment && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between p-5 border-b border-surface-700">
+              <div>
+                <h2 className="font-bold text-slate-100">Change Shift</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{editAssignment.watchman_name} · {editAssignment.society_name}</p>
+              </div>
+              <button onClick={() => setEditAssignment(null)} className="p-1.5 rounded-lg hover:bg-surface-700 text-slate-400"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5">
+              <label className="label mb-2 block">Select New Shift *</label>
+              <div className="space-y-2">
+                {shifts?.map(s => (
+                  <button key={s.id} onClick={() => setEditShiftId(s.id)}
+                    className={`w-full p-3.5 rounded-xl border-2 text-left flex justify-between items-center transition-all ${
+                      editShiftId === s.id ? 'border-brand-500 bg-brand-500/10 text-slate-100' : 'border-surface-700 bg-surface-800/50 text-slate-300 hover:border-surface-600'
+                    }`}>
+                    <span className="font-semibold text-sm">{s.name}</span>
+                    <span className="text-slate-400 text-xs">{formatTime(s.start_time)} — {formatTime(s.end_time)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 p-5 border-t border-surface-700">
+              <button onClick={() => setEditAssignment(null)} className="btn-ghost px-5 py-2.5">Cancel</button>
+              <button
+                onClick={() => editShiftMutation.mutate({ id: editAssignment.id, shiftId: editShiftId })}
+                disabled={editShiftMutation.isPending || !editShiftId}
+                className="btn-primary px-5 py-2.5 ml-auto">
+                {editShiftMutation.isPending ? 'Saving...' : 'Update Shift'}
               </button>
             </div>
           </div>
