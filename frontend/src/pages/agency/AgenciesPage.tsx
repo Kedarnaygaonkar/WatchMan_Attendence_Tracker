@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 
 interface Agency {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   phone?: string;
@@ -61,7 +61,7 @@ export default function AgenciesPage() {
   const saveMutation = useMutation({
     mutationFn: async (payload: typeof formData) => {
       if (editingAgency) {
-        return api.put(`/agencies/${editingAgency._id}`, payload);
+        return api.put(`/agencies/${editingAgency.id}`, payload);
       }
       return api.post('/agencies', payload);
     },
@@ -166,7 +166,7 @@ export default function AgenciesPage() {
               </tr>
             ) : (
               agencies.map((agency) => (
-                <tr key={agency._id}>
+                <tr key={agency.id}>
                   <td>
                     <div className="flex items-center gap-3">
                       {agency.logo_url ? (
