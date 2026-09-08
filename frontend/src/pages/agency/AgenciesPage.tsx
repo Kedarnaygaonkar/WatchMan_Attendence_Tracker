@@ -11,6 +11,7 @@ interface Agency {
   email: string;
   phone?: string;
   address?: string;
+  logo_url?: string;
   status: 'active' | 'inactive' | 'suspended';
   createdAt: string;
 }
@@ -28,8 +29,25 @@ export default function AgenciesPage() {
     email: '',
     phone: '',
     address: '',
+    logo_url: '',
     status: 'active',
   });
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData(f => ({ ...f, logo_url: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  }
 
   const { data: agencies = [], isLoading } = useQuery<Agency[]>({
     queryKey: ['agencies'],
@@ -75,6 +93,7 @@ export default function AgenciesPage() {
         email: agency.email,
         phone: agency.phone || '',
         address: agency.address || '',
+        logo_url: agency.logo_url || '',
         status: agency.status,
       });
     } else {
@@ -84,6 +103,7 @@ export default function AgenciesPage() {
         email: '',
         phone: '',
         address: '',
+        logo_url: '',
         status: 'active',
       });
     }
@@ -148,7 +168,16 @@ export default function AgenciesPage() {
               agencies.map((agency) => (
                 <tr key={agency._id}>
                   <td>
-                    <div className="font-semibold text-slate-100">{agency.name}</div>
+                    <div className="flex items-center gap-3">
+                      {agency.logo_url ? (
+                        <img src={agency.logo_url} alt={`${agency.name} logo`} className="w-10 h-10 rounded-lg object-contain bg-surface-700/50 p-1" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0 border border-brand-500/20">
+                          <Building2 className="w-5 h-5 text-brand-400" />
+                        </div>
+                      )}
+                      <div className="font-semibold text-slate-100">{agency.name}</div>
+                    </div>
                   </td>
                   <td>
                     <div className="text-sm text-slate-200">{agency.email}</div>
@@ -236,6 +265,30 @@ export default function AgenciesPage() {
                   className="input min-h-[80px]"
                   placeholder="Optional"
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Agency Logo</label>
+                <div className="flex items-center gap-4">
+                  {formData.logo_url ? (
+                    <div className="relative group">
+                      <img src={formData.logo_url} alt="Logo preview" className="w-16 h-16 rounded-xl object-contain bg-surface-700/50 border border-surface-600 p-1" />
+                      <button type="button" onClick={() => setFormData({ ...formData, logo_url: '' })} className="absolute -top-2 -right-2 bg-danger-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-surface-700/50 border border-dashed border-surface-600 flex items-center justify-center shrink-0">
+                      <Building2 className="w-6 h-6 text-slate-500" />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-500/10 file:text-brand-400 hover:file:bg-brand-500/20"
+                  />
+                </div>
               </div>
 
               {editingAgency && (

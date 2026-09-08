@@ -16,7 +16,7 @@ const createSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   address: z.string().optional(),
-  logo_url: z.string().url('Invalid logo URL').optional().or(z.literal('')),
+  logo_url: z.string().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).default('active'),
 });
 
