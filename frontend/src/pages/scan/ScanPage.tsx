@@ -226,7 +226,7 @@ export default function ScanPage() {
 
       <div className="text-center mb-6">
         <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain mb-2 mx-auto" />
-        <div className="text-slate-600 text-sm font-medium flex items-center justify-center gap-1.5">
+        <div className="text-slate-400 text-sm font-medium flex items-center justify-center gap-1.5">
           <Clock className="w-3.5 h-3.5" /> {currentTime}
         </div>
       </div>
@@ -236,16 +236,16 @@ export default function ScanPage() {
           <div className="text-center mb-8">
             <div className="bg-brand-500/15 border border-brand-500/20 rounded-xl p-4 mb-3">
               <p className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-1">{gateInfo.gate.name}</p>
-              <h1 className="text-slate-900 text-xl font-bold">{gateInfo.society.name}</h1>
+              <h1 className="text-slate-100 text-xl font-bold">{gateInfo.society.name}</h1>
             </div>
-            <p className="text-slate-600 text-xs">{gateInfo.society.address}</p>
+            <p className="text-slate-400 text-xs">{gateInfo.society.address}</p>
           </div>
         )}
 
         {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
           <div className="text-center py-10">
             <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
-            <p className="text-slate-600 mt-4 font-medium">
+            <p className="text-slate-400 mt-4 font-medium">
               {step === 'delivery_submitting' ? 'Recording visit...' : step === 'submitting' ? 'Recording attendance...' : 'Loading...'}
             </p>
           </div>
@@ -255,31 +255,31 @@ export default function ScanPage() {
           <div className="text-center py-6">
             <AlertTriangle className="w-12 h-12 text-danger-400 mx-auto mb-3" />
             <h2 className="text-danger-400 text-lg font-bold">Error</h2>
-            <p className="text-slate-600 mt-2">{errorMsg}</p>
+            <p className="text-slate-400 mt-2">{errorMsg}</p>
           </div>
         )}
 
         {step === 'mode_select' && (
           <div className="space-y-4">
-            <h2 className="text-slate-900 text-lg font-bold text-center mb-6">Who are you?</h2>
+            <h2 className="text-slate-100 text-lg font-bold text-center mb-6">Who are you?</h2>
             <button onClick={() => setStep('enter_id')} className="w-full p-5 rounded-xl border-2 border-brand-500/30 bg-brand-500/5 hover:bg-brand-500/15 text-left flex items-center gap-4 transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-500/20 flex items-center justify-center shrink-0 group-hover:bg-brand-500/30 transition-colors">
                 <ShieldCheck className="w-6 h-6 text-brand-400" />
               </div>
               <div>
-                <p className="text-slate-900 font-bold">Security Guard</p>
-                <p className="text-slate-600 text-sm">Mark attendance with Guard ID</p>
+                <p className="text-slate-100 font-bold">Security Guard</p>
+                <p className="text-slate-400 text-sm">Mark attendance with Guard ID</p>
               </div>
             </button>
             <div className="pt-4 border-t border-white/50/50">
-              <h3 className="text-slate-600 text-xs font-bold uppercase tracking-wider mb-3">Visitors & Delivery</h3>
+              <h3 className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">Visitors & Delivery</h3>
               <button onClick={() => setStep('delivery_form')} className="w-full p-5 rounded-xl border-2 border-white/50 bg-white/50 hover:bg-white/70 text-left flex items-center gap-4 transition-all group">
                 <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0 group-hover:bg-orange-500/30 transition-colors">
                   <Bike className="w-6 h-6 text-orange-400" />
                 </div>
                 <div>
-                  <p className="text-slate-900 font-bold">Delivery Boy</p>
-                  <p className="text-slate-600 text-sm">Zomato, Swiggy, Amazon, etc.</p>
+                  <p className="text-slate-100 font-bold">Delivery Boy</p>
+                  <p className="text-slate-400 text-sm">Zomato, Swiggy, Amazon, etc.</p>
                 </div>
               </button>
             </div>
@@ -290,20 +290,20 @@ export default function ScanPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2.5 mb-2">
               <User className="w-5 h-5 text-brand-400" />
-              <h2 className="text-slate-900 text-lg font-bold">Enter Your Guard ID</h2>
+              <h2 className="text-slate-100 text-lg font-bold">Enter Your Guard ID</h2>
             </div>
             {errorMsg && <div className="bg-danger-500/10 border border-danger-500/20 rounded-lg p-3 text-danger-400 text-sm">{errorMsg}</div>}
-            <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-4 rounded-xl border border-white/50 bg-white/70 text-slate-900 text-lg font-bold tracking-widest text-center focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all placeholder-slate-500 uppercase" />
-            <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full mt-4 p-4 rounded-xl font-bold transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/25' : 'bg-white/70 text-slate-600 cursor-not-allowed'}`}>Continue &rarr;</button>
-            <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-600 text-sm hover:text-slate-700 transition-colors py-1">← Back</button>
+            <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-4 rounded-xl border border-white/50 bg-white/70 text-slate-100 text-lg font-bold tracking-widest text-center focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all placeholder-slate-500 uppercase" />
+            <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full mt-4 p-4 rounded-xl font-bold transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/25' : 'bg-white/70 text-slate-400 cursor-not-allowed'}`}>Continue &rarr;</button>
+            <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-400 text-sm hover:text-slate-300 transition-colors py-1">← Back</button>
           </div>
         )}
 
         {step === 'get_gps' && (
           <div className="text-center py-10">
             <MapPin className="w-12 h-12 text-brand-500 mx-auto mb-4 animate-bounce" />
-            <h2 className="text-slate-900 text-lg font-bold">Getting Location...</h2>
-            <p className="text-slate-600 text-sm mt-2">Please allow location access if prompted.</p>
+            <h2 className="text-slate-100 text-lg font-bold">Getting Location...</h2>
+            <p className="text-slate-400 text-sm mt-2">Please allow location access if prompted.</p>
           </div>
         )}
 
@@ -311,14 +311,14 @@ export default function ScanPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="w-5 h-5 text-brand-400" />
-              <h2 className="text-slate-900 text-lg font-bold">First Time Face Setup</h2>
+              <h2 className="text-slate-100 text-lg font-bold">First Time Face Setup</h2>
             </div>
-            <p className="text-slate-600 text-sm mb-4">Please look directly at the camera to register your face.</p>
+            <p className="text-slate-400 text-sm mb-4">Please look directly at the camera to register your face.</p>
             <div className={`rounded-xl overflow-hidden aspect-4/3 flex items-center justify-center relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-white/50'}`}>
               <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
               {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-3 py-1 rounded-full text-sm backdrop-blur-sm">No face detected</p></div>}
             </div>
-            <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-600 cursor-not-allowed'}`}>
+            <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-400 cursor-not-allowed'}`}>
               <ScanFace className="w-5 h-5" /> Register My Face
             </button>
           </div>
@@ -331,14 +331,14 @@ export default function ScanPage() {
                 <ShieldCheck className="w-3.5 h-3.5" />
                 {faceVerified === false ? 'Face Mismatch' : 'Face Verification'}
               </div>
-              <h2 className="text-slate-900 text-xl font-bold">{faceVerified === false ? 'Verification Failed' : 'Verify Your Identity'}</h2>
-              <p className="text-slate-600 text-sm">{faceVerified === false ? 'Your face did not match your registered photo.' : 'Look straight at the camera. Press verify when ready.'}</p>
+              <h2 className="text-slate-100 text-xl font-bold">{faceVerified === false ? 'Verification Failed' : 'Verify Your Identity'}</h2>
+              <p className="text-slate-400 text-sm">{faceVerified === false ? 'Your face did not match your registered photo.' : 'Look straight at the camera. Press verify when ready.'}</p>
             </div>
             {faceVerified === false ? (
               <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-6 flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-8 h-8 text-danger-400" /></div>
                 <p className="text-danger-400 font-bold text-lg">Face Mismatch ✕</p>
-                <p className="text-slate-600 text-sm text-center">Attendance cannot be marked. If this is a mistake, please try again in better lighting.</p>
+                <p className="text-slate-400 text-sm text-center">Attendance cannot be marked. If this is a mistake, please try again in better lighting.</p>
                 <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full mt-2 p-4 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all">Try Again</button>
               </div>
             ) : (
@@ -377,7 +377,7 @@ export default function ScanPage() {
                     } else { toast.error('No face detected. Ensure good lighting.'); }
                   }}
                   disabled={!faceDetected}
-                  className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-slate-200/60 text-slate-600 cursor-not-allowed'}`}
+                  className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-slate-200/60 text-slate-400 cursor-not-allowed'}`}
                 >
                   <ScanFace className="w-5 h-5" /> {faceDetected ? 'Verify My Face' : 'Waiting for face...'}
                 </button>
@@ -392,20 +392,20 @@ export default function ScanPage() {
               <CheckCircle className="w-6 h-6 text-success-400 shrink-0" />
               <div>
                 <p className="text-success-400 font-bold">{watchman.full_name}</p>
-                <p className="text-slate-600 text-xs mt-0.5">ID: {watchman.employee_id}</p>
+                <p className="text-slate-400 text-xs mt-0.5">ID: {watchman.employee_id}</p>
               </div>
             </div>
 
             {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
               <div>
-                <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-2">Select Gate *</label>
+                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Gate *</label>
                 <div className="flex flex-wrap gap-2">
                   {gateInfo.society.gates.map(g => (
                     <button key={g} onClick={() => setSelectedGate(g)}
                       className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
                         selectedGate === g
                           ? 'border-brand-500 bg-brand-500/15 text-brand-400'
-                          : 'border-white/50 text-slate-600 bg-white/70 hover:border-white/40'
+                          : 'border-white/50 text-slate-400 bg-white/70 hover:border-white/40'
                       }`}>
                       {g}
                     </button>
@@ -416,14 +416,14 @@ export default function ScanPage() {
 
             {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
               <div>
-                <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-2">Select Wing <span className="text-slate-600 font-normal normal-case">(optional)</span></label>
+                <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Wing <span className="text-slate-400 font-normal normal-case">(optional)</span></label>
                 <div className="flex flex-wrap gap-2">
                   {gateInfo.society.wings.map(w => (
                     <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
                       className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
                         selectedWing === w
                           ? 'border-brand-500 bg-brand-500/15 text-brand-400'
-                          : 'border-white/50 text-slate-600 bg-white/70 hover:border-white/40'
+                          : 'border-white/50 text-slate-400 bg-white/70 hover:border-white/40'
                       }`}>
                       {w}
                     </button>
@@ -433,17 +433,17 @@ export default function ScanPage() {
             )}
 
             <div>
-              <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-2">Select Shift *</label>
+              <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Select Shift *</label>
               <div className="space-y-2">
                 {gateInfo?.shifts.map(s => (
                   <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
                     className={`w-full p-4 rounded-xl border-2 text-left flex justify-between items-center transition-all ${
                       selectedShiftId === s.id
-                        ? 'border-brand-500 bg-brand-500/15 text-slate-900'
-                        : 'border-white/50 bg-white/50 text-slate-700'
+                        ? 'border-brand-500 bg-brand-500/15 text-slate-100'
+                        : 'border-white/50 bg-white/50 text-slate-300'
                     }`}>
                     <span className="font-semibold">{s.name}</span>
-                    <span className="text-slate-600 text-xs">{s.start_time} &ndash; {s.end_time}</span>
+                    <span className="text-slate-400 text-xs">{s.start_time} &ndash; {s.end_time}</span>
                   </button>
                 ))}
               </div>
@@ -455,7 +455,7 @@ export default function ScanPage() {
               className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
                 selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
                   ? 'bg-brand-600 hover:bg-brand-500 text-white'
-                  : 'bg-white/70 text-slate-600 cursor-not-allowed'
+                  : 'bg-white/70 text-slate-400 cursor-not-allowed'
               }`}>
               <Camera className="w-5 h-5" /> Take Check-in Photo &rarr;
             </button>
@@ -466,7 +466,7 @@ export default function ScanPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
               {mode === 'checkin' ? <LogIn className="w-5 h-5 text-success-400" /> : <LogOut className="w-5 h-5 text-warning-400" />}
-              <h2 className="text-slate-900 text-lg font-bold">{mode === 'checkin' ? 'Check-In Photo' : 'Check-Out Photo'}</h2>
+              <h2 className="text-slate-100 text-lg font-bold">{mode === 'checkin' ? 'Check-In Photo' : 'Check-Out Photo'}</h2>
             </div>
             {mode === 'checkout' && existingRecord && (
               <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-3 text-warning-400 text-sm mb-2">
@@ -488,8 +488,8 @@ export default function ScanPage() {
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${successMsg.includes('LATE') ? 'bg-warning-500/10 text-warning-400' : 'bg-success-500/10 text-success-400'}`}>
               <CheckCircle className="w-10 h-10" />
             </div>
-            <h2 className="text-slate-900 text-2xl font-bold mb-2">{successMsg.includes('LATE') ? 'Late Arrival' : mode === 'checkin' ? 'Checked In!' : 'Checked Out!'}</h2>
-            <p className="text-slate-600 text-sm leading-relaxed mb-6">{successMsg}</p>
+            <h2 className="text-slate-100 text-2xl font-bold mb-2">{successMsg.includes('LATE') ? 'Late Arrival' : mode === 'checkin' ? 'Checked In!' : 'Checked Out!'}</h2>
+            <p className="text-slate-400 text-sm leading-relaxed mb-6">{successMsg}</p>
           </div>
         )}
 
@@ -497,38 +497,38 @@ export default function ScanPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2.5 mb-2">
               <Bike className="w-5 h-5 text-orange-400" />
-              <h2 className="text-slate-900 text-lg font-bold">Delivery Check-In</h2>
+              <h2 className="text-slate-100 text-lg font-bold">Delivery Check-In</h2>
             </div>
             <div>
-              <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-2">Delivery Company</label>
+              <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-2">Delivery Company</label>
               <div className="flex flex-wrap gap-2">
                 {DELIVERY_COMPANIES.map(c => (
                   <button key={c} onClick={() => setDeliveryForm(f => ({ ...f, delivery_company: c }))}
-                    className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-white/40 text-slate-600 bg-white/70 hover:border-brand-400'}`}
+                    className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-white/40 text-slate-400 bg-white/70 hover:border-brand-400'}`}
                     style={deliveryForm.delivery_company === c ? { backgroundColor: COMPANY_COLORS[c] || '#64748b' } : {}}
                   >{c}</button>
                 ))}
               </div>
             </div>
             <div>
-              <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-1.5">Your Name *</label>
-              <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-900 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
+              <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-1.5">Your Name *</label>
+              <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
             <div>
-              <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-1.5">Phone Number *</label>
+              <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-1.5">Phone Number *</label>
               <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
                 const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                 setDeliveryForm(f => ({ ...f, visitor_phone: val }));
-              }} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-900 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
+              }} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
             <div>
-              <label className="text-slate-600 text-xs font-semibold uppercase tracking-wider block mb-1.5">Vehicle Number <span className="text-slate-600 font-normal normal-case">(optional)</span></label>
-              <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-900 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
+              <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider block mb-1.5">Vehicle Number <span className="text-slate-400 font-normal normal-case">(optional)</span></label>
+              <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
-            <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-600 cursor-not-allowed'}`}>
+            <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-400 cursor-not-allowed'}`}>
               <LogIn className="w-5 h-5" /> Mark Entry
             </button>
-            <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-600 text-sm hover:text-slate-700 transition-colors py-1">← Back</button>
+            <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-400 text-sm hover:text-slate-300 transition-colors py-1">← Back</button>
           </div>
         )}
 
@@ -537,11 +537,11 @@ export default function ScanPage() {
             <div className="w-20 h-20 rounded-full bg-success-500/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-10 h-10 text-success-400" />
             </div>
-            <h2 className="text-slate-900 text-2xl font-bold mb-2">Welcome!</h2>
-            <p className="text-slate-600 mb-6">
+            <h2 className="text-slate-100 text-2xl font-bold mb-2">Welcome!</h2>
+            <p className="text-slate-400 mb-6">
               {`Check-in recorded at ${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
             </p>
-            <button onClick={() => window.location.reload()} className="w-full p-4 rounded-xl font-bold bg-white/70 hover:bg-slate-200/60 text-slate-700 transition-all">
+            <button onClick={() => window.location.reload()} className="w-full p-4 rounded-xl font-bold bg-white/70 hover:bg-slate-200/60 text-slate-300 transition-all">
               Done
             </button>
           </div>
