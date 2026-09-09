@@ -232,7 +232,12 @@ export default function ScanPage() {
     if (!token) { setStep('error'); setErrorMsg('Invalid QR code'); return; }
 
     axios.get(`${API}/scan/${token}`)
-      .then(r => { setGateInfo(r.data.data); setStep('mode_select'); })
+      .then(r => {
+        setGateInfo(r.data.data);
+        const modeParam = new URLSearchParams(window.location.search).get('mode');
+        if (modeParam === 'delivery') setStep('delivery_form');
+        else setStep('enter_id');
+      })
       .catch(e => { setStep('error'); setErrorMsg(e.response?.data?.message || 'Invalid or expired QR code'); });
 
     async function loadModels() {
@@ -435,41 +440,6 @@ export default function ScanPage() {
           </div>
         )}
 
-        {step === 'mode_select' && (
-          <div className="space-y-4">
-            <h2 className="text-slate-100 text-2xl font-bold text-center mb-6">{t.who_are_you}</h2>
-            <button onClick={() => setStep('enter_id')} className="w-full p-5 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm/60 backdrop-blur-md hover:bg-white/80 border-white/50 hover:border-brand-300 hover:shadow-md text-left flex items-center justify-between transition-all group shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-6 h-6 text-brand-500" />
-                </div>
-                <div>
-                  <p className="text-slate-100 text-[15px] font-bold">{t.security_guard}</p>
-                  <p className="text-slate-500 text-[13px]">{t.mark_attendance}</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-brand-400 transition-colors" />
-            </button>
-            <div className="flex items-center gap-4 py-4">
-              <div className="flex-1 h-px bg-slate-800"></div>
-              <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{t.visitors}</h3>
-              <div className="flex-1 h-px bg-slate-800"></div>
-            </div>
-            <button onClick={() => setStep('delivery_form')} className="w-full p-5 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm/60 backdrop-blur-md hover:bg-white/80 border-white/50 hover:border-orange-300 hover:shadow-md text-left flex items-center justify-between transition-all group shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                  <Bike className="w-6 h-6 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-slate-100 text-[15px] font-bold">{t.delivery_boy}</p>
-                  <p className="text-slate-500 text-[13px]">Zomato, Swiggy, Amazon, etc.</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-orange-400 transition-colors" />
-            </button>
-          </div>
-        )}
-
         {step === 'enter_id' && (
           <div className="space-y-4">
             <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
@@ -481,7 +451,7 @@ export default function ScanPage() {
               <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-4 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm text-slate-100 text-[15px] font-semibold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-6 shadow-sm" />
               <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-4 h-4" /></button>
             </div>
-            <button onClick={() => setStep('mode_select')} className="w-full mt-6 text-center text-slate-500 text-sm font-medium hover:text-slate-600 transition-colors py-2 flex justify-center items-center gap-1"><ChevronRight className="w-4 h-4 rotate-180" />{t.back}</button>
+            
           </div>
         )}
 
@@ -712,7 +682,7 @@ export default function ScanPage() {
             <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
               <LogIn className="w-5 h-5" /> Mark Entry
             </button>
-            <button onClick={() => setStep('mode_select')} className="w-full text-center text-slate-500 text-sm hover:text-slate-600 transition-colors py-1">← Back</button>
+            
           </div>
         )}
 

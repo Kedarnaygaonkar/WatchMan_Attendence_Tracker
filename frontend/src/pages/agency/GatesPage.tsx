@@ -24,7 +24,8 @@ const FRONTEND_URL = window.location.origin;
 export default function GatesPage() {
   const queryClient = useQueryClient();
   const [qrModalGate, setQrModalGate] = useState<Gate | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [watchmanQrUrl, setWatchmanQrUrl] = useState<string>('');
+  const [deliveryQrUrl, setDeliveryQrUrl] = useState<string>('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { data: gates = [], isLoading } = useQuery({
@@ -65,15 +66,83 @@ export default function GatesPage() {
 
   async function openQrModal(gate: Gate) {
     setQrModalGate(gate);
-    const scanUrl = `${FRONTEND_URL}/scan/${gate.qr_token}`;
-    const dataUrl = await QRCode.toDataURL(scanUrl, { width: 300, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
-    setQrDataUrl(dataUrl);
+    
+    // Generate Watchman QR
+    const watchmanUrl = `${FRONTEND_URL}/scan/${gate.qr_token}?mode=guard`;
+    const watchmanQr = await QRCode.toDataURL(watchmanUrl, { width: 600, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+    setWatchmanQrUrl(watchmanQr);
+
+    // Generate Delivery QR
+    const deliveryUrl = `${FRONTEND_URL}/scan/${gate.qr_token}?mode=delivery`;
+    const deliveryQr = await QRCode.toDataURL(deliveryUrl, { width: 300, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+    setDeliveryQrUrl(deliveryQr);
   }
 
-  function downloadQR(gate: Gate) {
+  async function downloadQR(gate: Gate) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // A4 Size at 300 DPI is 2480 x 3508
+    canvas.width = 2480;
+    canvas.height = 3508;
+
+    // White Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header (Society Name)
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 120px sans-serif';
+    ctx.textAlign = 'center';
+    const societyName = getSocietyName(gate);
+    ctx.fillText(societyName, canvas.width / 2, 400);
+
+    // Gate Name
+    ctx.font = 'bold 60px sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.fillText(gate.name.toUpperCase(), canvas.width / 2, 520);
+
+    // Load Images
+    const loadImg = (src: string): Promise<HTMLImageElement> => new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
+
+    const wImg = await loadImg(watchmanQrUrl);
+    const dImg = await loadImg(deliveryQrUrl);
+
+    // Draw Watchman QR (Large)
+    const wSize = 1400;
+    ctx.drawImage(wImg, (canvas.width - wSize) / 2, 700, wSize, wSize);
+
+    // Watchman Label
+    ctx.font = 'bold 90px sans-serif';
+    ctx.fillStyle = '#1e40af';
+    ctx.fillText('SECURITY GUARD SCAN HERE', canvas.width / 2, 2250);
+
+    // Divider Line
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(300, 2450);
+    ctx.lineTo(canvas.width - 300, 2450);
+    ctx.stroke();
+
+    // Draw Delivery QR (Small)
+    const dSize = 600;
+    ctx.drawImage(dImg, (canvas.width - dSize) / 2, 2550, dSize, dSize);
+
+    // Delivery Label
+    ctx.font = 'bold 70px sans-serif';
+    ctx.fillStyle = '#ea580c';
+    ctx.fillText('DELIVERY BOY SCAN HERE', canvas.width / 2, 3300);
+
+    // Trigger Download
     const link = document.createElement('a');
     link.download = `gate-qr-${gate.name.replace(/\s+/g, '-')}.png`;
-    link.href = qrDataUrl;
+    link.href = canvas.toDataURL('image/png');
     link.click();
   }
 
@@ -169,14 +238,22 @@ export default function GatesPage() {
               <button onClick={() => setQrModalGate(null)} className="text-slate-400 hover:text-slate-200"><X className="w-5 h-5" /></button>
             </div>
 
-            {qrDataUrl && (
-              <div className="bg-white rounded-2xl p-4 text-center mb-4">
-                <img src={qrDataUrl} alt="QR Code" className="w-full max-w-[240px] mx-auto" />
+            {(watchmanQrUrl && deliveryQrUrl) && (
+              <div className="bg-white rounded-2xl p-4 text-center mb-4 flex flex-col items-center gap-4">
+                <div>
+                  <p className="text-xs font-bold text-brand-600 mb-1">SECURITY GUARD</p>
+                  <img src={watchmanQrUrl} alt="Watchman QR" className="w-full max-w-[200px] mx-auto border border-slate-200 rounded-lg" />
+                </div>
+                <div className="w-full h-px bg-slate-200"></div>
+                <div>
+                  <p className="text-xs font-bold text-orange-600 mb-1">DELIVERY BOY</p>
+                  <img src={deliveryQrUrl} alt="Delivery QR" className="w-full max-w-[120px] mx-auto border border-slate-200 rounded-lg" />
+                </div>
               </div>
             )}
-
             <p className="text-slate-500 text-xs text-center mb-4 font-mono break-all">
-              {FRONTEND_URL}/scan/{qrModalGate.qr_token}
+              Watchman: {FRONTEND_URL}/scan/{qrModalGate.qr_token}?mode=guard<br/>
+              Delivery: {FRONTEND_URL}/scan/{qrModalGate.qr_token}?mode=delivery
             </p>
 
             <div className="flex gap-2">
