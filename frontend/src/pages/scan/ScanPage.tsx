@@ -275,13 +275,41 @@ export default function ScanPage() {
   function requestGPS(wm: WatchmanInfo, detectedMode: 'checkin' | 'checkout') {
     setStep('get_gps');
     if (!navigator.geolocation) { toast.error('Location services not supported.'); setStep('enter_id'); return; }
+    
+    const successCallback = (pos: GeolocationPosition) => {
+      setGpsData(pos.coords);
+      startFaceVerificationFlow(wm, detectedMode);
+    };
+
+    const fallbackToLowAccuracy = () => {
+      navigator.geolocation.getCurrentPosition(
+        successCallback,
+        (err) => {
+          console.error("GPS Fallback Error:", err);
+          if (err.code === 1) {
+            toast.error('Location access denied. Please enable it in browser settings.');
+          } else {
+            toast.error('Failed to get location. Please check your signal or GPS settings.');
+          }
+          setStep('enter_id');
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setGpsData(pos.coords); startFaceVerificationFlow(wm, detectedMode); },
+      successCallback,
       (err) => {
-        toast.error(err.code === 1 ? 'Location access denied. Please enable it in browser settings.' : 'Please enable location services.');
-        setStep('enter_id');
+        console.error("GPS High Accuracy Error:", err);
+        if (err.code === 1) {
+          toast.error('Location access denied. Please enable it in browser settings.');
+          setStep('enter_id');
+        } else {
+          // If high accuracy fails (Timeout or Unavailable), try low accuracy
+          fallbackToLowAccuracy();
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   }
 
