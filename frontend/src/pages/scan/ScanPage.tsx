@@ -56,7 +56,30 @@ const TRANSLATIONS = {
     checked_in: 'Checked In!',
     checked_out: 'Checked Out!',
     welcome: 'Welcome!',
-    done: 'Done'
+    done: 'Done',
+    invalid_qr: t.invalid_qr,
+    invalid_or_expired_qr: t.invalid_or_expired_qr,
+    guard_not_found: t.guard_not_found,
+    location_not_supported: t.location_not_supported,
+    location_denied: t.location_denied,
+    location_failed: t.location_failed,
+    session_lost: t.session_lost,
+    no_face_found_reg: t.no_face_found_reg,
+    face_registered_success: t.face_registered_success,
+    failed_register_face: t.failed_register_face,
+    camera_denied: t.camera_denied,
+    submission_failed: t.submission_failed,
+    name_phone_required: t.name_phone_required,
+    checkin_failed: t.checkin_failed,
+    verify_context_lost: t.verify_context_lost,
+    face_verified_success: t.face_verified_success,
+    no_face_good_lighting: t.no_face_good_lighting,
+    checkin_photo_header: 'Check-In Photo',
+    checkout_photo_header: 'Check-Out Photo',
+    checked_in_at: 'Checked in at ',
+    checkin_recorded_at: 'Check-in recorded at ',
+    attendance_cannot_mark: 'Attendance cannot be marked. If this is a mistake, please try again in better lighting.',
+    done_btn: 'Done'
   },
   HI: {
     who_are_you: 'आप कौन हैं?',
@@ -106,7 +129,30 @@ const TRANSLATIONS = {
     checked_in: 'चेक इन!',
     checked_out: 'चेक आउट!',
     welcome: 'स्वागत है!',
-    done: 'हो गया'
+    done: 'हो गया',
+    invalid_qr: 'अमान्य क्यूआर कोड',
+    invalid_or_expired_qr: 'अमान्य या समाप्त क्यूआर कोड',
+    guard_not_found: 'गार्ड नहीं मिला',
+    location_not_supported: 'स्थान सेवाएँ समर्थित नहीं हैं।',
+    location_denied: 'स्थान पहुँच अस्वीकृत। कृपया ब्राउज़र सेटिंग्स में सक्षम करें।',
+    location_failed: 'स्थान प्राप्त करने में विफल। कृपया अपना सिग्नल या जीपीएस जांचें।',
+    session_lost: 'सत्र खो गया। कृपया अपना गार्ड आईडी पुनः दर्ज करें।',
+    no_face_found_reg: 'चेहरा नहीं मिला। सुनिश्चित करें कि आपका चेहरा स्पष्ट दिखाई दे रहा है।',
+    face_registered_success: 'चेहरा सफलतापूर्वक पंजीकृत!',
+    failed_register_face: 'चेहरा पंजीकृत करने में विफल।',
+    camera_denied: 'कैमरा एक्सेस अस्वीकृत।',
+    submission_failed: 'सबमिशन विफल।',
+    name_phone_required: 'नाम और फोन आवश्यक हैं',
+    checkin_failed: 'चेक-इन विफल',
+    verify_context_lost: 'सत्यापन संदर्भ खो गया। कृपया फिर से स्कैन करें।',
+    face_verified_success: 'चेहरा सत्यापित!',
+    no_face_good_lighting: 'चेहरा नहीं मिला। अच्छी रोशनी सुनिश्चित करें।',
+    checkin_photo_header: 'चेक-इन फोटो',
+    checkout_photo_header: 'चेक-आउट फोटो',
+    checked_in_at: 'चेक इन किया गया: ',
+    checkin_recorded_at: 'चेक-इन दर्ज किया गया: ',
+    attendance_cannot_mark: 'हाजिरी नहीं लगाई जा सकती। यदि यह कोई त्रुटि है, तो कृपया बेहतर रोशनी में पुनः प्रयास करें।',
+    done_btn: 'हो गया'
   },
   MR: {
     who_are_you: 'तुम्ही कोण आहात?',
@@ -156,7 +202,30 @@ const TRANSLATIONS = {
     checked_in: 'चेक इन केले!',
     checked_out: 'चेक आउट केले!',
     welcome: 'स्वागत आहे!',
-    done: 'पूर्ण'
+    done: 'पूर्ण',
+    invalid_qr: 'अवैध क्यूआर कोड',
+    invalid_or_expired_qr: 'अवैध किंवा कालबाह्य क्यूआर कोड',
+    guard_not_found: 'गार्ड सापडला नाही',
+    location_not_supported: 'स्थान सेवा समर्थित नाहीत.',
+    location_denied: 'स्थान प्रवेश नाकारला. कृपया ब्राउझर सेटिंग्जमध्ये ते सक्षम करा.',
+    location_failed: 'स्थान मिळविण्यात अयशस्वी. कृपया तुमचे सिग्नल किंवा जीपीएस तपासा.',
+    session_lost: 'सत्र गमावले. कृपया तुमचा गार्ड आयडी पुन्हा प्रविष्ट करा.',
+    no_face_found_reg: 'चेहरा सापडला नाही. तुमचा चेहरा स्पष्टपणे दिसत असल्याची खात्री करा.',
+    face_registered_success: 'चेहरा यशस्वीरित्या नोंदणीकृत!',
+    failed_register_face: 'चेहरा नोंदणी करण्यात अयशस्वी.',
+    camera_denied: 'कॅमेरा प्रवेश नाकारला.',
+    submission_failed: 'सबमिशन अयशस्वी.',
+    name_phone_required: 'नाव आणि फोन आवश्यक आहेत',
+    checkin_failed: 'चेक-इन अयशस्वी',
+    verify_context_lost: 'पडताळणी संदर्भ गमावला. कृपया पुन्हा स्कॅन करा.',
+    face_verified_success: 'चेहरा पडताळला!',
+    no_face_good_lighting: 'चेहरा सापडला नाही. चांगली प्रकाशव्यवस्था सुनिश्चित करा.',
+    checkin_photo_header: 'चेक-इन फोटो',
+    checkout_photo_header: 'चेक-आउट फोटो',
+    checked_in_at: 'चेक इन केले: ',
+    checkin_recorded_at: 'चेक-इन नोंदवले: ',
+    attendance_cannot_mark: 'उपस्थिती नोंदवता येत नाही. ही चूक असल्यास, कृपया चांगल्या प्रकाशात पुन्हा प्रयत्न करा.',
+    done_btn: 'पूर्ण'
   }
 };
 
@@ -229,7 +298,7 @@ export default function ScanPage() {
   const verifyWatchmanRef = useRef<{ wm: WatchmanInfo; detectedMode: 'checkin' | 'checkout' } | null>(null);
 
   useEffect(() => {
-    if (!token) { setStep('error'); setErrorMsg('Invalid QR code'); return; }
+    if (!token) { setStep('error'); setErrorMsg(t.invalid_qr); return; }
 
     axios.get(`${API}/scan/${token}`)
       .then(r => {
@@ -238,7 +307,7 @@ export default function ScanPage() {
         if (modeParam === 'delivery') setStep('delivery_form');
         else setStep('enter_id');
       })
-      .catch(e => { setStep('error'); setErrorMsg(e.response?.data?.message || 'Invalid or expired QR code'); });
+      .catch(e => { setStep('error'); setErrorMsg(e.response?.data?.message || t.invalid_or_expired_qr); });
 
     async function loadModels() {
       try {
@@ -269,12 +338,12 @@ export default function ScanPage() {
       verifyWatchmanRef.current = { wm, detectedMode };
       if (!wm.face_registered) { await startCamera(); setStep('face_registration'); startRegistrationDetection(); }
       else requestGPS(wm, detectedMode);
-    } catch (e: any) { setStep('enter_id'); setErrorMsg(e.response?.data?.message || 'Guard not found'); }
+    } catch (e: any) { setStep('enter_id'); setErrorMsg(e.response?.data?.message || t.guard_not_found); }
   }
 
   function requestGPS(wm: WatchmanInfo, detectedMode: 'checkin' | 'checkout') {
     setStep('get_gps');
-    if (!navigator.geolocation) { toast.error('Location services not supported.'); setStep('enter_id'); return; }
+    if (!navigator.geolocation) { toast.error(t.location_not_supported); setStep('enter_id'); return; }
     
     const successCallback = (pos: GeolocationPosition) => {
       setGpsData(pos.coords);
@@ -287,9 +356,9 @@ export default function ScanPage() {
         (err) => {
           console.error("GPS Fallback Error:", err);
           if (err.code === 1) {
-            toast.error('Location access denied. Please enable it in browser settings.');
+            toast.error(t.location_denied);
           } else {
-            toast.error('Failed to get location. Please check your signal or GPS settings.');
+            toast.error(t.location_failed);
           }
           setStep('enter_id');
         },
@@ -302,7 +371,7 @@ export default function ScanPage() {
       (err) => {
         console.error("GPS High Accuracy Error:", err);
         if (err.code === 1) {
-          toast.error('Location access denied. Please enable it in browser settings.');
+          toast.error(t.location_denied);
           setStep('enter_id');
         } else {
           // If high accuracy fails (Timeout or Unavailable), try low accuracy
@@ -334,19 +403,19 @@ export default function ScanPage() {
   async function registerFace() {
     if (!videoRef.current) return;
     const regCtx = verifyWatchmanRef.current;
-    if (!regCtx) { toast.error('Session lost. Please re-enter your Guard ID.'); return; }
+    if (!regCtx) { toast.error(t.session_lost); return; }
     setStep('loading');
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     try {
       const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 })).withFaceLandmarks(true).withFaceDescriptor();
-      if (!detection) { toast.error('No face found. Make sure your face is clearly visible.'); setStep('face_registration'); startRegistrationDetection(); return; }
+      if (!detection) { toast.error(t.no_face_found_reg); setStep('face_registration'); startRegistrationDetection(); return; }
       await axios.post(`${API}/scan/register-face`, { employee_id: employeeId.trim(), gate_token: token, face_descriptor: Array.from(detection.descriptor) });
-      toast.success('Face registered successfully!');
+      toast.success(t.face_registered_success);
       const updatedWm: WatchmanInfo = { ...regCtx.wm, face_registered: true, face_descriptor: Array.from(detection.descriptor) };
       setWatchman(updatedWm); stopCamera();
       verifyWatchmanRef.current = { wm: updatedWm, detectedMode: regCtx.detectedMode };
       requestGPS(updatedWm, regCtx.detectedMode);
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to register face.'); setStep('face_registration'); startRegistrationDetection(); }
+    } catch (e: any) { toast.error(e.response?.data?.message || t.failed_register_face); setStep('face_registration'); startRegistrationDetection(); }
   }
 
   async function startCamera() {
@@ -354,7 +423,7 @@ export default function ScanPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       streamRef.current = stream;
-    } catch { toast.error('Camera access denied.'); }
+    } catch { toast.error(t.camera_denied); }
   }
 
   function stopCamera() {
@@ -388,12 +457,12 @@ export default function ScanPage() {
       }
       const r = await axios.post(`${API}${endpoint}`, body);
       setSuccessMsg(r.data.message); setStep('success');
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Submission failed.'); setStep('take_photo'); startCamera(); }
+    } catch (e: any) { toast.error(e.response?.data?.message || t.submission_failed); setStep('take_photo'); startCamera(); }
   }
 
   async function handleDeliveryCheckin() {
     const { visitor_name, visitor_phone, delivery_company } = deliveryForm;
-    if (!visitor_name.trim() || !visitor_phone.trim()) { toast.error('Name and phone are required'); return; }
+    if (!visitor_name.trim() || !visitor_phone.trim()) { toast.error(t.name_phone_required); return; }
     setStep('delivery_submitting');
     try {
       const r = await axios.post(`${API}/delivery/checkin`, {
@@ -404,7 +473,7 @@ export default function ScanPage() {
         delivery_company,
       });
       setDeliveryResult(r.data.data); setStep('delivery_success');
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Check-in failed'); setStep('delivery_form'); }
+    } catch (e: any) { toast.error(e.response?.data?.message || t.checkin_failed); setStep('delivery_form'); }
   }
 
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -522,7 +591,7 @@ export default function ScanPage() {
               <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-6 flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-8 h-8 text-danger-400" /></div>
                 <p className="text-danger-400 font-bold text-lg">{t.face_mismatch} ✕</p>
-                <p className="text-slate-500 text-sm text-center">Attendance cannot be marked. If this is a mistake, please try again in better lighting.</p>
+                <p className="text-slate-500 text-sm text-center">{t.attendance_cannot_mark}</p>
                 <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full mt-2 p-4 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all">{t.try_again}</button>
               </div>
             ) : (
@@ -550,7 +619,7 @@ export default function ScanPage() {
                   onClick={async () => {
                     if (!videoRef.current) return;
                     const ctx = verifyWatchmanRef.current;
-                    if (!ctx) { toast.error('Verification context lost. Please rescan.'); return; }
+                    if (!ctx) { toast.error(t.verify_context_lost); return; }
                     setFaceVerified(null);
                     const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 })).withFaceLandmarks(true).withFaceDescriptor();
                     if (detection && ctx.wm.face_descriptor) {
@@ -559,14 +628,14 @@ export default function ScanPage() {
                       if (distance < FACE_MATCH_THRESHOLD) {
                         if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
                         setFaceVerified(true); setFaceMatchScore(distance);
-                        toast.success('Face Verified!');
+                        toast.success(t.face_verified_success);
                         if (ctx.detectedMode === 'checkin') {
                           stopCamera();
                           setStep('select_shift');
                         }
                         else setStep('take_photo');
                       } else { setFaceVerified(false); }
-                    } else { toast.error('No face detected. Ensure good lighting.'); }
+                    } else { toast.error(t.no_face_good_lighting); }
                   }}
                   disabled={!faceDetected}
                   className={`w-full p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all mt-6 ${faceDetected ? 'bg-[#0a1128] hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
@@ -648,7 +717,7 @@ export default function ScanPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
               {mode === 'checkin' ? <LogIn className="w-5 h-5 text-success-400" /> : <LogOut className="w-5 h-5 text-warning-400" />}
-              <h2 className="text-slate-100 text-lg font-bold">{mode === 'checkin' ? 'Check-In Photo' : 'Check-Out Photo'}</h2>
+              <h2 className="text-slate-100 text-lg font-bold">{mode === 'checkin' ? t.checkin_photo_header : t.checkout_photo_header}</h2>
             </div>
             {mode === 'checkout' && existingRecord && (
               <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-3 text-warning-400 text-sm mb-2">
@@ -704,7 +773,7 @@ export default function ScanPage() {
               }} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
             <div>
-              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-1.5">{t.vehicle_number} <span className="text-slate-500 font-normal normal-case">(optional)</span></label>
+              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-1.5">{t.vehicle_number} <span className="text-slate-500 font-normal normal-case">{t.optional}</span></label>
               <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
             </div>
             <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
@@ -721,7 +790,7 @@ export default function ScanPage() {
             </div>
             <h2 className="text-slate-100 text-2xl font-bold mb-2">{t.welcome}</h2>
             <p className="text-slate-500 mb-6">
-              {`Check-in recorded at ${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
+              {`${t.checkin_recorded_at}${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
             </p>
             <button onClick={() => window.location.reload()} className="w-full p-4 rounded-xl font-bold bg-white/70 hover:bg-slate-800/60 text-slate-600 transition-all">
               Done
