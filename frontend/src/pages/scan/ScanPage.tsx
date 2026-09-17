@@ -496,12 +496,12 @@ export default function ScanPage() {
       </div>
 
       {/* ── Brand header: Logo → Agency Name → Gate → Society ── */}
-      <div className="text-center px-4 pt-1 pb-2 shrink-0 w-full max-w-sm mx-auto">
+      <div className="text-center px-4 pt-1 pb-2 shrink-0 w-full mx-auto">
         {gateInfo?.agency?.logo_url ? (
           <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-            className="w-full h-24 object-contain drop-shadow-xl mx-auto mb-2" />
+            className="w-full h-32 object-cover rounded-2xl drop-shadow-lg mx-auto mb-3" />
         ) : (
-          <div className="w-full h-24 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-2 shadow-lg">
+          <div className="w-full h-32 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-3 shadow-lg">
             <ShieldCheck className="w-10 h-10 text-white" />
           </div>
         )}
@@ -518,8 +518,8 @@ export default function ScanPage() {
       </div>
 
       {/* ── Content area fills remaining height ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-        <div className="w-full max-w-sm mx-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col">
+        <div className="w-full max-w-sm mx-auto flex flex-col justify-center flex-1 py-2">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
             <div className="text-center py-16">
@@ -539,7 +539,7 @@ export default function ScanPage() {
           )}
 
           {step === 'enter_id' && (
-            <div className="pt-4">
+            <div>
               <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
                 <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-3">
                   <User className="w-5 h-5 text-brand-500" />
