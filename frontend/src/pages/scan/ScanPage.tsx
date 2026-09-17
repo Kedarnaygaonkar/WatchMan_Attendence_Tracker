@@ -496,23 +496,23 @@ export default function ScanPage() {
       </div>
 
       {/* ── Brand header: Logo → Agency Name → Gate → Society ── */}
-      <div className="text-center px-4 pt-1 pb-2 shrink-0">
+      <div className="text-center px-4 pt-1 pb-2 shrink-0 w-full max-w-sm mx-auto">
         {gateInfo?.agency?.logo_url ? (
           <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-            className="w-36 h-36 rounded-3xl object-contain bg-white shadow-2xl mx-auto mb-2 border-2 border-white/80" />
+            className="w-full h-24 object-contain drop-shadow-xl mx-auto mb-2" />
         ) : (
-          <div className="w-36 h-36 rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-2 shadow-2xl">
-            <ShieldCheck className="w-16 h-16 text-white" />
+          <div className="w-full h-24 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-2 shadow-lg">
+            <ShieldCheck className="w-10 h-10 text-white" />
           </div>
         )}
         {gateInfo?.agency?.name && (
-          <p className="text-slate-900 text-base font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
+          <p className="text-slate-100 text-base font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
         )}
         {gateInfo && step !== 'error' && (
           <>
             <p className="text-brand-700 text-[11px] font-black uppercase tracking-[0.15em] mb-0.5">{gateInfo.gate.name}</p>
-            <h1 className="text-slate-900 text-xl font-black leading-tight">{gateInfo.society.name}</h1>
-            <p className="text-slate-600 text-[11px] leading-snug mt-0.5 line-clamp-1">{gateInfo.society.address}</p>
+            <h1 className="text-slate-100 text-xl font-black leading-tight">{gateInfo.society.name}</h1>
+            <p className="text-slate-400 text-[11px] font-medium leading-snug mt-0.5 line-clamp-1">{gateInfo.society.address}</p>
           </>
         )}
       </div>
