@@ -518,8 +518,8 @@ export default function ScanPage() {
       </div>
 
       {/* ── Content area fills remaining height ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col">
-        <div className="w-full max-w-sm mx-auto flex flex-col justify-center flex-1 py-2">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+        <div className="w-full max-w-sm mx-auto pt-2">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
             <div className="text-center py-16">
