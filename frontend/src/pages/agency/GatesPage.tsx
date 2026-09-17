@@ -11,6 +11,7 @@ interface Gate {
   qr_token: string;
   is_active: boolean;
   society_id: { id: string; name: string; address: string } | string;
+  agency_id?: { _id: string; name: string; logo_url?: string } | string;
 }
 
 interface Society {
@@ -78,7 +79,7 @@ export default function GatesPage() {
     setDeliveryQrUrl(deliveryQr);
   }
 
-  async function downloadQR(gate: Gate) {
+  async function downloadGuardQR(gate: Gate) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -91,57 +92,141 @@ export default function GatesPage() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Agency Banner (Blue background)
+    ctx.fillStyle = '#1e3a8a'; // brand-900 / dark blue
+    ctx.fillRect(0, 0, canvas.width, 600);
+
+    const agency = typeof gate.agency_id === 'object' ? gate.agency_id : null;
+    let agencyName = agency?.name || 'Secure Agency';
+
+    // Helper to load image
+    const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+
+    // Draw Agency Logo if exists, else text
+    if (agency?.logo_url) {
+      try {
+        const logo = await loadImg(agency.logo_url);
+        // Draw centered logo in the banner
+        const lWidth = 1000;
+        const lHeight = 400;
+        ctx.drawImage(logo, (canvas.width - lWidth) / 2, 100, lWidth, lHeight);
+      } catch (e) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 140px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(agencyName.toUpperCase(), canvas.width / 2, 350);
+      }
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 140px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(agencyName.toUpperCase(), canvas.width / 2, 350);
+    }
+
     // Header (Society Name)
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 120px sans-serif';
     ctx.textAlign = 'center';
     const societyName = getSocietyName(gate);
-    ctx.fillText(societyName, canvas.width / 2, 400);
+    ctx.fillText(societyName, canvas.width / 2, 850);
 
     // Gate Name
     ctx.font = 'bold 60px sans-serif';
     ctx.fillStyle = '#475569';
-    ctx.fillText(gate.name.toUpperCase(), canvas.width / 2, 520);
-
-    // Load Images
-    const loadImg = (src: string): Promise<HTMLImageElement> => new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.src = src;
-    });
-
-    const wImg = await loadImg(watchmanQrUrl);
-    const dImg = await loadImg(deliveryQrUrl);
+    ctx.fillText(gate.name.toUpperCase(), canvas.width / 2, 980);
 
     // Draw Watchman QR (Large)
-    const wSize = 1400;
-    ctx.drawImage(wImg, (canvas.width - wSize) / 2, 700, wSize, wSize);
+    try {
+      const wImg = await loadImg(watchmanQrUrl);
+      const wSize = 1600;
+      ctx.drawImage(wImg, (canvas.width - wSize) / 2, 1150, wSize, wSize);
+    } catch (e) {
+      console.error('Failed to load QR image for canvas');
+    }
 
     // Watchman Label
-    ctx.font = 'bold 90px sans-serif';
+    ctx.font = 'bold 100px sans-serif';
     ctx.fillStyle = '#1e40af';
-    ctx.fillText('SECURITY GUARD SCAN HERE', canvas.width / 2, 2250);
+    ctx.fillText('SECURITY GUARD SCAN HERE', canvas.width / 2, 2900);
 
-    // Divider Line
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(300, 2450);
-    ctx.lineTo(canvas.width - 300, 2450);
-    ctx.stroke();
-
-    // Draw Delivery QR (Small)
-    const dSize = 600;
-    ctx.drawImage(dImg, (canvas.width - dSize) / 2, 2550, dSize, dSize);
-
-    // Delivery Label
-    ctx.font = 'bold 70px sans-serif';
-    ctx.fillStyle = '#ea580c';
-    ctx.fillText('DELIVERY BOY SCAN HERE', canvas.width / 2, 3300);
+    // Footer Help Text
+    ctx.font = '50px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Please use the Watchman App to scan this QR code', canvas.width / 2, 3100);
 
     // Trigger Download
     const link = document.createElement('a');
-    link.download = `gate-qr-${gate.name.replace(/\s+/g, '-')}.png`;
+    link.download = `guard-qr-${gate.name.replace(/\s+/g, '-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  async function downloadDeliveryQR(gate: Gate) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // A4 Size at 300 DPI is 2480 x 3508
+    canvas.width = 2480;
+    canvas.height = 3508;
+
+    // White Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Delivery Header
+    ctx.fillStyle = '#ea580c'; // orange
+    ctx.fillRect(0, 0, canvas.width, 600);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 140px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('DELIVERY CHECK-IN', canvas.width / 2, 350);
+
+    // Header (Society Name)
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 120px sans-serif';
+    ctx.textAlign = 'center';
+    const societyName = getSocietyName(gate);
+    ctx.fillText(societyName, canvas.width / 2, 850);
+
+    // Gate Name
+    ctx.font = 'bold 60px sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.fillText(gate.name.toUpperCase(), canvas.width / 2, 980);
+
+    // Load Images
+    const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+
+    // Draw Delivery QR (Large)
+    try {
+      const dImg = await loadImg(deliveryQrUrl);
+      const dSize = 1600;
+      ctx.drawImage(dImg, (canvas.width - dSize) / 2, 1150, dSize, dSize);
+    } catch (e) {
+      console.error('Failed to load QR image for canvas');
+    }
+
+    // Delivery Label
+    ctx.font = 'bold 100px sans-serif';
+    ctx.fillStyle = '#ea580c';
+    ctx.fillText('DELIVERY PARTNER SCAN HERE', canvas.width / 2, 2900);
+
+    // Trigger Download
+    const link = document.createElement('a');
+    link.download = `delivery-qr-${gate.name.replace(/\s+/g, '-')}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   }
@@ -238,16 +323,11 @@ export default function GatesPage() {
               <button onClick={() => setQrModalGate(null)} className="text-slate-400 hover:text-slate-200"><X className="w-5 h-5" /></button>
             </div>
 
-            {(watchmanQrUrl && deliveryQrUrl) && (
+            {watchmanQrUrl && (
               <div className="bg-white rounded-2xl p-4 text-center mb-4 flex flex-col items-center gap-4">
                 <div>
                   <p className="text-xs font-bold text-brand-600 mb-1">SECURITY GUARD</p>
-                  <img src={watchmanQrUrl} alt="Watchman QR" className="w-full max-w-[200px] mx-auto border border-slate-200 rounded-lg" />
-                </div>
-                <div className="w-full h-px bg-slate-200"></div>
-                <div>
-                  <p className="text-xs font-bold text-orange-600 mb-1">DELIVERY BOY</p>
-                  <img src={deliveryQrUrl} alt="Delivery QR" className="w-full max-w-[120px] mx-auto border border-slate-200 rounded-lg" />
+                  <img src={watchmanQrUrl} alt="Watchman QR" className="w-full max-w-[240px] mx-auto border border-slate-200 rounded-lg" />
                 </div>
               </div>
             )}
@@ -257,11 +337,18 @@ export default function GatesPage() {
             </p>
 
             <div className="flex gap-2">
-              <button className="btn-primary flex-1" onClick={() => downloadQR(qrModalGate)}>
-                <Download className="w-4 h-4" /> Download PNG
+              <button className="btn-primary flex-1" onClick={() => downloadGuardQR(qrModalGate)}>
+                <Download className="w-4 h-4" /> Download Guard QR
               </button>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button className="btn-secondary flex-1 border-orange-500 text-orange-600 hover:bg-orange-50" onClick={() => downloadDeliveryQR(qrModalGate)}>
+                <Download className="w-4 h-4" /> Download Delivery QR
+              </button>
+            </div>
+            <div className="flex gap-2 mt-2">
               <button className="btn-secondary flex-1" onClick={() => copyLink(qrModalGate)}>
-                <Copy className="w-4 h-4" /> Copy Link
+                <Copy className="w-4 h-4" /> Copy Direct Link
               </button>
             </div>
 

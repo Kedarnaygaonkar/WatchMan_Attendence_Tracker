@@ -25,6 +25,7 @@ router.get(
 
     const gates = await Gate.find(filter)
       .populate('society_id', 'name address')
+      .populate('agency_id', 'name logo_url')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: gates });
