@@ -518,8 +518,8 @@ export default function ScanPage() {
       </div>
 
       {/* ── Content area fills remaining height ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-        <div className="w-full max-w-sm mx-auto pt-2">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col">
+        <div className="w-full max-w-sm mx-auto pt-2 flex-1 flex flex-col">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
             <div className="text-center py-16">
@@ -539,15 +539,15 @@ export default function ScanPage() {
           )}
 
           {step === 'enter_id' && (
-            <div>
-              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
-                <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-3">
-                  <User className="w-5 h-5 text-brand-500" />
+            <div className="flex-1 flex flex-col justify-center pb-8">
+              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
+                <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
+                  <User className="w-6 h-6 text-brand-500" />
                 </div>
-                <h2 className="text-slate-100 text-[17px] font-bold tracking-tight mb-4">{t.enter_guard_id}</h2>
-                {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-3">{errorMsg}</div>}
-                <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-3.5 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm text-slate-100 text-[15px] font-semibold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-4 shadow-sm" />
-                <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full p-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-4 h-4" /></button>
+                <h2 className="text-slate-900 text-[19px] font-black tracking-tight mb-5">{t.enter_guard_id}</h2>
+                {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-4">{errorMsg}</div>}
+                <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full py-4 px-4 rounded-2xl border border-brand-200/50 bg-white/80 backdrop-blur-sm text-slate-800 text-[16px] font-bold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-4 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-5 shadow-sm" />
+                <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] ${employeeId.trim() ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
           )}
