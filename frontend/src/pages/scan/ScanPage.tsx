@@ -479,324 +479,328 @@ export default function ScanPage() {
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center p-5 font-sans">
-      
-      {/* Language Toggle */}
-      <div className="absolute top-6 left-6 z-50">
-        <button
-          onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-          className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-2 rounded-full shadow-sm border border-white/50 text-slate-100 font-bold hover:bg-white/80 transition-all"
-        >
-          <Globe className="w-4 h-4 text-brand-500" />
-          <span className="text-sm">{lang === 'EN' ? 'English' : lang === 'HI' ? 'हिंदी' : 'मराठी'}</span>
-        </button>
-      </div>
+    <div className="relative flex flex-col font-sans" style={{ minHeight: '100dvh' }}>
+      {/* Background video + overlay */}
       <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover -z-20">
         <source src="/watchmen_background.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-brand-100/50 backdrop-blur-md -z-10" />
 
-      <div className="text-center mb-6 mt-2">
-        {gateInfo?.agency?.logo_url ? (
-          <img src={gateInfo.agency.logo_url} alt="Agency Logo" className="w-16 h-16 rounded-2xl object-contain bg-white shadow-sm mb-3 mx-auto" />
-        ) : (
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-500 flex items-center justify-center mx-auto mb-3 shadow-md shadow-brand-500/20">
-            <ShieldCheck className="w-8 h-8 text-white" />
+      {/* ── Sticky top header ── */}
+      <div className="sticky top-0 z-40 px-4 pt-4 pb-3">
+        {/* Row 1: lang toggle + time */}
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
+            className="flex items-center gap-1.5 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-white/50 text-slate-100 font-bold hover:bg-white/80 transition-all"
+          >
+            <Globe className="w-3.5 h-3.5 text-brand-500" />
+            <span className="text-xs">{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
+          </button>
+          <div className="text-slate-500 text-xs font-medium flex items-center gap-1">
+            <Clock className="w-3 h-3" /> {currentTime}
           </div>
-        )}
-        <div className="text-slate-500 text-sm font-medium flex items-center justify-center gap-1.5">
-          <Clock className="w-4 h-4" /> {currentTime}
+        </div>
+        {/* Row 2: big logo + gate/society info */}
+        <div className="flex items-center gap-4">
+          {gateInfo?.agency?.logo_url ? (
+            <img src={gateInfo.agency.logo_url} alt="Agency Logo"
+              className="w-24 h-24 rounded-2xl object-contain bg-white shadow-lg shrink-0 border border-white/60" />
+          ) : (
+            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-500 flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/30">
+              <ShieldCheck className="w-12 h-12 text-white" />
+            </div>
+          )}
+          {gateInfo && step !== 'error' ? (
+            <div className="flex-1 min-w-0">
+              <p className="text-brand-400 text-[10px] font-bold uppercase tracking-widest mb-0.5 truncate">{gateInfo.gate.name}</p>
+              <h1 className="text-slate-100 text-lg font-bold leading-tight truncate">{gateInfo.society.name}</h1>
+              <p className="text-slate-500 text-[11px] leading-tight line-clamp-2 mt-0.5">{gateInfo.society.address}</p>
+            </div>
+          ) : (
+            <div className="flex-1" />
+          )}
         </div>
       </div>
 
-      <div className="w-full max-w-sm mx-auto">
-        {gateInfo && step !== 'error' && (
-          <div className="text-center mb-8">
-            <div className="bg-brand-500/15 border border-brand-500/20 rounded-xl p-4 mb-3">
-              <p className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-1">{gateInfo.gate.name}</p>
-              <h1 className="text-slate-100 text-xl font-bold">{gateInfo.society.name}</h1>
+      {/* ── Scrollable content ── */}
+      <div className="flex-1 overflow-y-auto px-4 pb-6">
+        <div className="w-full max-w-sm mx-auto space-y-0">
+
+          {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
+            <div className="text-center py-16">
+              <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
+              <p className="text-slate-500 mt-4 font-medium">
+                {step === 'delivery_submitting' ? t.recording_visit : step === 'submitting' ? t.recording_attendance : t.loading}
+              </p>
             </div>
-            <p className="text-slate-500 text-xs">{gateInfo.society.address}</p>
-          </div>
-        )}
+          )}
 
-        {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
-          <div className="text-center py-10">
-            <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
-            <p className="text-slate-500 mt-4 font-medium">
-              {step === 'delivery_submitting' ? t.recording_visit : step === 'submitting' ? t.recording_attendance : t.loading}
-            </p>
-          </div>
-        )}
+          {step === 'error' && (
+            <div className="text-center py-16">
+              <AlertTriangle className="w-12 h-12 text-danger-400 mx-auto mb-3" />
+              <h2 className="text-danger-400 text-lg font-bold">{t.error}</h2>
+              <p className="text-slate-500 mt-2">{errorMsg}</p>
+            </div>
+          )}
 
-        {step === 'error' && (
-          <div className="text-center py-6">
-            <AlertTriangle className="w-12 h-12 text-danger-400 mx-auto mb-3" />
-            <h2 className="text-danger-400 text-lg font-bold">{t.error}</h2>
-            <p className="text-slate-500 mt-2">{errorMsg}</p>
-          </div>
-        )}
-
-        {step === 'enter_id' && (
-          <div className="space-y-4">
-            <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
-              <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
-                <User className="w-5 h-5 text-brand-500" />
+          {step === 'enter_id' && (
+            <div className="pt-4">
+              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] text-center">
+                <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-3">
+                  <User className="w-5 h-5 text-brand-500" />
+                </div>
+                <h2 className="text-slate-100 text-[17px] font-bold tracking-tight mb-4">{t.enter_guard_id}</h2>
+                {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-3">{errorMsg}</div>}
+                <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-3.5 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm text-slate-100 text-[15px] font-semibold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-4 shadow-sm" />
+                <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full p-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-4 h-4" /></button>
               </div>
-              <h2 className="text-slate-100 text-[19px] font-bold tracking-tight mb-6">{t.enter_guard_id}</h2>
-              {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-4">{errorMsg}</div>}
-              <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full p-4 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm text-slate-100 text-[15px] font-semibold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-6 shadow-sm" />
-              <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-4 h-4" /></button>
             </div>
-            
-          </div>
-        )}
+          )}
 
-        {step === 'get_gps' && (
-          <div className="text-center py-10">
-            <MapPin className="w-12 h-12 text-brand-500 mx-auto mb-4 animate-bounce" />
-            <h2 className="text-slate-100 text-lg font-bold">{t.getting_location}</h2>
-            <p className="text-slate-500 text-sm mt-2">{t.allow_location}</p>
-          </div>
-        )}
-
-        {step === 'face_registration' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="w-5 h-5 text-brand-400" />
-              <h2 className="text-slate-100 text-lg font-bold">{t.first_time_setup}</h2>
+          {step === 'get_gps' && (
+            <div className="text-center py-16">
+              <MapPin className="w-12 h-12 text-brand-500 mx-auto mb-4 animate-bounce" />
+              <h2 className="text-slate-100 text-lg font-bold">{t.getting_location}</h2>
+              <p className="text-slate-500 text-sm mt-2">{t.allow_location}</p>
             </div>
-            <p className="text-slate-500 text-sm mb-4">{t.look_camera_register}</p>
-            <div className={`rounded-xl overflow-hidden aspect-4/3 flex items-center justify-center relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-white/50'}`}>
-              <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-              {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-3 py-1 rounded-full text-sm backdrop-blur-sm">{t.no_face_detected}</p></div>}
-            </div>
-            <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
-              <ScanFace className="w-5 h-5" /> Register My Face
-            </button>
-          </div>
-        )}
+          )}
 
-        {step === 'face_verification' && (
-          <div className="space-y-4">
-            <div className="text-center mb-8">
-              <div className="bg-brand-50 text-brand-500 mx-auto inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide mb-4">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                {faceVerified === false ? t.face_mismatch : t.face_verification}
+          {step === 'face_registration' && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-brand-400" />
+                <h2 className="text-slate-100 text-base font-bold">{t.first_time_setup}</h2>
               </div>
-              <h2 className="text-slate-100 text-2xl font-black tracking-tight mb-2">{faceVerified === false ? t.verification_failed : t.verify_identity}</h2>
-              <p className="text-slate-500 text-sm">{faceVerified === false ? t.face_did_not_match : t.look_camera_verify}</p>
-            </div>
-            {faceVerified === false ? (
-              <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-6 flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-8 h-8 text-danger-400" /></div>
-                <p className="text-danger-400 font-bold text-lg">{t.face_mismatch} ✕</p>
-                <p className="text-slate-500 text-sm text-center">{t.attendance_cannot_mark}</p>
-                <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full mt-2 p-4 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all">{t.try_again}</button>
+              <p className="text-slate-500 text-sm">{t.look_camera_register}</p>
+              <div className={`rounded-xl overflow-hidden aspect-video relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-white/50'}`}>
+                <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-3 py-1 rounded-full text-sm backdrop-blur-sm">{t.no_face_detected}</p></div>}
               </div>
-            ) : (
-              <>
-                <div className="rounded-[2rem] overflow-hidden bg-[#0a1128] aspect-[3/4] relative border-4 border-[#121c3b] shadow-2xl">
-                  <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                  <div className="absolute inset-0 pointer-events-none p-6">
-                    <div className="w-full h-full border-[3px] border-brand-500/30 rounded-[3rem] relative">
-                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-brand-500 rounded-tl-[3rem] -mt-1 -ml-1"></div>
-                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-brand-500 rounded-tr-[3rem] -mt-1 -mr-1"></div>
-                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-brand-500 rounded-bl-[3rem] -mb-1 -ml-1"></div>
-                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-brand-500 rounded-br-[3rem] -mb-1 -mr-1"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                         <div className={`w-48 h-64 rounded-[4rem] border-2 transition-colors duration-300 ${faceDetected ? 'border-brand-400/80' : 'border-white/10'}`} />
+              <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
+                <ScanFace className="w-5 h-5" /> {t.register_face}
+              </button>
+            </div>
+          )}
+
+          {step === 'face_verification' && (
+            <div className="space-y-3 pt-2">
+              <div className="text-center">
+                <div className="bg-brand-50 text-brand-500 mx-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide mb-2">
+                  <ShieldCheck className="w-3 h-3" />
+                  {faceVerified === false ? t.face_mismatch : t.face_verification}
+                </div>
+                <h2 className="text-slate-100 text-xl font-black tracking-tight mb-1">{faceVerified === false ? t.verification_failed : t.verify_identity}</h2>
+                <p className="text-slate-500 text-xs">{faceVerified === false ? t.face_did_not_match : t.look_camera_verify}</p>
+              </div>
+              {faceVerified === false ? (
+                <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-5 flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-7 h-7 text-danger-400" /></div>
+                  <p className="text-danger-400 font-bold">{t.face_mismatch} ✕</p>
+                  <p className="text-slate-500 text-sm text-center">{t.attendance_cannot_mark}</p>
+                  <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full p-3.5 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all">{t.try_again}</button>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-[1.5rem] overflow-hidden bg-[#0a1128] aspect-video relative border-4 border-[#121c3b] shadow-2xl">
+                    <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                    <div className="absolute inset-0 pointer-events-none p-4">
+                      <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[2rem] relative">
+                        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-brand-500 rounded-tl-[2rem] -mt-0.5 -ml-0.5"></div>
+                        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-brand-500 rounded-tr-[2rem] -mt-0.5 -mr-0.5"></div>
+                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-brand-500 rounded-bl-[2rem] -mb-0.5 -ml-0.5"></div>
+                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-brand-500 rounded-br-[2rem] -mb-0.5 -mr-0.5"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className={`w-32 h-44 rounded-[3rem] border-2 transition-colors duration-300 ${faceDetected ? 'border-brand-400/80' : 'border-white/10'}`} />
+                        </div>
                       </div>
                     </div>
+                    {faceDetected && (
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                        <span className="bg-success-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg"><CheckCircle className="w-3 h-3" /> {t.face_detected}</span>
+                      </div>
+                    )}
                   </div>
-                  {faceDetected && (
-                    <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-                      <span className="bg-success-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg"><CheckCircle className="w-3.5 h-3.5" /> Face Detected ✓</span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!videoRef.current) return;
-                    const ctx = verifyWatchmanRef.current;
-                    if (!ctx) { toast.error(t.verify_context_lost); return; }
-                    setFaceVerified(null);
-                    const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 })).withFaceLandmarks(true).withFaceDescriptor();
-                    if (detection && ctx.wm.face_descriptor) {
-                      const stored = new Float32Array(ctx.wm.face_descriptor);
-                      const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
-                      if (distance < FACE_MATCH_THRESHOLD) {
-                        if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-                        setFaceVerified(true); setFaceMatchScore(distance);
-                        toast.success(t.face_verified_success);
-                        if (ctx.detectedMode === 'checkin') {
-                          stopCamera();
-                          setStep('select_shift');
-                        }
-                        else setStep('take_photo');
-                      } else { setFaceVerified(false); }
-                    } else { toast.error(t.no_face_good_lighting); }
-                  }}
-                  disabled={!faceDetected}
-                  className={`w-full p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all mt-6 ${faceDetected ? 'bg-[#0a1128] hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
-                >
-                  <ScanFace className="w-5 h-5" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {step === 'select_shift' && watchman && (
-          <div className="space-y-5">
-            <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1.5rem] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
-                <CheckCircle className="w-5 h-5 text-brand-500" />
-              </div>
-              <div>
-                <p className="text-slate-100 font-bold tracking-tight text-[15px]">{watchman.full_name}</p>
-                <p className="text-slate-500 text-xs font-medium">ID: {watchman.employee_id}</p>
-              </div>
-            </div>
-
-            {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
-              <div>
-                <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-2">{t.select_gate}</label>
-                <div className="flex flex-wrap gap-2">
-                  {gateInfo.society.gates.map(g => (
-                    <button key={g} onClick={() => setSelectedGate(g)}
-                      className={`px-6 py-3 rounded-2xl text-[14px] font-bold border transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
-                      {g}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
-              <div>
-                <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-2">{t.select_wing} <span className="text-slate-500 font-normal normal-case">{t.optional}</span></label>
-                <div className="flex flex-wrap gap-2">
-                  {gateInfo.society.wings.map(w => (
-                    <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
-                      className={`px-6 py-3 rounded-2xl text-[14px] font-bold border transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
-                      {w}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-2">{t.select_shift}</label>
-              <div className="space-y-2">
-                {gateInfo?.shifts.map(s => (
-                  <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
-                    className={`w-full p-5 rounded-2xl border text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 hover:border-slate-700 hover:bg-slate-900 shadow-sm'}`}>
-                    <div className="flex items-center gap-3"><Clock className="w-4 h-4" /><span className="font-bold text-[15px]">{s.name}</span></div>
-                    <span className="text-slate-500 text-xs">{s.start_time} &ndash; {s.end_time}</span>
+                  <button
+                    onClick={async () => {
+                      if (!videoRef.current) return;
+                      const ctx = verifyWatchmanRef.current;
+                      if (!ctx) { toast.error(t.verify_context_lost); return; }
+                      setFaceVerified(null);
+                      const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 })).withFaceLandmarks(true).withFaceDescriptor();
+                      if (detection && ctx.wm.face_descriptor) {
+                        const stored = new Float32Array(ctx.wm.face_descriptor);
+                        const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
+                        if (distance < FACE_MATCH_THRESHOLD) {
+                          if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+                          setFaceVerified(true); setFaceMatchScore(distance);
+                          toast.success(t.face_verified_success);
+                          if (ctx.detectedMode === 'checkin') { stopCamera(); setStep('select_shift'); }
+                          else setStep('take_photo');
+                        } else { setFaceVerified(false); }
+                      } else { toast.error(t.no_face_good_lighting); }
+                    }}
+                    disabled={!faceDetected}
+                    className={`w-full p-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${faceDetected ? 'bg-[#0a1128] hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                  >
+                    <ScanFace className="w-5 h-5" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
                   </button>
-                ))}
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 'select_shift' && watchman && (
+            <div className="space-y-3 pt-2">
+              {/* Watchman identity card */}
+              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-2xl p-3.5 shadow flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
+                  <CheckCircle className="w-4 h-4 text-brand-500" />
+                </div>
+                <div>
+                  <p className="text-slate-100 font-bold text-sm">{watchman.full_name}</p>
+                  <p className="text-slate-500 text-xs">ID: {watchman.employee_id}</p>
+                </div>
               </div>
-            </div>
 
-            <button
-              onClick={async () => { await startCamera(); setStep('take_photo'); }}
-              disabled={!selectedShiftId || !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
-              className={`w-full p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all mt-8 ${
-                selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
-                  ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30'
-                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-              }`}>
-              <Camera className="w-5 h-5" /> {t.take_photo} <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+              {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
+                <div>
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.select_gate}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {gateInfo.society.gates.map(g => (
+                      <button key={g} onClick={() => setSelectedGate(g)}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {step === 'take_photo' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              {mode === 'checkin' ? <LogIn className="w-5 h-5 text-success-400" /> : <LogOut className="w-5 h-5 text-warning-400" />}
-              <h2 className="text-slate-100 text-lg font-bold">{mode === 'checkin' ? t.checkin_photo_header : t.checkout_photo_header}</h2>
-            </div>
-            {mode === 'checkout' && existingRecord && (
-              <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-3 text-warning-400 text-sm mb-2">
-                Checked in at {new Date(existingRecord.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+              {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
+                <div>
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.select_wing} <span className="font-normal normal-case">{t.optional}</span></label>
+                  <div className="flex flex-wrap gap-2">
+                    {gateInfo.society.wings.map(w => (
+                      <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.select_shift}</label>
+                <div className="space-y-1.5">
+                  {gateInfo?.shifts.map(s => (
+                    <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
+                      className={`w-full px-4 py-3 rounded-xl border text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
+                      <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5" /><span className="font-bold text-sm">{s.name}</span></div>
+                      <span className="text-slate-500 text-xs">{s.start_time} &ndash; {s.end_time}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-            <div className="rounded-xl overflow-hidden bg-surface-950 aspect-4/3 relative border border-white/50">
-              <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-            </div>
-            <canvas ref={canvasRef} className="hidden" />
-            <button onClick={capturePhoto} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${mode === 'checkin' ? 'bg-success-600 hover:bg-success-500' : 'bg-warning-600 hover:bg-warning-500'}`}>
-              {mode === 'checkin' ? <><LogIn className="w-5 h-5" /> {t.mark_checkin}</> : <><LogOut className="w-5 h-5" /> {t.mark_checkout}</>}
-            </button>
-          </div>
-        )}
 
-        {step === 'success' && (
-          <div className="text-center py-6">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${successMsg.includes('LATE') ? 'bg-warning-500/10 text-warning-400' : 'bg-success-500/10 text-success-400'}`}>
-              <CheckCircle className="w-10 h-10" />
+              <button
+                onClick={async () => { await startCamera(); setStep('take_photo'); }}
+                disabled={!selectedShiftId || !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
+                className={`w-full p-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
+                    ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                }`}>
+                <Camera className="w-4 h-4" /> {t.take_photo} <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-            <h2 className="text-slate-100 text-2xl font-bold mb-2">{successMsg.includes('LATE') ? t.late_arrival : mode === 'checkin' ? t.checked_in : t.checked_out}</h2>
-            <p className="text-slate-500 text-sm leading-relaxed mb-6">{successMsg}</p>
-          </div>
-        )}
+          )}
 
-        {step === 'delivery_form' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <Bike className="w-5 h-5 text-orange-400" />
-              <h2 className="text-slate-100 text-lg font-bold">{t.delivery_checkin}</h2>
-            </div>
-            <div>
-              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-2">{t.delivery_company}</label>
-              <div className="flex flex-wrap gap-2">
-                {DELIVERY_COMPANIES.map(c => (
-                  <button key={c} onClick={() => setDeliveryForm(f => ({ ...f, delivery_company: c }))}
-                    className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-all ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-white/40 text-slate-500 bg-white/70 hover:border-brand-400'}`}
-                    style={deliveryForm.delivery_company === c ? { backgroundColor: COMPANY_COLORS[c] || '#64748b' } : {}}
-                  >{c}</button>
-                ))}
+          {step === 'take_photo' && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                {mode === 'checkin' ? <LogIn className="w-5 h-5 text-success-400" /> : <LogOut className="w-5 h-5 text-warning-400" />}
+                <h2 className="text-slate-100 text-base font-bold">{mode === 'checkin' ? t.checkin_photo_header : t.checkout_photo_header}</h2>
               </div>
+              {mode === 'checkout' && existingRecord && (
+                <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-3 text-warning-400 text-sm">
+                  {t.checked_in_at}{new Date(existingRecord.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </div>
+              )}
+              <div className="rounded-xl overflow-hidden bg-surface-950 aspect-video relative border border-white/50">
+                <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+              </div>
+              <canvas ref={canvasRef} className="hidden" />
+              <button onClick={capturePhoto} className={`w-full p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${mode === 'checkin' ? 'bg-success-600 hover:bg-success-500' : 'bg-warning-600 hover:bg-warning-500'}`}>
+                {mode === 'checkin' ? <><LogIn className="w-5 h-5" /> {t.mark_checkin}</> : <><LogOut className="w-5 h-5" /> {t.mark_checkout}</>}
+              </button>
             </div>
-            <div>
-              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-1.5">{t.your_name}</label>
-              <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
-            </div>
-            <div>
-              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-1.5">{t.phone_number}</label>
-              <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                setDeliveryForm(f => ({ ...f, visitor_phone: val }));
-              }} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
-            </div>
-            <div>
-              <label className="text-slate-500 text-xs font-semibold uppercase tracking-wider block mb-1.5">{t.vehicle_number} <span className="text-slate-500 font-normal normal-case">{t.optional}</span></label>
-              <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-white/50 bg-white/70 text-slate-100 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500" />
-            </div>
-            <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
-              <LogIn className="w-5 h-5" /> Mark Entry
-            </button>
-            
-          </div>
-        )}
+          )}
 
-        {step === 'delivery_success' && deliveryResult && (
-          <div className="text-center py-6">
-            <div className="w-20 h-20 rounded-full bg-success-500/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-10 h-10 text-success-400" />
+          {step === 'success' && (
+            <div className="text-center py-12">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${successMsg.includes('LATE') ? 'bg-warning-500/10 text-warning-400' : 'bg-success-500/10 text-success-400'}`}>
+                <CheckCircle className="w-10 h-10" />
+              </div>
+              <h2 className="text-slate-100 text-2xl font-bold mb-2">{successMsg.includes('LATE') ? t.late_arrival : mode === 'checkin' ? t.checked_in : t.checked_out}</h2>
+              <p className="text-slate-500 text-sm leading-relaxed">{successMsg}</p>
             </div>
-            <h2 className="text-slate-100 text-2xl font-bold mb-2">{t.welcome}</h2>
-            <p className="text-slate-500 mb-6">
-              {`${t.checkin_recorded_at}${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
-            </p>
-            <button onClick={() => window.location.reload()} className="w-full p-4 rounded-xl font-bold bg-white/70 hover:bg-slate-800/60 text-slate-600 transition-all">
-              Done
-            </button>
-          </div>
-        )}
+          )}
+
+          {step === 'delivery_form' && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                <Bike className="w-5 h-5 text-orange-400" />
+                <h2 className="text-slate-100 text-base font-bold">{t.delivery_checkin}</h2>
+              </div>
+              <div>
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.delivery_company}</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DELIVERY_COMPANIES.map(c => (
+                    <button key={c} onClick={() => setDeliveryForm(f => ({ ...f, delivery_company: c }))}
+                      className={`px-3 py-1 rounded-full text-xs font-bold border-2 transition-all ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-white/40 text-slate-500 bg-white/70 hover:border-brand-400'}`}
+                      style={deliveryForm.delivery_company === c ? { backgroundColor: COMPANY_COLORS[c] || '#64748b' } : {}}
+                    >{c}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.your_name}</label>
+                <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500 text-sm" />
+              </div>
+              <div>
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.phone_number}</label>
+                <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setDeliveryForm(f => ({ ...f, visitor_phone: val }));
+                }} className="w-full p-3 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500 text-sm" />
+              </div>
+              <div>
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.vehicle_number} <span className="font-normal normal-case">{t.optional}</span></label>
+                <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3 rounded-xl border border-white/50 bg-white/70 text-slate-100 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500 text-sm" />
+              </div>
+              <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
+                <LogIn className="w-5 h-5" /> {t.mark_entry}
+              </button>
+            </div>
+          )}
+
+          {step === 'delivery_success' && deliveryResult && (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 rounded-full bg-success-500/10 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-10 h-10 text-success-400" />
+              </div>
+              <h2 className="text-slate-100 text-2xl font-bold mb-2">{t.welcome}</h2>
+              <p className="text-slate-500 mb-4">
+                {`${t.checkin_recorded_at}${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
+              </p>
+              <button onClick={() => window.location.reload()} className="w-full p-3.5 rounded-xl font-bold bg-white/70 hover:bg-slate-800/60 text-slate-600 transition-all">
+                {t.done_btn}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
