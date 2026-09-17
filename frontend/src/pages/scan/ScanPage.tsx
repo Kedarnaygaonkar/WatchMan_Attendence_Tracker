@@ -496,23 +496,23 @@ export default function ScanPage() {
       </div>
 
       {/* ── Brand header: Logo → Agency Name → Gate → Society ── */}
-      <div className="text-center px-4 pt-1 pb-4 shrink-0 w-full mx-auto">
+      <div className="text-center px-4 pt-1 pb-2 shrink-0 w-full mx-auto">
         {gateInfo?.agency?.logo_url ? (
           <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-            className="w-full h-44 object-cover rounded-3xl drop-shadow-xl mx-auto mb-4" />
+            className="w-full h-[18vh] max-h-36 min-h-[100px] object-cover rounded-[1.5rem] drop-shadow-xl mx-auto mb-2" />
         ) : (
-          <div className="w-full h-44 rounded-3xl bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-4 shadow-xl">
-            <ShieldCheck className="w-16 h-16 text-white" />
+          <div className="w-full h-[18vh] max-h-36 min-h-[100px] rounded-[1.5rem] bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-2 shadow-xl">
+            <ShieldCheck className="w-14 h-14 text-white" />
           </div>
         )}
         {gateInfo?.agency?.name && (
-          <p className="text-slate-100 text-xl font-black tracking-wide mb-1">{gateInfo.agency.name}</p>
+          <p className="text-slate-100 text-lg font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
         )}
         {gateInfo && step !== 'error' && (
           <>
-            <p className="text-brand-700 text-xs font-black uppercase tracking-[0.2em] mb-1">{gateInfo.gate.name}</p>
-            <h1 className="text-slate-100 text-3xl font-black leading-tight mb-1">{gateInfo.society.name}</h1>
-            <p className="text-slate-400 text-xs font-medium leading-relaxed mt-1 line-clamp-2 px-4">{gateInfo.society.address}</p>
+            <p className="text-brand-700 text-[11px] font-black uppercase tracking-[0.2em] mb-0.5">{gateInfo.gate.name}</p>
+            <h1 className="text-slate-100 text-2xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
+            <p className="text-slate-400 text-[11px] font-medium leading-relaxed mt-0.5 line-clamp-1 px-4">{gateInfo.society.address}</p>
           </>
         )}
       </div>
@@ -645,9 +645,9 @@ export default function ScanPage() {
           )}
 
           {step === 'select_shift' && watchman && (
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2 pt-1">
               {/* Watchman identity card */}
-              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-2xl p-3.5 shadow flex items-center gap-3">
+              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[1rem] p-2.5 shadow flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
                   <CheckCircle className="w-4 h-4 text-brand-500" />
                 </div>
@@ -659,11 +659,11 @@ export default function ScanPage() {
 
               {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
                 <div>
-                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.select_gate}</label>
-                  <div className="flex flex-wrap gap-2">
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.select_gate}</label>
+                  <div className="flex flex-wrap gap-1.5">
                     {gateInfo.society.gates.map(g => (
                       <button key={g} onClick={() => setSelectedGate(g)}
-                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
+                        className={`px-3.5 py-1.5 rounded-lg text-sm font-bold border transition-all ${selectedGate === g ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
                         {g}
                       </button>
                     ))}
@@ -673,11 +673,11 @@ export default function ScanPage() {
 
               {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
                 <div>
-                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.select_wing} <span className="font-normal normal-case">{t.optional}</span></label>
-                  <div className="flex flex-wrap gap-2">
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.select_wing} <span className="font-normal normal-case">{t.optional}</span></label>
+                  <div className="flex flex-wrap gap-1.5">
                     {gateInfo.society.wings.map(w => (
                       <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
-                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
+                        className={`px-3.5 py-1.5 rounded-lg text-sm font-bold border transition-all ${selectedWing === w ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
                         {w}
                       </button>
                     ))}
@@ -686,11 +686,11 @@ export default function ScanPage() {
               )}
 
               <div>
-                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.select_shift}</label>
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.select_shift}</label>
                 <div className="space-y-1.5">
                   {gateInfo?.shifts.map(s => (
                     <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
-                      className={`w-full px-4 py-3 rounded-xl border text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
+                      className={`w-full px-4 py-2.5 rounded-xl border text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm' : 'border-white/60 bg-white/80 backdrop-blur-sm text-slate-600 shadow-sm'}`}>
                       <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5" /><span className="font-bold text-sm">{s.name}</span></div>
                       <span className="text-slate-500 text-xs">{s.start_time} &ndash; {s.end_time}</span>
                     </button>
