@@ -45,7 +45,8 @@ router.get(
           is_overnight: s.is_overnight,
         })),
         agency: {
-          logo_url: agency?.logo_url || null
+          logo_url: agency?.logo_url || null,
+          name: agency?.name || null
         }
       },
     });

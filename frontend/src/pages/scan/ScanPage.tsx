@@ -247,7 +247,7 @@ interface GateInfo {
   gate: { id: string; name: string };
   society: { id: string; name: string; address: string; wings: string[]; gates: string[]; latitude: number; longitude: number; geofence_radius: number };
   shifts: { id: string; name: string; start_time: string; end_time: string }[];
-  agency?: { logo_url: string | null };
+  agency?: { logo_url: string | null; name: string | null };
 }
 
 interface WatchmanInfo {
@@ -485,37 +485,40 @@ export default function ScanPage() {
       <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
         <button
           onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-          className="flex items-center gap-1.5 bg-white/70 px-3 py-1.5 rounded-full shadow-sm border border-white/60 text-slate-700 font-bold text-xs hover:bg-white transition-all"
+          className="flex items-center gap-1.5 bg-white/80 px-3 py-1.5 rounded-full shadow-sm border border-white text-slate-700 font-bold text-xs hover:bg-white transition-all"
         >
-          <Globe className="w-3.5 h-3.5 text-brand-500" />
+          <Globe className="w-3.5 h-3.5 text-brand-600" />
           <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
         </button>
-        <div className="text-slate-600 text-xs font-medium flex items-center gap-1">
+        <div className="text-slate-700 text-xs font-semibold flex items-center gap-1">
           <Clock className="w-3 h-3" /> {currentTime}
         </div>
       </div>
 
-      {/* ── Brand header: centered logo → agency name → society ── */}
-      <div className="text-center px-4 pt-2 pb-3 shrink-0">
+      {/* ── Brand header: Logo → Agency Name → Gate → Society ── */}
+      <div className="text-center px-4 pt-1 pb-2 shrink-0">
         {gateInfo?.agency?.logo_url ? (
           <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-            className="w-28 h-28 rounded-3xl object-contain bg-white shadow-xl mx-auto mb-2 border-2 border-white" />
+            className="w-36 h-36 rounded-3xl object-contain bg-white shadow-2xl mx-auto mb-2 border-2 border-white/80" />
         ) : (
-          <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center mx-auto mb-2 shadow-xl">
-            <ShieldCheck className="w-14 h-14 text-white" />
+          <div className="w-36 h-36 rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-2 shadow-2xl">
+            <ShieldCheck className="w-16 h-16 text-white" />
           </div>
+        )}
+        {gateInfo?.agency?.name && (
+          <p className="text-slate-900 text-base font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
         )}
         {gateInfo && step !== 'error' && (
           <>
-            <p className="text-brand-600 text-[11px] font-black uppercase tracking-[0.15em] mb-0.5">{gateInfo.gate.name}</p>
-            <h1 className="text-slate-800 text-[22px] font-black leading-tight">{gateInfo.society.name}</h1>
-            <p className="text-slate-500 text-[11px] leading-snug mt-0.5 line-clamp-1">{gateInfo.society.address}</p>
+            <p className="text-brand-700 text-[11px] font-black uppercase tracking-[0.15em] mb-0.5">{gateInfo.gate.name}</p>
+            <h1 className="text-slate-900 text-xl font-black leading-tight">{gateInfo.society.name}</h1>
+            <p className="text-slate-600 text-[11px] leading-snug mt-0.5 line-clamp-1">{gateInfo.society.address}</p>
           </>
         )}
       </div>
 
-      {/* ── Content area: fills remaining space ── */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      {/* ── Content area fills remaining height ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
         <div className="w-full max-w-sm mx-auto">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
