@@ -479,53 +479,44 @@ export default function ScanPage() {
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   return (
-    <div className="relative flex flex-col font-sans" style={{ minHeight: '100dvh' }}>
-      {/* Background video + overlay */}
-      <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover -z-20">
-        <source src="/watchmen_background.mp4" type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 bg-brand-100/50 backdrop-blur-md -z-10" />
+    <div className="flex flex-col font-sans" style={{ height: '100dvh', background: 'linear-gradient(160deg, #dce8f7 0%, #c8d8f0 40%, #b8ccec 100%)' }}>
 
-      {/* ── Sticky top header ── */}
-      <div className="sticky top-0 z-40 px-4 pt-4 pb-3">
-        {/* Row 1: lang toggle + time */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-            className="flex items-center gap-1.5 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-white/50 text-slate-100 font-bold hover:bg-white/80 transition-all"
-          >
-            <Globe className="w-3.5 h-3.5 text-brand-500" />
-            <span className="text-xs">{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
-          </button>
-          <div className="text-slate-500 text-xs font-medium flex items-center gap-1">
-            <Clock className="w-3 h-3" /> {currentTime}
-          </div>
-        </div>
-        {/* Row 2: big logo + gate/society info */}
-        <div className="flex items-center gap-4">
-          {gateInfo?.agency?.logo_url ? (
-            <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-              className="w-24 h-24 rounded-2xl object-contain bg-white shadow-lg shrink-0 border border-white/60" />
-          ) : (
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-500 flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/30">
-              <ShieldCheck className="w-12 h-12 text-white" />
-            </div>
-          )}
-          {gateInfo && step !== 'error' ? (
-            <div className="flex-1 min-w-0">
-              <p className="text-brand-400 text-[10px] font-bold uppercase tracking-widest mb-0.5 truncate">{gateInfo.gate.name}</p>
-              <h1 className="text-slate-100 text-lg font-bold leading-tight truncate">{gateInfo.society.name}</h1>
-              <p className="text-slate-500 text-[11px] leading-tight line-clamp-2 mt-0.5">{gateInfo.society.address}</p>
-            </div>
-          ) : (
-            <div className="flex-1" />
-          )}
+      {/* ── Top bar: lang + time ── */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+        <button
+          onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
+          className="flex items-center gap-1.5 bg-white/70 px-3 py-1.5 rounded-full shadow-sm border border-white/60 text-slate-700 font-bold text-xs hover:bg-white transition-all"
+        >
+          <Globe className="w-3.5 h-3.5 text-brand-500" />
+          <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
+        </button>
+        <div className="text-slate-600 text-xs font-medium flex items-center gap-1">
+          <Clock className="w-3 h-3" /> {currentTime}
         </div>
       </div>
 
-      {/* ── Scrollable content ── */}
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
-        <div className="w-full max-w-sm mx-auto space-y-0">
+      {/* ── Brand header: centered logo → agency name → society ── */}
+      <div className="text-center px-4 pt-2 pb-3 shrink-0">
+        {gateInfo?.agency?.logo_url ? (
+          <img src={gateInfo.agency.logo_url} alt="Agency Logo"
+            className="w-28 h-28 rounded-3xl object-contain bg-white shadow-xl mx-auto mb-2 border-2 border-white" />
+        ) : (
+          <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center mx-auto mb-2 shadow-xl">
+            <ShieldCheck className="w-14 h-14 text-white" />
+          </div>
+        )}
+        {gateInfo && step !== 'error' && (
+          <>
+            <p className="text-brand-600 text-[11px] font-black uppercase tracking-[0.15em] mb-0.5">{gateInfo.gate.name}</p>
+            <h1 className="text-slate-800 text-[22px] font-black leading-tight">{gateInfo.society.name}</h1>
+            <p className="text-slate-500 text-[11px] leading-snug mt-0.5 line-clamp-1">{gateInfo.society.address}</p>
+          </>
+        )}
+      </div>
+
+      {/* ── Content area: fills remaining space ── */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
+        <div className="w-full max-w-sm mx-auto">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
             <div className="text-center py-16">
