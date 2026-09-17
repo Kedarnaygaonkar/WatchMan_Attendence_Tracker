@@ -496,23 +496,23 @@ export default function ScanPage() {
       </div>
 
       {/* ── Brand header: Logo → Agency Name → Gate → Society ── */}
-      <div className="text-center px-4 pt-1 pb-2 shrink-0 w-full mx-auto">
+      <div className="text-center px-4 pt-1 pb-4 shrink-0 w-full mx-auto">
         {gateInfo?.agency?.logo_url ? (
           <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-            className="w-full h-32 object-cover rounded-2xl drop-shadow-lg mx-auto mb-3" />
+            className="w-full h-44 object-cover rounded-3xl drop-shadow-xl mx-auto mb-4" />
         ) : (
-          <div className="w-full h-32 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <ShieldCheck className="w-10 h-10 text-white" />
+          <div className="w-full h-44 rounded-3xl bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <ShieldCheck className="w-16 h-16 text-white" />
           </div>
         )}
         {gateInfo?.agency?.name && (
-          <p className="text-slate-100 text-base font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
+          <p className="text-slate-100 text-xl font-black tracking-wide mb-1">{gateInfo.agency.name}</p>
         )}
         {gateInfo && step !== 'error' && (
           <>
-            <p className="text-brand-700 text-[11px] font-black uppercase tracking-[0.15em] mb-0.5">{gateInfo.gate.name}</p>
-            <h1 className="text-slate-100 text-xl font-black leading-tight">{gateInfo.society.name}</h1>
-            <p className="text-slate-400 text-[11px] font-medium leading-snug mt-0.5 line-clamp-1">{gateInfo.society.address}</p>
+            <p className="text-brand-700 text-xs font-black uppercase tracking-[0.2em] mb-1">{gateInfo.gate.name}</p>
+            <h1 className="text-slate-100 text-3xl font-black leading-tight mb-1">{gateInfo.society.name}</h1>
+            <p className="text-slate-400 text-xs font-medium leading-relaxed mt-1 line-clamp-2 px-4">{gateInfo.society.address}</p>
           </>
         )}
       </div>
