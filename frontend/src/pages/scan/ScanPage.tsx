@@ -232,7 +232,7 @@ const TRANSLATIONS = {
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const MODELS_PATH = '/models';
-const FACE_MATCH_THRESHOLD = 0.6;
+const FACE_MATCH_THRESHOLD = 0.45;
 
 const DELIVERY_COMPANIES = ['Zomato', 'Swiggy', 'Amazon', 'Flipkart', 'DTDC', 'BlueDart', 'FedEx', 'Meesho', 'Other'] as const;
 const COMPANY_COLORS: Record<string, string> = {
@@ -644,7 +644,7 @@ export default function ScanPage() {
                 <h2 className="text-slate-100 text-base font-bold">{t.first_time_setup}</h2>
               </div>
               <p className="text-slate-500 text-sm">{t.look_camera_register}</p>
-              <div className={`rounded-xl overflow-hidden aspect-video relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-white/50'}`}>
+              <div className={`rounded-xl overflow-hidden aspect-[3/4] relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-white/50'}`}>
                 <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                 {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-3 py-1 rounded-full text-sm backdrop-blur-sm">{t.no_face_detected}</p></div>}
               </div>
@@ -673,7 +673,7 @@ export default function ScanPage() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-[1.5rem] overflow-hidden bg-[#0a1128] aspect-video relative border-4 border-[#121c3b] shadow-2xl">
+                  <div className="rounded-[1.5rem] overflow-hidden bg-[#0a1128] aspect-[3/4] relative border-4 border-[#121c3b] shadow-2xl">
                     <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                     <div className="absolute inset-0 pointer-events-none p-4">
                       <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[2rem] relative">
@@ -806,7 +806,7 @@ export default function ScanPage() {
                   {t.checked_in_at}{new Date(existingRecord.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                 </div>
               )}
-              <div className="rounded-xl overflow-hidden bg-surface-950 aspect-video relative border border-white/50">
+              <div className="rounded-xl overflow-hidden bg-surface-950 aspect-[3/4] relative border border-white/50">
                 <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
               </div>
               <canvas ref={canvasRef} className="hidden" />

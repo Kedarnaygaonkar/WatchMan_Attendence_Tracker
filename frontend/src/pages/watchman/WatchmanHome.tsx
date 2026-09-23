@@ -91,7 +91,7 @@ export default function WatchmanHome() {
   const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
 
   const MODELS_PATH = '/models';
-  const FACE_MATCH_THRESHOLD = 0.6; // distance < 0.6 = same person (~80% confidence)
+  const FACE_MATCH_THRESHOLD = 0.45; // distance < 0.45 = same person (more secure)
 
   // Load face-api.js models (once)
   useEffect(() => {
@@ -567,7 +567,7 @@ export default function WatchmanHome() {
           </div>
 
           {/* Camera or captured photo */}
-          <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[4/3]">
+          <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4]">
             {capturedPhoto ? (
               <img src={capturedPhoto} alt="Selfie" className="w-full h-full object-cover" />
             ) : (
@@ -693,7 +693,7 @@ export default function WatchmanHome() {
             </div>
           ) : (
             // Camera feed + verify button
-            <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[4/3]">
+            <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4]">
               <video
                 ref={faceVideoRef}
                 autoPlay
