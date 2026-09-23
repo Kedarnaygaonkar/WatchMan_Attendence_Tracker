@@ -567,7 +567,7 @@ export default function WatchmanHome() {
           </div>
 
           {/* Camera or captured photo */}
-          <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4]">
+          <div className="relative w-56 mx-auto rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4] shadow-2xl ring-2 ring-white/10 border border-white/20">
             {capturedPhoto ? (
               <img src={capturedPhoto} alt="Selfie" className="w-full h-full object-cover" />
             ) : (
@@ -693,7 +693,7 @@ export default function WatchmanHome() {
             </div>
           ) : (
             // Camera feed + verify button
-            <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4]">
+            <div className="relative w-56 mx-auto rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4] shadow-2xl ring-2 ring-white/10 border border-white/20">
               <video
                 ref={faceVideoRef}
                 autoPlay
