@@ -7,6 +7,8 @@ export interface IAgency extends Document {
   phone?: string;
   address?: string;
   logo_url?: string;
+  banner_url?: string;
+  footer_url?: string;
   status: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
   updatedAt: Date;
@@ -19,6 +21,8 @@ const agencySchema = new Schema<IAgency>(
     phone: { type: String },
     address: { type: String },
     logo_url: { type: String },
+    banner_url: { type: String },
+    footer_url: { type: String },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended'],

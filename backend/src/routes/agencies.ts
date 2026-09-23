@@ -17,6 +17,8 @@ const createSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   logo_url: z.string().optional(),
+  banner_url: z.string().optional(),
+  footer_url: z.string().optional(),
   status: z.enum(['active', 'inactive', 'suspended']).default('active'),
 });
 

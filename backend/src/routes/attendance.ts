@@ -9,7 +9,7 @@ import { asyncHandler, AppError, logAudit } from '../middleware/errorHandler';
 import { checkGeofence } from '../utils/haversine';
 import { analyzeGpsFlags } from '../utils/gpsFlags';
 import { config } from '../config';
-import { Watchman, Assignment, Attendance, Society, Shift } from '../models';
+import { Watchman, Assignment, Attendance, Society, Shift, Agency } from '../models';
 
 const router = Router();
 router.use(authenticate);
@@ -83,6 +83,9 @@ router.get(
       shift_id: sh._id,
     });
 
+    // Fetch agency branding
+    const agency = await Agency.findById(agencyId).lean() as any;
+
     res.json({
       success: true,
       watchman,
@@ -99,6 +102,9 @@ router.get(
         end_time: sh.end_time,
         is_overnight: sh.is_overnight,
         late_threshold_minutes: sh.late_threshold_minutes,
+        agency_banner_url: agency?.banner_url || null,
+        agency_footer_url: agency?.footer_url || null,
+        agency_name: agency?.name || null,
       },
       attendance: att || null,
     });

@@ -38,6 +38,9 @@ interface Assignment {
   end_time: string;
   is_overnight: boolean;
   late_threshold_minutes: number;
+  agency_banner_url?: string | null;
+  agency_footer_url?: string | null;
+  agency_name?: string | null;
 }
 
 interface AttendanceRecord {
@@ -766,7 +769,19 @@ export default function WatchmanHome() {
   const greeting = now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
 
   return (
-    <div className="flex-1 flex flex-col p-4 animate-fade-in">
+    <div className="flex-1 flex flex-col animate-fade-in">
+      {/* Agency Banner */}
+      {assignment?.agency_banner_url && (
+        <div className="w-full shrink-0">
+          <img
+            src={assignment.agency_banner_url}
+            alt="Agency Banner"
+            className="w-full object-cover"
+            style={{ maxHeight: '140px' }}
+          />
+        </div>
+      )}
+      <div className="flex-1 flex flex-col p-4">
       <div className="max-w-sm mx-auto w-full space-y-5">
 
         {/* Offline/Online indicator */}
@@ -892,6 +907,19 @@ export default function WatchmanHome() {
           </div>
         )}
       </div>
+
+      {/* Agency Footer */}
+      {assignment?.agency_footer_url && (
+        <div className="w-full shrink-0">
+          <img
+            src={assignment.agency_footer_url}
+            alt="Agency Footer"
+            className="w-full object-cover"
+            style={{ maxHeight: '120px' }}
+          />
+        </div>
+      )}
+      </div>{/* closes flex-1 flex-col p-4 */}
     </div>
   );
 }
