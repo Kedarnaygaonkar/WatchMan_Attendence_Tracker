@@ -544,10 +544,10 @@ export default function ScanPage() {
                 <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
                   <User className="w-6 h-6 text-brand-500" />
                 </div>
-                <h2 className="text-slate-900 text-[19px] font-black tracking-tight mb-5">{t.enter_guard_id}</h2>
+                <h2 className="text-slate-100 text-[19px] font-black tracking-tight mb-5">{t.enter_guard_id}</h2>
                 {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-4">{errorMsg}</div>}
-                <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full py-4 px-4 rounded-2xl border border-brand-200/50 bg-white/80 backdrop-blur-sm text-slate-800 text-[16px] font-bold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-4 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-5 shadow-sm" />
-                <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] ${employeeId.trim() ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-5 h-5" /></button>
+                <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full py-4 px-4 rounded-2xl border border-brand-200/50 bg-white/80 backdrop-blur-sm text-slate-100 text-[16px] font-bold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-4 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-5 shadow-sm" />
+                <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-5 h-5" /></button>
               </div>
             </div>
           )}
