@@ -5,6 +5,10 @@ import api from '../../api/client';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 
+// Dynamically import all images in the backgrounds folder at build time
+const backgroundFiles = import.meta.glob('/public/backgrounds/*.{png,jpg,jpeg,webp}');
+const dynamicBackgrounds = Object.keys(backgroundFiles).map(path => path.replace('/public', ''));
+
 interface Agency {
   id: string;
   name: string;
@@ -311,23 +315,42 @@ export default function AgenciesPage() {
                   >
                     <span className="text-xs text-slate-400 font-medium">None</span>
                   </button>
-                  {['watchman_bg.jpg', 'bg1.png', 'bg2.png', 'bg3.png', 'bg4.png', 'bg5.png', 'bg6.png'].map((bg, idx) => (
+                  {dynamicBackgrounds.length > 0 ? dynamicBackgrounds.map((bgUrl, idx) => (
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => setFormData({ ...formData, background_url: `/backgrounds/${bg}` })}
+                      onClick={() => setFormData({ ...formData, background_url: bgUrl })}
                       className={`relative rounded-xl border-2 overflow-hidden h-16 transition-all ${
-                        formData.background_url === `/backgrounds/${bg}` ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-surface-600'
+                        formData.background_url === bgUrl ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-surface-600'
                       }`}
                     >
-                      <img src={`/backgrounds/${bg}`} alt={`Background ${idx}`} className="w-full h-full object-cover" />
-                      {formData.background_url === `/backgrounds/${bg}` && (
+                      <img src={bgUrl} alt={`Background ${idx}`} className="w-full h-full object-cover" />
+                      {formData.background_url === bgUrl && (
                         <div className="absolute inset-0 bg-brand-500/20 flex items-center justify-center">
                           <svg className="w-5 h-5 text-white drop-shadow" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                         </div>
                       )}
                     </button>
-                  ))}
+                  )) : (
+                    // Fallback just in case glob is empty in some environments
+                    ['watchman_bg.jpg', 'bg1.png', 'bg2.png', 'bg3.png', 'bg4.png', 'bg5.png', 'bg6.png'].map((bg, idx) => (
+                      <button
+                        key={`fallback-${idx}`}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, background_url: `/backgrounds/${bg}` })}
+                        className={`relative rounded-xl border-2 overflow-hidden h-16 transition-all ${
+                          formData.background_url === `/backgrounds/${bg}` ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-surface-600'
+                        }`}
+                      >
+                        <img src={`/backgrounds/${bg}`} alt={`Background ${idx}`} className="w-full h-full object-cover" />
+                        {formData.background_url === `/backgrounds/${bg}` && (
+                          <div className="absolute inset-0 bg-brand-500/20 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white drop-shadow" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          </div>
+                        )}
+                      </button>
+                    ))
+                  )}
                 </div>
                 {formData.background_url && (
                   <img src={formData.background_url} alt="Background preview" className="mt-2 w-full rounded-xl object-cover h-32 border border-surface-600" />
