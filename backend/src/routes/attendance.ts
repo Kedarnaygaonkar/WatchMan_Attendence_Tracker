@@ -105,6 +105,7 @@ router.get(
         agency_banner_url: agency?.banner_url || null,
         agency_footer_url: agency?.footer_url || null,
         agency_name: agency?.name || null,
+        agency_logo_url: agency?.logo_url || null,
       },
       attendance: att || null,
     });

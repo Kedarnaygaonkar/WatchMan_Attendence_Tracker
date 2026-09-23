@@ -479,71 +479,63 @@ export default function ScanPage() {
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   return (
-    <div className="flex flex-col font-sans" style={{ height: '100dvh', background: 'linear-gradient(160deg, #dce8f7 0%, #c8d8f0 40%, #b8ccec 100%)' }}>
+    <div className="flex flex-col font-sans relative min-h-[100dvh] overflow-hidden bg-[#e6f0fa]">
+      {/* ── Full Screen Background ── */}
+      <div className="absolute inset-0 z-0">
+        <img src="/backgrounds/watchman_bg.jpg" alt="Background" className="w-full h-full object-cover object-center" />
+      </div>
 
-      {/* ── Brand header: Banner BG + Logo overlaid + Society info ── */}
-      <div className="shrink-0 w-full">
-        {/* Banner with logo overlaid */}
-        <div className="relative w-full" style={{ height: '42vw', minHeight: '150px', maxHeight: '220px' }}>
-          {/* Banner background */}
-          {gateInfo?.agency?.banner_url ? (
-            <img
-              src={gateInfo.agency.banner_url}
-              alt="Agency Banner"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700" />
-          )}
-          {/* Dark overlay for text legibility */}
-          <div className="absolute inset-0 bg-black/10" />
-          {/* Language + Time on top of banner */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3">
+      {/* Main Content wrapper */}
+      <div className="relative z-10 flex flex-col h-[100dvh]">
+        {/* ── Brand header: Logo + Society info ── */}
+        <div className="shrink-0 w-full pt-2 pb-2 px-4 flex flex-col relative">
+          
+          {/* Language + Time at top */}
+          <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-              className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-full shadow border border-white/60 text-slate-700 font-bold text-xs"
+              className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-full shadow border border-white/60 text-[#1a2a5e] font-bold text-xs"
             >
-              <Globe className="w-3.5 h-3.5 text-brand-600" />
+              <Globe className="w-3.5 h-3.5 text-[#3b5bdb]" />
               <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
             </button>
-            <div className="text-white text-xs font-bold flex items-center gap-1 bg-black/30 px-2.5 py-1 rounded-full">
+            <div className="text-white text-xs font-bold flex items-center gap-1 bg-[#1a2a5e]/50 px-2.5 py-1 rounded-full backdrop-blur-sm">
               <Clock className="w-3 h-3" /> {currentTime}
             </div>
           </div>
-          {/* Logo centered on the banner */}
-          <div className="absolute inset-0 flex items-center justify-center pt-4">
+
+          {/* Logo centered */}
+          <div className="flex items-center justify-center pt-8 pb-3">
             {gateInfo?.agency?.logo_url ? (
               <img
                 src={gateInfo.agency.logo_url}
                 alt="Agency Logo"
-                className="object-contain drop-shadow-2xl"
-                style={{ height: '72%', maxHeight: '140px' }}
+                className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.25)] h-28 max-h-[120px]"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40">
+              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-xl">
                 <ShieldCheck className="w-12 h-12 text-white" />
               </div>
             )}
           </div>
-        </div>
 
-        {/* Text info below the banner */}
-        <div className="text-center px-4 pt-3 pb-2">
-          {gateInfo?.agency?.name && (
-            <p className="text-[#1a2a5e] text-[17px] font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
-          )}
-          {gateInfo && step !== 'error' && (
-            <>
-              <p className="text-[#3b5bdb] text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">{gateInfo.gate.name}</p>
-              <h1 className="text-[#1a2a5e] text-xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
-              <p className="text-[#4a5580] text-[11px] font-medium leading-snug flex items-center justify-center gap-1">
-                <MapPin className="w-3 h-3 shrink-0" />
-                <span className="line-clamp-1">{gateInfo.society.address}</span>
-              </p>
-            </>
-          )}
+          {/* Text info below the logo */}
+          <div className="text-center pb-2">
+            {gateInfo?.agency?.name && (
+              <p className="text-[#1a2a5e] text-[20px] font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
+            )}
+            {gateInfo && step !== 'error' && (
+              <>
+                <p className="text-[#3b5bdb] text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">{gateInfo.gate.name}</p>
+                <h1 className="text-[#1a2a5e] text-2xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
+                <p className="text-[#4a5580] text-[12px] font-semibold leading-snug flex items-center justify-center gap-1 mt-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span className="line-clamp-1">{gateInfo.society.address}</span>
+                </p>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* ── Content area fills remaining height ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
@@ -877,6 +869,7 @@ export default function ScanPage() {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

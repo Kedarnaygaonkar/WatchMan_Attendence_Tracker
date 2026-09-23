@@ -41,6 +41,7 @@ interface Assignment {
   agency_banner_url?: string | null;
   agency_footer_url?: string | null;
   agency_name?: string | null;
+  agency_logo_url?: string | null;
 }
 
 interface AttendanceRecord {
@@ -769,50 +770,64 @@ export default function WatchmanHome() {
   const greeting = now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
 
   return (
-    <div className="flex-1 flex flex-col animate-fade-in">
-      {/* Agency Banner */}
-      {assignment?.agency_banner_url && (
-        <div className="w-full shrink-0">
-          <img
-            src={assignment.agency_banner_url}
-            alt="Agency Banner"
-            className="w-full object-cover"
-            style={{ maxHeight: '140px' }}
-          />
-        </div>
-      )}
-      <div className="flex-1 flex flex-col p-4">
-      <div className="max-w-sm mx-auto w-full space-y-5">
+    <div className="flex-1 flex flex-col animate-fade-in relative min-h-[100dvh]">
+      {/* ── Full Screen Background ── */}
+      <div className="absolute inset-0 z-0 bg-[#e6f0fa]">
+        <img src="/backgrounds/watchman_bg.jpg" alt="Background" className="w-full h-full object-cover object-center" />
+      </div>
 
-        {/* Offline/Online indicator */}
-        <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-medium mx-auto w-fit ${
-          isOnline
-            ? 'bg-success-500/10 text-success-400 border border-success-500/20'
-            : 'bg-warning-500/10 text-warning-400 border border-warning-500/20'
-        }`}>
-          {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-          {isOnline ? 'Online' : 'Offline Mode'}
-          {pendingCount > 0 && (
-            <span className="ml-1 bg-warning-500 text-surface-900 rounded-full px-1.5 text-xs font-bold">
-              {pendingCount} pending
-            </span>
+      <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-y-auto">
+        
+        {/* ── Brand Header (Logo + Agency Name) ── */}
+        <div className="shrink-0 w-full pt-8 pb-2 px-4 flex flex-col items-center relative">
+          {assignment?.agency_logo_url ? (
+            <img
+              src={assignment.agency_logo_url}
+              alt="Agency Logo"
+              className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.25)] h-28 max-h-[120px]"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-[#1a2a5e]/20 flex items-center justify-center border-2 border-white/40 shadow-xl backdrop-blur-sm">
+              <ShieldCheck className="w-12 h-12 text-[#1a2a5e]" />
+            </div>
+          )}
+          {assignment?.agency_name && (
+            <p className="text-[#1a2a5e] text-[20px] font-black tracking-wide mt-2 text-center drop-shadow-sm">{assignment.agency_name}</p>
           )}
         </div>
 
-        {/* Greeting */}
-        <div className="text-center">
-          <p className="text-slate-500 text-sm">{greeting},</p>
-          <h1 className="text-2xl font-black text-slate-100">
-            {user?.watchman?.full_name || user?.name}
-          </h1>
-          <p className="text-slate-500 text-xs mt-1">
-            {user?.watchman?.employee_id} • {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </p>
-        </div>
+        <div className="flex-1 flex flex-col p-4">
+          <div className="max-w-sm mx-auto w-full space-y-5">
 
-        {/* Assignment Card */}
-        {assignment ? (
-          <div className={`card p-5 space-y-4 ${alreadyMarked ? 'border-success-500/30' : 'border-brand-500/20'}`}>
+            {/* Offline/Online indicator */}
+            <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-medium mx-auto w-fit backdrop-blur-md shadow-sm ${
+              isOnline
+                ? 'bg-white/90 text-success-600 border border-success-500/30'
+                : 'bg-white/90 text-warning-600 border border-warning-500/30'
+            }`}>
+              {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+              {isOnline ? 'Online' : 'Offline Mode'}
+              {pendingCount > 0 && (
+                <span className="ml-1 bg-warning-500 text-white rounded-full px-1.5 text-xs font-bold">
+                  {pendingCount} pending
+                </span>
+              )}
+            </div>
+
+            {/* Greeting */}
+            <div className="text-center bg-white/40 backdrop-blur-md border border-white/50 rounded-3xl py-4 shadow-sm">
+              <p className="text-[#4a5580] text-sm font-semibold">{greeting},</p>
+              <h1 className="text-2xl font-black text-[#1a2a5e]">
+                {user?.watchman?.full_name || user?.name}
+              </h1>
+              <p className="text-[#3b5bdb] font-bold text-xs mt-1 tracking-wide">
+                {user?.watchman?.employee_id} • {now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </p>
+            </div>
+
+            {/* Assignment Card */}
+            {assignment ? (
+              <div className={`rounded-[2rem] border shadow-2xl backdrop-blur-xl bg-slate-900/90 p-6 space-y-4 ${alreadyMarked ? 'border-success-500/50' : 'border-slate-700/80'}`}>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-brand-400 animate-pulse-slow" />
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's Duty</span>
@@ -907,19 +922,8 @@ export default function WatchmanHome() {
           </div>
         )}
       </div>
-
-      {/* Agency Footer */}
-      {assignment?.agency_footer_url && (
-        <div className="w-full shrink-0">
-          <img
-            src={assignment.agency_footer_url}
-            alt="Agency Footer"
-            className="w-full object-cover"
-            style={{ maxHeight: '120px' }}
-          />
-        </div>
-      )}
-      </div>{/* closes flex-1 flex-col p-4 */}
+      </div>
+      </div>
     </div>
   );
 }
