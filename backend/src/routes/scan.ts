@@ -46,7 +46,9 @@ router.get(
         })),
         agency: {
           logo_url: agency?.logo_url || null,
-          name: agency?.name || null
+          name: agency?.name || null,
+          banner_url: agency?.banner_url || null,
+          footer_url: agency?.footer_url || null
         }
       },
     });

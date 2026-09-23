@@ -247,7 +247,7 @@ interface GateInfo {
   gate: { id: string; name: string };
   society: { id: string; name: string; address: string; wings: string[]; gates: string[]; latitude: number; longitude: number; geofence_radius: number };
   shifts: { id: string; name: string; start_time: string; end_time: string }[];
-  agency?: { logo_url: string | null; name: string | null };
+  agency?: { logo_url: string | null; name: string | null; banner_url?: string | null; footer_url?: string | null };
 }
 
 interface WatchmanInfo {
@@ -481,45 +481,73 @@ export default function ScanPage() {
   return (
     <div className="flex flex-col font-sans" style={{ height: '100dvh', background: 'linear-gradient(160deg, #dce8f7 0%, #c8d8f0 40%, #b8ccec 100%)' }}>
 
-      {/* ── Top bar: lang + time ── */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
-        <button
-          onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-          className="flex items-center gap-1.5 bg-white/80 px-3 py-1.5 rounded-full shadow-sm border border-white text-slate-700 font-bold text-xs hover:bg-white transition-all"
-        >
-          <Globe className="w-3.5 h-3.5 text-brand-600" />
-          <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
-        </button>
-        <div className="text-slate-700 text-xs font-semibold flex items-center gap-1">
-          <Clock className="w-3 h-3" /> {currentTime}
+      {/* ── Brand header: Banner BG + Logo overlaid + Society info ── */}
+      <div className="shrink-0 w-full">
+        {/* Banner with logo overlaid */}
+        <div className="relative w-full" style={{ height: '42vw', minHeight: '150px', maxHeight: '220px' }}>
+          {/* Banner background */}
+          {gateInfo?.agency?.banner_url ? (
+            <img
+              src={gateInfo.agency.banner_url}
+              alt="Agency Banner"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700" />
+          )}
+          {/* Dark overlay for text legibility */}
+          <div className="absolute inset-0 bg-black/10" />
+          {/* Language + Time on top of banner */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3">
+            <button
+              onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
+              className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-full shadow border border-white/60 text-slate-700 font-bold text-xs"
+            >
+              <Globe className="w-3.5 h-3.5 text-brand-600" />
+              <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
+            </button>
+            <div className="text-white text-xs font-bold flex items-center gap-1 bg-black/30 px-2.5 py-1 rounded-full">
+              <Clock className="w-3 h-3" /> {currentTime}
+            </div>
+          </div>
+          {/* Logo centered on the banner */}
+          <div className="absolute inset-0 flex items-center justify-center pt-4">
+            {gateInfo?.agency?.logo_url ? (
+              <img
+                src={gateInfo.agency.logo_url}
+                alt="Agency Logo"
+                className="object-contain drop-shadow-2xl"
+                style={{ height: '72%', maxHeight: '140px' }}
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40">
+                <ShieldCheck className="w-12 h-12 text-white" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Text info below the banner */}
+        <div className="text-center px-4 pt-3 pb-2">
+          {gateInfo?.agency?.name && (
+            <p className="text-[#1a2a5e] text-[17px] font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
+          )}
+          {gateInfo && step !== 'error' && (
+            <>
+              <p className="text-[#3b5bdb] text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">{gateInfo.gate.name}</p>
+              <h1 className="text-[#1a2a5e] text-xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
+              <p className="text-[#4a5580] text-[11px] font-medium leading-snug flex items-center justify-center gap-1">
+                <MapPin className="w-3 h-3 shrink-0" />
+                <span className="line-clamp-1">{gateInfo.society.address}</span>
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* ── Brand header: Logo → Agency Name → Gate → Society ── */}
-      <div className="text-center px-4 pt-1 pb-2 shrink-0 w-full mx-auto">
-        {gateInfo?.agency?.logo_url ? (
-          <img src={gateInfo.agency.logo_url} alt="Agency Logo"
-            className="w-full h-[18vh] max-h-36 min-h-[100px] object-cover rounded-[1.5rem] drop-shadow-xl mx-auto mb-2" />
-        ) : (
-          <div className="w-full h-[18vh] max-h-36 min-h-[100px] rounded-[1.5rem] bg-gradient-to-r from-brand-500 to-brand-700 flex items-center justify-center mx-auto mb-2 shadow-xl">
-            <ShieldCheck className="w-14 h-14 text-white" />
-          </div>
-        )}
-        {gateInfo?.agency?.name && (
-          <p className="text-slate-100 text-lg font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
-        )}
-        {gateInfo && step !== 'error' && (
-          <>
-            <p className="text-brand-700 text-[11px] font-black uppercase tracking-[0.2em] mb-0.5">{gateInfo.gate.name}</p>
-            <h1 className="text-slate-100 text-2xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
-            <p className="text-slate-400 text-[11px] font-medium leading-relaxed mt-0.5 line-clamp-1 px-4">{gateInfo.society.address}</p>
-          </>
-        )}
-      </div>
-
       {/* ── Content area fills remaining height ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col">
-        <div className="w-full max-w-sm mx-auto pt-2 flex-1 flex flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+        <div className="w-full max-w-sm mx-auto">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
             <div className="text-center py-16">
@@ -539,15 +567,68 @@ export default function ScanPage() {
           )}
 
           {step === 'enter_id' && (
-            <div className="flex-1 flex flex-col justify-center pb-8">
-              <div className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
-                <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
-                  <User className="w-6 h-6 text-brand-500" />
+            <div className="pt-3">
+              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[2rem] px-6 pt-6 pb-5 shadow-[0_8px_40px_rgba(0,0,0,0.10)] text-center">
+                {/* Person icon */}
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+                  <User className="w-6 h-6 text-blue-500" />
                 </div>
-                <h2 className="text-slate-100 text-[19px] font-black tracking-tight mb-5">{t.enter_guard_id}</h2>
-                {errorMsg && <div className="bg-danger-50 text-danger-500 text-sm p-3 rounded-xl mb-4">{errorMsg}</div>}
-                <input type="text" placeholder="e.g. EMP001" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }} onKeyDown={e => e.key === 'Enter' && handleLookup()} autoFocus className="w-full py-4 px-4 rounded-2xl border border-brand-200/50 bg-white/80 backdrop-blur-sm text-slate-100 text-[16px] font-bold tracking-[0.2em] text-center focus:border-brand-400 focus:ring-4 focus:ring-brand-100 outline-none transition-all placeholder-slate-400 uppercase mb-5 shadow-sm" />
-                <button onClick={handleLookup} disabled={!employeeId.trim()} className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] ${employeeId.trim() ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>{t.continue} <ChevronRight className="w-5 h-5" /></button>
+                <h2 className="text-[#1a2a5e] text-[20px] font-black tracking-tight mb-1">{t.enter_guard_id}</h2>
+                <p className="text-[#4a5580] text-[12px] font-medium mb-4 leading-snug px-2">Use the Guard ID provided by your supervisor<br />to continue.</p>
+                {errorMsg && <div className="bg-red-50 text-red-500 text-sm p-3 rounded-xl mb-3">{errorMsg}</div>}
+                
+                {/* Input with ID icon */}
+                <div className="relative mb-4">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
+                    <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2" strokeWidth="1.5"/><path d="M8 10h8M8 14h4" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="E.g. EMP001"
+                    value={employeeId}
+                    onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleLookup()}
+                    autoFocus
+                    className="w-full py-3.5 pl-11 pr-4 rounded-2xl border border-gray-200 bg-white text-[#1a2a5e] text-[15px] font-bold tracking-[0.15em] focus:border-blue-400 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder-gray-400 uppercase shadow-sm"
+                  />
+                </div>
+                
+                {/* Continue button — solid blue */}
+                <button
+                  onClick={handleLookup}
+                  disabled={!employeeId.trim()}
+                  className={`w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] mb-5 ${
+                    employeeId.trim()
+                      ? 'bg-[#1a3db5] hover:bg-[#1530a0] text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {t.continue} <ChevronRight className="w-5 h-5" />
+                </button>
+                
+                {/* 3 feature icons */}
+                <div className="flex items-center justify-around border-t border-gray-100 pt-4">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                      <ShieldCheck className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <span className="text-[10px] text-[#4a5580] font-semibold text-center leading-tight">Secure<br />Attendance</span>
+                  </div>
+                  <div className="w-px h-10 bg-gray-100" />
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>
+                    </div>
+                    <span className="text-[10px] text-[#4a5580] font-semibold text-center leading-tight">Trained<br />Personnel</span>
+                  </div>
+                  <div className="w-px h-10 bg-gray-100" />
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    </div>
+                    <span className="text-[10px] text-[#4a5580] font-semibold text-center leading-tight">Trusted<br />Service</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
