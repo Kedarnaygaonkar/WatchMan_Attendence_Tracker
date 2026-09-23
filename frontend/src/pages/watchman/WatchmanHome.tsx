@@ -42,6 +42,7 @@ interface Assignment {
   agency_footer_url?: string | null;
   agency_name?: string | null;
   agency_logo_url?: string | null;
+  agency_background_url?: string | null;
 }
 
 interface AttendanceRecord {
@@ -773,7 +774,11 @@ export default function WatchmanHome() {
     <div className="flex-1 flex flex-col animate-fade-in relative min-h-[100dvh]">
       {/* ── Full Screen Background ── */}
       <div className="absolute inset-0 z-0 bg-[#e6f0fa]">
-        <img src="/backgrounds/watchman_bg.jpg" alt="Background" className="w-full h-full object-cover object-center" />
+        {assignment?.agency_background_url ? (
+          <img src={assignment.agency_background_url} alt="Background" className="w-full h-full object-cover object-center" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700" />
+        )}
       </div>
 
       <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-y-auto">

@@ -14,6 +14,7 @@ interface Agency {
   logo_url?: string;
   banner_url?: string;
   footer_url?: string;
+  background_url?: string;
   status: 'active' | 'inactive' | 'suspended';
   createdAt: string;
 }
@@ -34,6 +35,7 @@ export default function AgenciesPage() {
     logo_url: '',
     banner_url: '',
     footer_url: '',
+    background_url: '',
     status: 'active',
   });
 
@@ -100,6 +102,7 @@ export default function AgenciesPage() {
         logo_url: agency.logo_url || '',
         banner_url: agency.banner_url || '',
         footer_url: agency.footer_url || '',
+        background_url: agency.background_url || '',
         status: agency.status,
       });
     } else {
@@ -112,6 +115,7 @@ export default function AgenciesPage() {
         logo_url: '',
         banner_url: '',
         footer_url: '',
+        background_url: '',
         status: 'active',
       });
     }
@@ -371,6 +375,37 @@ export default function AgenciesPage() {
                 {formData.footer_url && (
                   <img src={formData.footer_url} alt="Footer preview" className="mt-2 w-full rounded-xl object-cover h-20 border border-surface-600" />
                 )}
+              </div>
+
+              {/* Background Picker */}
+              <div className="form-group">
+                <label className="label">Watchman App Background</label>
+                <p className="text-xs text-slate-500 mb-2">Full screen background image for watchman dashboard</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, background_url: '' })}
+                    className={`relative rounded-xl border-2 overflow-hidden flex items-center justify-center h-24 transition-all ${
+                      !formData.background_url ? 'border-brand-500 bg-brand-500/10' : 'border-surface-600 bg-surface-700/30'
+                    }`}
+                  >
+                    <span className="text-xs text-slate-400 font-medium">None</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, background_url: '/backgrounds/watchman_bg.jpg' })}
+                    className={`relative rounded-xl border-2 overflow-hidden h-24 transition-all ${
+                      formData.background_url === '/backgrounds/watchman_bg.jpg' ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-surface-600'
+                    }`}
+                  >
+                    <img src={`/backgrounds/watchman_bg.jpg`} alt={`Background 1`} className="w-full h-full object-cover" />
+                    {formData.background_url === '/backgrounds/watchman_bg.jpg' && (
+                      <div className="absolute inset-0 bg-brand-500/20 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white drop-shadow" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {editingAgency && (

@@ -247,7 +247,7 @@ interface GateInfo {
   gate: { id: string; name: string };
   society: { id: string; name: string; address: string; wings: string[]; gates: string[]; latitude: number; longitude: number; geofence_radius: number };
   shifts: { id: string; name: string; start_time: string; end_time: string }[];
-  agency?: { logo_url: string | null; name: string | null; banner_url?: string | null; footer_url?: string | null };
+  agency?: { logo_url: string | null; name: string | null; banner_url?: string | null; footer_url?: string | null; background_url?: string | null };
 }
 
 interface WatchmanInfo {
@@ -482,7 +482,11 @@ export default function ScanPage() {
     <div className="flex flex-col font-sans relative min-h-[100dvh] overflow-hidden bg-[#e6f0fa]">
       {/* ── Full Screen Background ── */}
       <div className="absolute inset-0 z-0">
-        <img src="/backgrounds/watchman_bg.jpg" alt="Background" className="w-full h-full object-cover object-center" />
+        {gateInfo?.agency?.background_url ? (
+          <img src={gateInfo.agency.background_url} alt="Background" className="w-full h-full object-cover object-center" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700" />
+        )}
       </div>
 
       {/* Main Content wrapper */}
