@@ -827,40 +827,44 @@ export default function ScanPage() {
           )}
 
           {step === 'delivery_form' && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2">
-                <Bike className="w-5 h-5 text-orange-400" />
-                <h2 className="text-slate-100 text-base font-bold">{t.delivery_checkin}</h2>
-              </div>
-              <div>
-                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1.5">{t.delivery_company}</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {DELIVERY_COMPANIES.map(c => (
-                    <button key={c} onClick={() => setDeliveryForm(f => ({ ...f, delivery_company: c }))}
-                      className={`px-3 py-1 rounded-full text-xs font-bold border-2 transition-all ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-white/40 text-slate-500 bg-white/70 hover:border-brand-400'}`}
-                      style={deliveryForm.delivery_company === c ? { backgroundColor: COMPANY_COLORS[c] || '#64748b' } : {}}
-                    >{c}</button>
-                  ))}
+            <div className="pt-3">
+              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[1.5rem] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.10)] space-y-4">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                    <Bike className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <h2 className="text-[#1a2a5e] text-[18px] font-black tracking-tight">{t.delivery_checkin}</h2>
                 </div>
+                <div>
+                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-2">{t.delivery_company}</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DELIVERY_COMPANIES.map(c => (
+                      <button key={c} onClick={() => setDeliveryForm(f => ({ ...f, delivery_company: c }))}
+                        className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold border-2 transition-all shadow-sm ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 bg-white hover:border-orange-400'}`}
+                        style={deliveryForm.delivery_company === c ? { backgroundColor: COMPANY_COLORS[c] || '#64748b' } : {}}
+                      >{c}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.your_name}</label>
+                  <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                </div>
+                <div>
+                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.phone_number}</label>
+                  <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setDeliveryForm(f => ({ ...f, visitor_phone: val }));
+                  }} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                </div>
+                <div>
+                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.vehicle_number} <span className="font-normal normal-case">{t.optional}</span></label>
+                  <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-mono uppercase font-bold tracking-widest focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                </div>
+                <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-2 ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_4px_14px_0_rgba(234,88,12,0.39)]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  <LogIn className="w-5 h-5" /> {t.mark_entry}
+                </button>
               </div>
-              <div>
-                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.your_name}</label>
-                <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500 text-sm" />
-              </div>
-              <div>
-                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.phone_number}</label>
-                <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                  setDeliveryForm(f => ({ ...f, visitor_phone: val }));
-                }} className="w-full p-3 rounded-xl border border-white/50 bg-white/70 text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500 text-sm" />
-              </div>
-              <div>
-                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-1">{t.vehicle_number} <span className="font-normal normal-case">{t.optional}</span></label>
-                <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3 rounded-xl border border-white/50 bg-white/70 text-slate-100 font-mono uppercase focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-slate-500 text-sm" />
-              </div>
-              <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
-                <LogIn className="w-5 h-5" /> {t.mark_entry}
-              </button>
             </div>
           )}
 
