@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import * as faceapi from 'face-api.js';
-import { Camera, CheckCircle, LogIn, LogOut, AlertTriangle, Loader2, User, Clock, MapPin, ScanFace, ShieldCheck, Bike, Package, ChevronRight, Globe } from 'lucide-react';
+import { Camera, CheckCircle, LogIn, LogOut, AlertTriangle, Loader2, User, Clock, MapPin, ScanFace, ShieldCheck, Bike, Package, ChevronRight, Globe, Sun, Moon, Building, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type Language = 'EN' | 'HI' | 'MR';
@@ -724,73 +724,128 @@ export default function ScanPage() {
           )}
 
           {step === 'select_shift' && watchman && (
-            <div className="pt-3">
-              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[1.5rem] p-4 shadow-[0_8px_40px_rgba(0,0,0,0.10)] space-y-3">
+            <div className="pt-3 pb-8">
+              <div className="bg-white/95 backdrop-blur-2xl border border-white rounded-[1.5rem] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.15)]">
+                
                 {/* Watchman identity card */}
-                <div className="bg-blue-50 border border-blue-100 rounded-[0.75rem] p-2 shadow-sm flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-3 shadow-sm flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-[#1a2a5e] font-black text-[16px] leading-tight tracking-tight">{watchman.full_name}</p>
+                      <p className="text-[#4a5580] font-medium text-[12px] leading-tight mt-0.5">ID: {watchman.employee_id}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[#1a2a5e] font-black text-[14px] leading-tight">{watchman.full_name}</p>
-                    <p className="text-[#4a5580] font-medium text-[10px] leading-tight mt-0.5">ID: {watchman.employee_id}</p>
+                  <div className="bg-green-50 text-green-700 px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-green-100">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-[11px] font-bold">Identity Verified</span>
                   </div>
                 </div>
 
+                {/* Gates Section */}
                 {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
-                  <div>
-                    <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-widest block mb-1">{t.select_gate}</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {gateInfo.society.gates.map(g => (
-                        <button key={g} onClick={() => setSelectedGate(g)}
-                          className={`px-3 py-1.5 rounded-lg text-[13px] font-bold border-[1.5px] transition-all ${selectedGate === g ? 'border-[#1a3db5] bg-[#1a3db5] text-white shadow-sm' : 'border-gray-200 bg-white text-[#4a5580] hover:border-blue-300 hover:bg-blue-50'}`}>
-                          {g}
-                        </button>
-                      ))}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="w-5 h-5 text-[#1a2a5e]" />
+                      <div>
+                        <label className="text-[#1a2a5e] text-[14px] font-bold block leading-tight">{t.select_gate}</label>
+                        <p className="text-[#4a5580] text-[11px] leading-tight mt-0.5">Choose where you are on duty</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {gateInfo.society.gates.map(g => {
+                        const active = selectedGate === g;
+                        return (
+                          <button key={g} onClick={() => setSelectedGate(g)}
+                            className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border-[1.5px] transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
+                              {active && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                            </div>
+                            <Building2 className={`w-5 h-5 shrink-0 ${active ? 'text-blue-600' : 'text-[#1a2a5e]'}`} />
+                            <span className={`text-[14px] font-bold line-clamp-1 ${active ? 'text-blue-900' : 'text-[#1a2a5e]'}`}>{g}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
+                {/* Wings Section */}
                 {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
-                  <div>
-                    <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-widest block mb-1">{t.select_wing} <span className="font-normal normal-case opacity-70">{t.optional}</span></label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {gateInfo.society.wings.map(w => (
-                        <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
-                          className={`px-3 py-1.5 rounded-lg text-[13px] font-bold border-[1.5px] transition-all ${selectedWing === w ? 'border-[#1a3db5] bg-[#1a3db5] text-white shadow-sm' : 'border-gray-200 bg-white text-[#4a5580] hover:border-blue-300 hover:bg-blue-50'}`}>
-                          {w}
-                        </button>
-                      ))}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building className="w-5 h-5 text-[#1a2a5e]" />
+                      <div>
+                        <label className="text-[#1a2a5e] text-[14px] font-bold block leading-tight">{t.select_wing} <span className="font-normal opacity-70 text-[#4a5580]">{t.optional}</span></label>
+                        <p className="text-[#4a5580] text-[11px] leading-tight mt-0.5">Choose your wing</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {gateInfo.society.wings.map(w => {
+                        const active = selectedWing === w;
+                        return (
+                          <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
+                            className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border-[1.5px] transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
+                              {active && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                            </div>
+                            <span className={`text-[14px] font-bold line-clamp-1 ${active ? 'text-blue-900' : 'text-[#1a2a5e]'}`}>{w} Wing</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
-                <div>
-                  <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-widest block mb-1">{t.select_shift}</label>
-                  <div className="space-y-1.5">
-                    {gateInfo?.shifts.map(s => (
-                      <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
-                        className={`w-full px-3 py-2.5 rounded-xl border-[1.5px] text-left flex justify-between items-center transition-all ${selectedShiftId === s.id ? 'border-[#1a3db5] bg-[#1a3db5]/5 text-[#1a3db5] ring-2 ring-[#1a3db5]/20 shadow-sm' : 'border-gray-200 bg-white text-[#4a5580] hover:border-blue-300 hover:bg-blue-50'}`}>
-                        <div className="flex items-center gap-2">
-                          <Clock className={`w-3.5 h-3.5 ${selectedShiftId === s.id ? 'text-[#1a3db5]' : 'text-gray-400'}`} />
-                          <span className="font-bold text-[13px]">{s.name}</span>
-                        </div>
-                        <span className={`text-[11px] font-semibold ${selectedShiftId === s.id ? 'text-[#1a3db5]' : 'text-gray-400'}`}>{s.start_time} &ndash; {s.end_time}</span>
-                      </button>
-                    ))}
+                {/* Shifts Section */}
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-5 h-5 text-[#1a2a5e]" />
+                    <div>
+                      <label className="text-[#1a2a5e] text-[14px] font-bold block leading-tight">{t.select_shift}</label>
+                      <p className="text-[#4a5580] text-[11px] leading-tight mt-0.5">Choose your duty shift</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {gateInfo?.shifts.map(s => {
+                      const active = selectedShiftId === s.id;
+                      const isDay = s.name.toLowerCase().includes('day') || parseInt(s.start_time.split(':')[0]) >= 6 && parseInt(s.start_time.split(':')[0]) < 18;
+                      const activeColors = isDay 
+                        ? 'border-amber-400 bg-amber-50' 
+                        : 'border-[#1a2a5e] bg-slate-50';
+                      const radioColor = isDay ? 'border-amber-500 bg-amber-500' : 'border-[#1a2a5e] bg-[#1a2a5e]';
+                      const textColor = isDay ? 'text-amber-900' : 'text-[#1a2a5e]';
+                      const iconColor = isDay ? 'text-amber-500' : 'text-[#1a2a5e]';
+                      
+                      return (
+                        <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
+                          className={`flex items-center gap-2 px-3 py-3 rounded-xl border-[1.5px] transition-all text-left ${active ? activeColors : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? radioColor.split(' ')[0] : 'border-gray-300'}`}>
+                            {active && <div className={`w-2 h-2 rounded-full ${radioColor.split(' ')[1]}`} />}
+                          </div>
+                          {isDay ? <Sun className={`w-6 h-6 shrink-0 ${active ? iconColor : 'text-amber-500'}`} /> : <Moon className={`w-6 h-6 shrink-0 ${active ? iconColor : 'text-[#1a2a5e]'}`} />}
+                          <div>
+                            <span className={`block text-[14px] font-bold leading-tight ${active ? textColor : 'text-[#1a2a5e]'}`}>{s.name}</span>
+                            <span className={`block text-[10px] font-medium leading-tight mt-0.5 ${active ? textColor : 'text-[#4a5580]'}`}>{s.start_time} &ndash; {s.end_time}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="pt-1">
+                <div className="pt-2">
                   <button
                     onClick={async () => { await startCamera(); setStep('take_photo'); }}
                     disabled={!selectedShiftId || !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
-                    className={`w-full py-3.5 rounded-[1rem] font-bold flex items-center justify-center gap-2 transition-all text-[14px] ${
+                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] ${
                       selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
-                        ? 'bg-[#1a3db5] hover:bg-[#1530a0] text-white shadow-lg shadow-blue-900/20'
+                        ? 'bg-[#0b5cda] hover:bg-[#094bb8] text-white shadow-lg shadow-blue-600/30'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}>
-                    <Camera className="w-4 h-4" /> {t.take_photo} <ChevronRight className="w-4 h-4" />
+                    <Camera className="w-5 h-5" /> {t.take_photo} <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
               </div>
