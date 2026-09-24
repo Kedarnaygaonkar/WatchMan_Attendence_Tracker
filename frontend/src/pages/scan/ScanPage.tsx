@@ -288,6 +288,7 @@ export default function ScanPage() {
     visitor_phone: '',
     vehicle_number: '',
     delivery_company: 'Zomato' as typeof DELIVERY_COMPANIES[number],
+    other_company: '',
   });
   const [deliveryResult, setDeliveryResult] = useState<any>(null);
 
@@ -461,16 +462,17 @@ export default function ScanPage() {
   }
 
   async function handleDeliveryCheckin() {
-    const { visitor_name, visitor_phone, delivery_company } = deliveryForm;
+    const { visitor_name, visitor_phone, delivery_company, other_company } = deliveryForm;
     if (!visitor_name.trim() || !visitor_phone.trim()) { toast.error(t.name_phone_required); return; }
     setStep('delivery_submitting');
     try {
+      const finalCompany = delivery_company === 'Other' && other_company.trim() ? other_company.trim() : delivery_company;
       const r = await axios.post(`${API}/delivery/checkin`, {
         gate_token: token,
         visitor_name: visitor_name.trim(),
         visitor_phone: visitor_phone.trim(),
         vehicle_number: deliveryForm.vehicle_number.trim() || undefined,
-        delivery_company,
+        delivery_company: finalCompany,
       });
       setDeliveryResult(r.data.data); setStep('delivery_success');
     } catch (e: any) { toast.error(e.response?.data?.message || t.checkin_failed); setStep('delivery_form'); }
@@ -845,6 +847,11 @@ export default function ScanPage() {
                       >{c}</button>
                     ))}
                   </div>
+                  {deliveryForm.delivery_company === 'Other' && (
+                    <div className="mt-3 animate-fade-in">
+                      <input type="text" placeholder="Specify company name" value={deliveryForm.other_company} onChange={e => setDeliveryForm(f => ({ ...f, other_company: e.target.value }))} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.your_name}</label>
