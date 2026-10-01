@@ -17,10 +17,10 @@ const TRANSLATIONS = {
     enter_guard_id: 'Enter Your Guard ID',
     continue: 'Continue',
     back: 'Back',
-    select_gate: 'Select Gate *',
+    select_gate: 'Select Gate',
     select_wing: 'Select Wing',
     optional: '(optional)',
-    select_shift: 'Select Shift *',
+    select_shift: 'Select Shift',
     take_photo: 'Take Check-in Photo',
     checkin_photo: 'Check-In Photo',
     checkout_photo: 'Check-Out Photo',
@@ -90,10 +90,10 @@ const TRANSLATIONS = {
     enter_guard_id: 'अपना गार्ड आईडी दर्ज करें',
     continue: 'आगे बढ़ें',
     back: 'पीछे',
-    select_gate: 'गेट चुनें *',
+    select_gate: 'गेट चुनें',
     select_wing: 'विंग चुनें',
     optional: '(वैकल्पिक)',
-    select_shift: 'शिफ्ट चुनें *',
+    select_shift: 'शिफ्ट चुनें',
     take_photo: 'चेक-इन फोटो लें',
     checkin_photo: 'चेक-इन फोटो',
     checkout_photo: 'चेक-आउट फोटो',
@@ -163,10 +163,10 @@ const TRANSLATIONS = {
     enter_guard_id: 'तुमचा गार्ड आयडी प्रविष्ट करा',
     continue: 'पुढे जा',
     back: 'मागे',
-    select_gate: 'गेट निवडा *',
+    select_gate: 'गेट निवडा',
     select_wing: 'विंग निवडा',
     optional: '(पर्यायी)',
-    select_shift: 'शिफ्ट निवडा *',
+    select_shift: 'शिफ्ट निवडा',
     take_photo: 'चेक-इन फोटो घ्या',
     checkin_photo: 'चेक-इन फोटो',
     checkout_photo: 'चेक-आउट फोटो',
@@ -750,10 +750,7 @@ export default function ScanPage() {
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <Building2 className="w-4 h-4 text-[#1a2a5e]" />
                       <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">
-                        {t.select_gate} 
-                        {(!selectedWing && gateInfo.society.wings && gateInfo.society.wings.length > 0) || !(gateInfo.society.wings && gateInfo.society.wings.length > 0) 
-                          ? ' *' 
-                          : <span className="font-normal opacity-70 text-[#4a5580] ml-1">{t.optional}</span>}
+                        {t.select_gate}
                       </label>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -780,10 +777,7 @@ export default function ScanPage() {
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <Building className="w-4 h-4 text-[#1a2a5e]" />
                       <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">
-                        {t.select_wing} 
-                        {(!selectedGate && gateInfo.society.gates && gateInfo.society.gates.length > 0) || !(gateInfo.society.gates && gateInfo.society.gates.length > 0)
-                          ? ' *' 
-                          : <span className="font-normal opacity-70 text-[#4a5580] ml-1">{t.optional}</span>}
+                        {t.select_wing}
                       </label>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
