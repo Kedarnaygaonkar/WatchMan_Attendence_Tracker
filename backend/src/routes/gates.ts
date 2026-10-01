@@ -20,8 +20,12 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { user } = req as any;
     const filter: any = {};
-    // Agency admins only see their own gates; super_admin sees all
-    if (user.role !== 'super_admin') filter.agency_id = user.agencyId;
+    // Agency admins only see their own gates; super_admin sees all (or filters by agency_id)
+    if (user.role !== 'super_admin') {
+      filter.agency_id = user.agencyId;
+    } else if (req.query.agency_id) {
+      filter.agency_id = req.query.agency_id;
+    }
 
     const gates = await Gate.find(filter)
       .populate('society_id', 'name address')

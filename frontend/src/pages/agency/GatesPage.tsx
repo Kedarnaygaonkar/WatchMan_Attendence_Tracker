@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
 import { QrCode, Download, Copy, RefreshCw, X, Building2 } from 'lucide-react';
 import api from '../../api/client';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Gate {
   id: string;
@@ -24,19 +25,37 @@ const FRONTEND_URL = window.location.origin;
 
 export default function GatesPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const [agencyFilter, setAgencyFilter] = useState('');
   const [qrModalGate, setQrModalGate] = useState<Gate | null>(null);
   const [watchmanQrUrl, setWatchmanQrUrl] = useState<string>('');
   const [deliveryQrUrl, setDeliveryQrUrl] = useState<string>('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const { data: agencies } = useQuery({
+    queryKey: ['agencies'],
+    queryFn: async () => { const { data } = await api.get('/agencies'); return data.data; },
+    enabled: user?.role === 'super_admin',
+  });
+
   const { data: gates = [], isLoading } = useQuery({
-    queryKey: ['gates'],
-    queryFn: async () => { const { data } = await api.get('/gates'); return data.data as Gate[]; },
+    queryKey: ['gates', agencyFilter],
+    queryFn: async () => { 
+      const params: any = {};
+      if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter;
+      const { data } = await api.get('/gates', { params }); 
+      return data.data as Gate[]; 
+    },
   });
 
   const { data: societies = [] } = useQuery({
-    queryKey: ['societies-list'],
-    queryFn: async () => { const { data } = await api.get('/societies', { params: { active: true } }); return data.data as Society[]; },
+    queryKey: ['societies-list', agencyFilter],
+    queryFn: async () => { 
+      const params: any = { active: true };
+      if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter;
+      const { data } = await api.get('/societies', { params }); 
+      return data.data as Society[]; 
+    },
   });
 
   const createMutation = useMutation({
@@ -249,6 +268,12 @@ export default function GatesPage() {
           <h1 className="section-title">Society QR Codes</h1>
           <p className="section-subtitle">Manage QR codes for society attendance</p>
         </div>
+        {user?.role === 'super_admin' && (
+          <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)} className="input w-48">
+            <option value="">All Agencies</option>
+            {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Societies Grid */}
