@@ -43,12 +43,12 @@ const watchmanSchema = z.object({
   agencyId: z.string().optional(),
 });
 
-function getAgencyId(req: Request): string {
+function getAgencyId(req: Request): string | null {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
     if (id) return id as string;
     if (req.user!.agencyId) return req.user!.agencyId;
-    throw new AppError('agency_id required for super_admin', 400);
+    return null;
   }
   return req.user!.agencyId!;
 }
@@ -58,7 +58,10 @@ router.get('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(async
   const agencyId = getAgencyId(req);
   const { search, status } = req.query;
 
-  const matchStage: any = { agency_id: new (require('mongoose').Types.ObjectId)(agencyId) };
+  const matchStage: any = {};
+  if (agencyId) {
+    matchStage.agency_id = new (require('mongoose').Types.ObjectId)(agencyId);
+  }
   if (status) {
     matchStage.status = status;
   }

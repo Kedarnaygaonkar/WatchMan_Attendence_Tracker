@@ -31,6 +31,7 @@ export default function WatchmenPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [agencyFilter, setAgencyFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editWatchman, setEditWatchman] = useState<Watchman | null>(null);
   const [form, setForm] = useState(defaultForm);
@@ -46,11 +47,11 @@ export default function WatchmenPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['watchmen', search, statusFilter],
+    queryKey: ['watchmen', search, statusFilter, agencyFilter],
     queryFn: async () => {
-      const { data } = await api.get('/watchmen', {
-        params: { search: search || undefined, status: statusFilter || undefined }
-      });
+      const params: any = { search: search || undefined, status: statusFilter || undefined };
+      if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter;
+      const { data } = await api.get('/watchmen', { params });
       return data.data as Watchman[];
     },
   });
@@ -140,6 +141,12 @@ export default function WatchmenPage() {
           <option value="inactive">Inactive</option>
           <option value="suspended">Suspended</option>
         </select>
+        {user?.role === 'super_admin' && (
+          <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)} className="input w-48">
+            <option value="">All Agencies</option>
+            {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Table */}

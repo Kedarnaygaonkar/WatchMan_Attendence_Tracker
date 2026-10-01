@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError, logAudit } from '../middleware/errorHandler';
@@ -17,12 +17,12 @@ const shiftSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-function getAgencyId(req: Request): string {
+function getAgencyId(req: Request): string | null {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
     if (id) return id as string;
     if (req.user!.agencyId) return req.user!.agencyId;
-    throw new AppError('agency_id required for super_admin', 400);
+    return null;
   }
   return req.user!.agencyId!;
 }
@@ -128,7 +128,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: shift });
 }));
 
-/** DELETE /api/shifts/:id — delete shift if no active assignments */
+/** DELETE /api/shifts/:id â€” delete shift if no active assignments */
 router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
 

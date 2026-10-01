@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError, logAudit } from '../middleware/errorHandler';
@@ -17,23 +17,24 @@ const assignmentSchema = z.object({
   notes: z.string().optional(),
 });
 
-function getAgencyId(req: Request): string {
+function getAgencyId(req: Request): string | null {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
     if (id) return id as string;
     if (req.user!.agencyId) return req.user!.agencyId;
-    throw new AppError('agency_id required for super_admin', 400);
+    return null;
   }
   return req.user!.agencyId!;
 }
 
-/** GET /api/assignments — list all assignments */
+/** GET /api/assignments â€” list all assignments */
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
   const { watchmanId, societyId, active } = req.query;
 
   const mongoose = require('mongoose');
-  const matchStage: any = { agency_id: new mongoose.Types.ObjectId(agencyId) };
+  const matchStage: any = {};
+  if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId as string);
   if (watchmanId) matchStage.watchman_id = new mongoose.Types.ObjectId(watchmanId as string);
   if (societyId) matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
   if (active !== undefined) matchStage.is_active = active === 'true';
@@ -91,7 +92,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: formatted });
 }));
 
-/** POST /api/assignments — create assignment */
+/** POST /api/assignments â€” create assignment */
 router.post('/', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
   const parse = assignmentSchema.safeParse(req.body);
@@ -139,7 +140,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: assignment });
 }));
 
-/** PATCH /api/assignments/:id/end — terminate assignment */
+/** PATCH /api/assignments/:id/end â€” terminate assignment */
 router.patch('/:id/end', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
 
@@ -158,7 +159,7 @@ router.patch('/:id/end', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: assignment });
 }));
 
-/** PATCH /api/assignments/:id/shift — change shift only */
+/** PATCH /api/assignments/:id/shift â€” change shift only */
 router.patch('/:id/shift', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
   const { shiftId } = req.body;

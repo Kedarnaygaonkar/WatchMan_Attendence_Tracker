@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { Attendance, Society, Assignment, Watchman } from '../models';
