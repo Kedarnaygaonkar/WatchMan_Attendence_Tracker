@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, GitBranch, Calendar, ChevronRight, Edit2 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Assignment {
   id: string;
@@ -40,12 +41,16 @@ export default function AssignmentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [editAssignment, setEditAssignment] = useState<Assignment | null>(null);
+  const { user } = useAuthStore();
+  const [agencyFilter, setAgencyFilter] = useState('');
   const [editShiftId, setEditShiftId] = useState('');
 
-  const { data } = useQuery({ queryKey: ['assignments'], queryFn: async () => { const {data} = await api.get('/assignments', {params:{active:true}}); return data.data as Assignment[]; } });
-  const { data: watchmen } = useQuery({ queryKey: ['watchmen-list'], queryFn: async () => { const {data} = await api.get('/watchmen', {params:{status:'active'}}); return data.data as Watchman[]; } });
-  const { data: societies } = useQuery({ queryKey: ['societies-list'], queryFn: async () => { const {data} = await api.get('/societies', {params:{active:true}}); return data.data as Society[]; } });
-  const { data: shifts } = useQuery({ queryKey: ['shifts-list'], queryFn: async () => { const {data} = await api.get('/shifts', {params:{active:true}}); return data.data as Shift[]; } });
+  const { data: agencies } = useQuery({ queryKey: ['agencies'], queryFn: async () => { const {data} = await api.get('/agencies'); return data.data; }, enabled: user?.role === 'super_admin' });
+
+  const { data } = useQuery({ queryKey: ['assignments', agencyFilter], queryFn: async () => { const params: any = {active:true}; if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter; const {data} = await api.get('/assignments', {params}); return data.data as Assignment[]; } });
+  const { data: watchmen } = useQuery({ queryKey: ['watchmen-list', agencyFilter], queryFn: async () => { const params: any = {status:'active'}; if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter; const {data} = await api.get('/watchmen', {params}); return data.data as Watchman[]; } });
+  const { data: societies } = useQuery({ queryKey: ['societies-list', agencyFilter], queryFn: async () => { const params: any = {active:true}; if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter; const {data} = await api.get('/societies', {params}); return data.data as Society[]; } });
+  const { data: shifts } = useQuery({ queryKey: ['shifts-list', agencyFilter], queryFn: async () => { const params: any = {active:true}; if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter; const {data} = await api.get('/shifts', {params}); return data.data as Shift[]; } });
 
   const mutation = useMutation({
     mutationFn: (payload: typeof form) => api.post('/assignments', { ...payload, endDate: payload.endDate || undefined }),
@@ -75,9 +80,17 @@ export default function AssignmentsPage() {
           <h1 className="section-title">Assignments</h1>
           <p className="text-slate-500 text-sm">Who works where and when</p>
         </div>
-        <button onClick={() => { setForm(defaultForm); setShowModal(true); }} className="btn-primary px-4 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> Assign Guard
-        </button>
+        <div className="flex gap-3">
+          {user?.role === 'super_admin' && (
+            <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)} className="input w-48">
+              <option value="">All Agencies</option>
+              {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          )}
+          <button onClick={() => { setForm(defaultForm); setShowModal(true); }} className="btn-primary px-4 py-2.5 text-sm">
+            <Plus className="w-4 h-4" /> Assign Guard
+          </button>
+        </div>
       </div>
 
       <div className="table-wrapper">
