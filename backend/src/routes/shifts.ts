@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError, logAudit } from '../middleware/errorHandler';
@@ -15,6 +15,7 @@ const shiftSchema = z.object({
   isOvernight: z.boolean().default(false),
   lateThresholdMinutes: z.number().min(0).max(120).default(15),
   isActive: z.boolean().default(true),
+  agencyId: z.string().optional(),
 });
 
 function getAgencyId(req: Request): string | null {
@@ -107,7 +108,12 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  const shift = await Shift.findOne({ _id: req.params.id, agency_id: agencyId });
+  const query: any = { _id: req.params.id };
+  if (req.user!.role !== 'super_admin') {
+    query.agency_id = req.user!.agencyId;
+  }
+
+  const shift = await Shift.findOne(query);
   if (!shift) throw new AppError('Shift not found', 404);
 
   const oldValues = shift.toObject();
@@ -119,6 +125,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   if (d.isOvernight !== undefined) shift.is_overnight = d.isOvernight;
   if (d.lateThresholdMinutes !== undefined) shift.late_threshold_minutes = d.lateThresholdMinutes;
   if (d.isActive !== undefined) shift.is_active = d.isActive;
+  if (req.user!.role === 'super_admin' && d.agencyId) shift.agency_id = d.agencyId as any;
 
   await shift.save();
 
@@ -132,7 +139,12 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
 router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
 
-  const shift = await Shift.findOne({ _id: req.params.id, agency_id: agencyId });
+  const query: any = { _id: req.params.id };
+  if (req.user!.role !== 'super_admin') {
+    query.agency_id = req.user!.agencyId;
+  }
+
+  const shift = await Shift.findOne(query);
   if (!shift) throw new AppError('Shift not found', 404);
 
   const activeAssignments = await Assignment.countDocuments({

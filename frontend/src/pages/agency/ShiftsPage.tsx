@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Clock, X, Sun, Moon, Trash2 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Shift {
   id: string;
@@ -15,7 +16,7 @@ interface Shift {
   active_assignments: number;
 }
 
-const defaultForm = { name: '', startTime: '08:00', endTime: '20:00', isOvernight: false, lateThresholdMinutes: 15, isActive: true };
+const defaultForm = { name: '', startTime: '08:00', endTime: '20:00', isOvernight: false, lateThresholdMinutes: 15, isActive: true, agencyId: '' };
 
 function formatTime(time: string) {
   const [h, m] = time.slice(0,5).split(':').map(Number);
@@ -29,9 +30,19 @@ export default function ShiftsPage() {
   const [editShift, setEditShift] = useState<Shift | null>(null);
   const [form, setForm] = useState(defaultForm);
 
+  const { user } = useAuthStore();
+  const [agencyFilter, setAgencyFilter] = useState('');
+
+  const { data: agencies } = useQuery({ queryKey: ['agencies'], queryFn: async () => { const {data} = await api.get('/agencies'); return data.data; }, enabled: user?.role === 'super_admin' });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['shifts'],
-    queryFn: async () => { const {data} = await api.get('/shifts'); return data.data as Shift[]; },
+    queryKey: ['shifts', agencyFilter],
+    queryFn: async () => { 
+      const params: any = {};
+      if (user?.role === 'super_admin' && agencyFilter) params.agency_id = agencyFilter;
+      const {data} = await api.get('/shifts', { params }); 
+      return data.data as Shift[]; 
+    },
   });
 
   const mutation = useMutation({
@@ -51,9 +62,9 @@ export default function ShiftsPage() {
     onError: (err: unknown) => toast.error((err as {response?:{data?:{message?:string}}})?.response?.data?.message || 'Failed to delete shift'),
   });
 
-  function openEdit(s: Shift) {
+  function openEdit(s: Shift & { agency_id?: string }) {
     setForm({ name: s.name, startTime: s.start_time.slice(0,5), endTime: s.end_time.slice(0,5),
-      isOvernight: s.is_overnight, lateThresholdMinutes: s.late_threshold_minutes, isActive: s.is_active });
+      isOvernight: s.is_overnight, lateThresholdMinutes: s.late_threshold_minutes, isActive: s.is_active, agencyId: s.agency_id || '' });
     setEditShift(s);
     setShowModal(true);
   }
@@ -62,14 +73,22 @@ export default function ShiftsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="section-header">
+      <div className="section-header flex flex-wrap gap-3 justify-between items-center">
         <div>
           <h1 className="section-title">Shift Management</h1>
           <p className="text-slate-500 text-sm">Configure work shifts for your guards</p>
         </div>
-        <button onClick={() => { setForm(defaultForm); setEditShift(null); setShowModal(true); }} className="btn-primary px-4 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> Add Shift
-        </button>
+        <div className="flex gap-3">
+          {user?.role === 'super_admin' && (
+            <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)} className="input w-48">
+              <option value="">All Agencies</option>
+              {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          )}
+          <button onClick={() => { setForm(defaultForm); setEditShift(null); setShowModal(true); }} className="btn-primary px-4 py-2.5 text-sm">
+            <Plus className="w-4 h-4" /> Add Shift
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -139,6 +158,15 @@ export default function ShiftsPage() {
                 <label className="label">Late Threshold (minutes after shift start)</label>
                 <input className="input" type="number" min={0} max={120} value={form.lateThresholdMinutes} onChange={e => setForm(f=>({...f,lateThresholdMinutes:parseInt(e.target.value)}))} />
               </div>
+              {user?.role === 'super_admin' && (
+                <div className="form-group">
+                  <label className="label">Agency</label>
+                  <select className="input" value={form.agencyId} onChange={e => setForm(f=>({...f,agencyId:e.target.value}))}>
+                    <option value="">Select Agency (Optional)</option>
+                    {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="flex gap-3 p-5 border-t border-surface-700">
               <button onClick={closeModal} className="btn-ghost px-5 py-2.5">Cancel</button>
