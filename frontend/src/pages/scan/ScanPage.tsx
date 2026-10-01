@@ -760,7 +760,7 @@ export default function ScanPage() {
                       {gateInfo.society.gates.map(g => {
                         const active = selectedGate === g;
                         return (
-                          <button key={g} onClick={() => setSelectedGate(g)}
+                          <button key={g} onClick={() => setSelectedGate(selectedGate === g ? '' : g)}
                             className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border-[1.5px] transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
                             <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
                               {active && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
