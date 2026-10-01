@@ -56,6 +56,7 @@ function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number,
 export default function SocietiesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [agencyFilter, setAgencyFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editSociety, setEditSociety] = useState<Society | null>(null);
   const [form, setForm] = useState(defaultForm);
@@ -72,9 +73,13 @@ export default function SocietiesPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['societies', search],
+    queryKey: ['societies', search, agencyFilter],
     queryFn: async () => {
-      const { data } = await api.get('/societies', { params: { search: search || undefined } });
+      const params: any = { search: search || undefined };
+      if (user?.role === 'super_admin' && agencyFilter) {
+        params.agency_id = agencyFilter;
+      }
+      const { data } = await api.get('/societies', { params });
       return data.data as Society[];
     },
   });
@@ -148,11 +153,19 @@ export default function SocietiesPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" style={{width:'16px',height:'16px'}} />
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search societies..." className="input pl-10 max-w-sm" />
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" style={{width:'16px',height:'16px'}} />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search societies..." className="input pl-10 max-w-sm w-64" />
+        </div>
+        {user?.role === 'super_admin' && (
+          <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)} className="input w-48">
+            <option value="">All Agencies</option>
+            {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Grid */}
