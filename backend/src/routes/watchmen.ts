@@ -302,4 +302,32 @@ router.post('/:id/photo', requireRole(['agency_admin', 'super_admin']), upload.s
   res.json({ success: true, data: { id: watchman.id, profile_photo_url: watchman.profile_photo_url } });
 }));
 
+/** DELETE /api/watchmen/:id */
+router.delete('/:id', requireRole(['agency_admin', 'super_admin']), asyncHandler(async (req: Request, res: Response) => {
+  const query: any = { _id: req.params.id };
+  if (req.user!.role !== 'super_admin') {
+    query.agency_id = req.user!.agencyId;
+  }
+
+  const watchman = await Watchman.findOne(query);
+  if (!watchman) throw new AppError('Watchman not found', 404);
+
+  // Delete associated user
+  await User.deleteOne({ _id: watchman.user_id });
+  
+  // Delete the watchman
+  await Watchman.deleteOne({ _id: watchman._id });
+
+  await logAudit(null as any, { 
+    agencyId: watchman.agency_id as any, 
+    userId: req.user!.userId, 
+    action: 'delete_watchman',
+    entityType: 'watchman', 
+    entityId: watchman.id,
+    req 
+  });
+
+  res.json({ success: true, message: 'Watchman deleted successfully' });
+}));
+
 export default router;

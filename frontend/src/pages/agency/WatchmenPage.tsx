@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Users, X, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit2, Users, X, UserCheck, UserX, Trash2 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
@@ -72,6 +72,29 @@ export default function WatchmenPage() {
       toast.error(msg);
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/watchmen/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchmen'] });
+      queryClient.invalidateQueries({ queryKey: ['watchmen-list'] });
+      queryClient.invalidateQueries({ queryKey: ['wm-all'] });
+      toast.success('Watchman deleted successfully!');
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete';
+      toast.error(msg);
+    },
+  });
+
+  const handleDelete = (w: Watchman) => {
+    if (window.confirm(`Are you sure you want to delete ${w.full_name}? This will remove all their records.`)) {
+      deleteMutation.mutate(w.id);
+    }
+  };
+
 
   function openAdd() {
     setForm(defaultForm);
@@ -173,9 +196,14 @@ export default function WatchmenPage() {
                   </span>
                 </td>
                 <td>
-                  <button onClick={() => openEdit(w)} className="p-2 rounded-lg hover:bg-surface-700 text-slate-500 hover:text-slate-300">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1 justify-end">
+                    <button onClick={() => openEdit(w)} className="p-2 rounded-lg hover:bg-surface-700 text-slate-500 hover:text-slate-300" title="Edit">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(w)} className="p-2 rounded-lg hover:bg-danger-500/10 text-slate-500 hover:text-danger-400 transition-colors" title="Delete">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
