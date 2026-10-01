@@ -85,7 +85,7 @@ export default function ShiftsPage() {
               {agencies?.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           )}
-          <button onClick={() => { setForm(defaultForm); setEditShift(null); setShowModal(true); }} className="btn-primary px-4 py-2.5 text-sm">
+          <button onClick={() => { setForm({...defaultForm, agencyId: agencyFilter}); setEditShift(null); setShowModal(true); }} className="btn-primary px-4 py-2.5 text-sm">
             <Plus className="w-4 h-4" /> Add Shift
           </button>
         </div>
@@ -179,7 +179,7 @@ export default function ShiftsPage() {
                   <Trash2 className="w-4 h-4" /> Delete
                 </button>
               )}
-              <button onClick={() => mutation.mutate(form)} disabled={mutation.isPending || !form.name} className="btn-primary px-5 py-2.5 ml-auto">
+              <button onClick={() => mutation.mutate(form)} disabled={mutation.isPending || !form.name || (user?.role === 'super_admin' && !form.agencyId)} className="btn-primary px-5 py-2.5 ml-auto">
                 {mutation.isPending ? 'Saving...' : 'Save Shift'}
               </button>
             </div>

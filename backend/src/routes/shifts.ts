@@ -29,10 +29,16 @@ function getAgencyId(req: Request): string | null {
 }
 
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
-  const agencyId = getAgencyId(req);
+  let agencyId = req.user!.agencyId;
+  if (req.user!.role === 'super_admin') {
+    agencyId = req.query.agency_id ? (req.query.agency_id as string) : null;
+  }
   
+  const matchObj: any = {};
+  if (agencyId) matchObj.agency_id = new (require('mongoose').Types.ObjectId)(agencyId);
+
   const shifts = await Shift.aggregate([
-    { $match: { agency_id: new (require('mongoose').Types.ObjectId)(agencyId) } },
+    { $match: matchObj },
     {
       $lookup: {
         from: 'assignments',
