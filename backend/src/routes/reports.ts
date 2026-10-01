@@ -380,4 +380,149 @@ router.get('/suspicious', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: formatted });
 }));
 
+
+/**
+ * GET /api/reports/watchman-journey?watchman_id=&startDate=&endDate=&agency_id=
+ * Day-by-day attendance journey for a specific watchman across all societies.
+ * Shows PRESENT/LATE at which society, or ABSENT if no attendance that day.
+ */
+router.get('/watchman-journey', asyncHandler(async (req: Request, res: Response) => {
+  const agencyId = getAgencyId(req);
+  const watchmanId = (req.query.watchman_id || req.query.watchmanId) as string;
+  const startDateStr = (req.query.startDate || req.query.start_date) as string;
+  const endDateStr = (req.query.endDate || req.query.end_date) as string;
+
+  if (!watchmanId) {
+    res.status(400).json({ success: false, message: 'watchman_id is required' });
+    return;
+  }
+
+  const startDate = startDateStr ? new Date(startDateStr) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const endDate = endDateStr ? new Date(endDateStr) : new Date();
+  startDate.setUTCHours(0, 0, 0, 0);
+  endDate.setUTCHours(23, 59, 59, 999);
+
+  // Fetch all attendance records for this watchman in the date range
+  const matchStage: any = {
+    watchman_id: new mongoose.Types.ObjectId(watchmanId),
+    $or: [
+      { attendance_date: { $gte: startDate, $lte: endDate } },
+      { check_in_time: { $gte: startDate, $lte: endDate } },
+    ],
+  };
+  if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+
+  const attRecords = await Attendance.aggregate([
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: 'societies',
+        localField: 'society_id',
+        foreignField: '_id',
+        as: 'society',
+      },
+    },
+    { $unwind: { path: '$society', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'shifts',
+        localField: 'shift_id',
+        foreignField: '_id',
+        as: 'shift',
+      },
+    },
+    { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        society_name: { $ifNull: ['$society.name', 'Unknown Society'] },
+        shift_name: { $ifNull: ['$shift.name', 'Standard Shift'] },
+        start_time: { $ifNull: ['$shift.start_time', ''] },
+        end_time: { $ifNull: ['$shift.end_time', ''] },
+        date_key: {
+          $dateToString: {
+            format: '%Y-%m-%d',
+            date: { $ifNull: ['$attendance_date', '$check_in_time'] },
+          },
+        },
+      },
+    },
+    { $project: { society: 0, shift: 0 } },
+    { $sort: { date_key: -1, check_in_time: -1 } },
+  ]);
+
+  // Build a map of date -> record
+  const recordMap: Record<string, any> = {};
+  for (const r of attRecords) {
+    if (!recordMap[r.date_key]) {
+      recordMap[r.date_key] = r;
+    }
+  }
+
+  // Generate all dates from startDate to endDate
+  const journey: any[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    const dateKey = cursor.toISOString().split('T')[0];
+    const rec = recordMap[dateKey];
+    if (rec) {
+      journey.push({
+        date: dateKey,
+        status: rec.status || 'present',
+        society_name: rec.society_name,
+        shift_name: rec.shift_name,
+        start_time: rec.start_time,
+        end_time: rec.end_time,
+        check_in_time: rec.check_in_time,
+        check_out_time: rec.check_out_time,
+        duration_minutes: rec.duration_minutes,
+        verification_status: rec.verification_status,
+        attendance_id: rec._id?.toString(),
+      });
+    } else {
+      // Only mark absent for past days (not today or future)
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      if (cursor < today) {
+        journey.push({
+          date: dateKey,
+          status: 'absent',
+          society_name: null,
+          shift_name: null,
+          start_time: null,
+          end_time: null,
+          check_in_time: null,
+          check_out_time: null,
+          duration_minutes: null,
+          verification_status: null,
+          attendance_id: null,
+        });
+      }
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  // Reverse so most recent is first
+  journey.reverse();
+
+  // Fetch watchman info
+  const findQuery: any = { _id: new mongoose.Types.ObjectId(watchmanId) };
+  if (agencyId) findQuery.agency_id = agencyId;
+  const watchman = await Watchman.findOne(findQuery).select('full_name employee_id');
+
+  // Stats
+  const totalDays = journey.length;
+  const presentDays = journey.filter(d => d.status === 'present').length;
+  const lateDays = journey.filter(d => d.status === 'late').length;
+  const absentDays = journey.filter(d => d.status === 'absent').length;
+
+  res.json({
+    success: true,
+    watchman,
+    data: journey,
+    stats: { totalDays, presentDays, lateDays, absentDays },
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0],
+  });
+}));
+
 export default router;

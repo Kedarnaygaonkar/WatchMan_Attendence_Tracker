@@ -76,21 +76,7 @@ router.post(
 
     if (!watchman) throw new AppError('Guard ID not found or inactive', 404);
 
-    // Verify watchman is assigned to this society
-    const todayObj = new Date();
-    todayObj.setHours(0, 0, 0, 0);
-
-    const assignment = await Assignment.findOne({
-      watchman_id: watchman._id,
-      society_id: gate.society_id,
-      is_active: true,
-      start_date: { $lte: todayObj },
-      $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: todayObj } }],
-    }).lean();
-
-    if (!assignment) {
-      throw new AppError('You are not assigned to this society today', 403);
-    }
+    // No assignment check — any watchman belonging to this agency can mark attendance at any society
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -202,20 +188,8 @@ router.post(
     const shift = await Shift.findById(shift_id).lean();
     if (!shift) throw new AppError('Shift not found', 404);
 
-    const todayObj = new Date();
-    todayObj.setHours(0, 0, 0, 0);
+    // No assignment check — any watchman of this agency can check in at any society
 
-    const assignment = await Assignment.findOne({
-      watchman_id: watchman._id,
-      society_id: gate.society_id,
-      is_active: true,
-      start_date: { $lte: todayObj },
-      $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: todayObj } }],
-    }).lean();
-
-    if (!assignment) {
-      throw new AppError('You are not assigned to this society today', 403);
-    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -327,17 +301,8 @@ router.post(
     const todayObj = new Date();
     todayObj.setHours(0, 0, 0, 0);
 
-    const assignment = await Assignment.findOne({
-      watchman_id: watchman._id,
-      society_id: (gate.society_id as any)._id,
-      is_active: true,
-      start_date: { $lte: todayObj },
-      $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: todayObj } }],
-    }).lean();
+    // No assignment check — any watchman belonging to this agency can checkout from any society
 
-    if (!assignment) {
-      throw new AppError('You are not assigned to this society today', 403);
-    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

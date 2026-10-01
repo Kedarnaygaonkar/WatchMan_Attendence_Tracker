@@ -1,66 +1,48 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Calendar, AlertTriangle, Download, Filter, X } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, CheckCircle, Clock, Building2 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
-type ReportTab = 'daily' | 'monthly' | 'suspicious';
+type ReportTab = 'daily' | 'monthly' | 'suspicious' | 'journey';
 
-interface Society {
-  id: string;
-  name: string;
-}
-
-interface Agency {
-  id: string;
-  name: string;
-}
+interface Society { id: string; name: string; }
+interface Agency { id: string; name: string; }
+interface WatchmanOption { _id: string; id: string; full_name: string; employee_id: string; }
 
 interface DailyRecord {
-  watchman_id: string;
-  full_name: string;
-  employee_id: string;
-  society_name: string;
-  shift_name: string;
-  final_status: string;
-  check_in_time: string | null;
-  check_out_time: string | null;
-  duration_minutes: number | null;
-  verification_status: string | null;
-  is_offline_sync: boolean;
+  watchman_id: string; full_name: string; employee_id: string;
+  society_name: string; shift_name: string; final_status: string;
+  check_in_time: string | null; check_out_time: string | null;
+  duration_minutes: number | null; verification_status: string | null; is_offline_sync: boolean;
 }
 
 interface MonthlyRecord {
-  watchman_id: string;
-  full_name: string;
-  employee_id: string;
-  days_present: number;
-  days_late: number;
-  days_absent: number;
-  suspicious_count: number;
-  total_records: number;
+  watchman_id: string; full_name: string; employee_id: string;
+  days_present: number; days_late: number; days_absent: number;
+  suspicious_count: number; total_records: number;
 }
 
 interface SuspiciousRecord {
-  id: string;
-  watchman_name: string;
-  employee_id: string;
-  society_name: string;
-  attendance_date: string;
-  check_in_time: string;
-  verification_status: string;
-  gps_flags: string[];
-  distance_from_society: number;
+  id: string; watchman_name: string; employee_id: string;
+  society_name: string; attendance_date: string; check_in_time: string;
+  verification_status: string; gps_flags: string[]; distance_from_society: number;
 }
 
+interface JourneyDay {
+  date: string; status: 'present' | 'late' | 'absent';
+  society_name: string | null; shift_name: string | null;
+  start_time: string | null; end_time: string | null;
+  check_in_time: string | null; check_out_time: string | null;
+  duration_minutes: number | null; verification_status: string | null;
+  attendance_id: string | null;
+}
+
+interface JourneyStats { totalDays: number; presentDays: number; lateDays: number; absentDays: number; }
+
 function StatusBadge({ status }: { status: string }) {
-  const cls: Record<string, string> = {
-    present: 'badge-present',
-    late: 'badge-late',
-    absent: 'badge-absent',
-    rejected: 'badge-absent',
-  };
+  const cls: Record<string, string> = { present: 'badge-present', late: 'badge-late', absent: 'badge-absent', rejected: 'badge-absent' };
   return <span className={cls[status] || 'badge'}>{status?.toUpperCase()}</span>;
 }
 
@@ -75,7 +57,12 @@ export default function ReportsPage() {
   const [societyId, setSocietyId] = useState('');
   const [agencyId, setAgencyId] = useState('');
 
-  // Fetch societies for filtering
+  const [journeyWatchmanId, setJourneyWatchmanId] = useState('');
+  const [journeyStartDate, setJourneyStartDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
+  });
+  const [journeyEndDate, setJourneyEndDate] = useState(new Date().toISOString().split('T')[0]);
+
   const { data: societies } = useQuery({
     queryKey: ['societies-filter', agencyId],
     queryFn: async () => {
@@ -86,18 +73,21 @@ export default function ReportsPage() {
     },
   });
 
-  // Fetch agencies for super_admin filter
   const { data: agencies } = useQuery({
     queryKey: ['agencies-filter'],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get('/agencies');
-        return data.data as Agency[];
-      } catch {
-        return [] as Agency[];
-      }
-    },
+    queryFn: async () => { try { const { data } = await api.get('/agencies'); return data.data as Agency[]; } catch { return [] as Agency[]; } },
     enabled: isSuperAdmin,
+  });
+
+  const { data: watchmenOptions } = useQuery({
+    queryKey: ['watchmen-all-journey', agencyId],
+    queryFn: async () => {
+      const params: any = {};
+      if (isSuperAdmin && agencyId) params.agency_id = agencyId;
+      const { data } = await api.get('/watchmen', { params });
+      return (data.data || data) as WatchmanOption[];
+    },
+    enabled: tab === 'journey',
   });
 
   const { data: dailyData, isLoading: dailyLoading } = useQuery({
@@ -136,86 +126,70 @@ export default function ReportsPage() {
     enabled: tab === 'suspicious',
   });
 
-  function exportDailyCSV() {
-    if (!dailyData?.length) {
-      toast.error('No daily data to export');
-      return;
-    }
-    const headers = [
-      'Guard Name',
-      'Employee ID',
-      'Society',
-      'Shift',
-      'Date',
-      'Check-In',
-      'Check-Out',
-      'Duration (min)',
-      'Status',
-      'Verification Status',
-      'Offline Sync',
-    ];
-    const rows = dailyData.map((r) => [
-      r.full_name,
-      r.employee_id,
-      r.society_name,
-      r.shift_name,
-      date,
-      r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '',
-      r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '',
-      r.duration_minutes ?? '',
-      r.final_status,
-      r.verification_status || '',
-      r.is_offline_sync ? 'Yes' : 'No',
-    ]);
-    downloadCSV([headers, ...rows], `daily-attendance-${date}.csv`);
-  }
-
-  function exportMonthlyCSV() {
-    if (!monthlyData?.length) {
-      toast.error('No monthly data to export');
-      return;
-    }
-    const headers = ['Guard Name', 'Employee ID', 'Present', 'Late', 'Absent', 'Suspicious Count', 'Total', 'Attendance %'];
-    const rows = monthlyData.map((r) => {
-      const total = r.days_present + r.days_late + r.days_absent;
-      const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
-      return [r.full_name, r.employee_id, r.days_present, r.days_late, r.days_absent, r.suspicious_count, total, `${pct}%`];
-    });
-    downloadCSV([headers, ...rows], `monthly-attendance-${year}-${month}.csv`);
-  }
-
-  function exportSuspiciousCSV() {
-    if (!suspiciousData?.length) {
-      toast.error('No suspicious data to export');
-      return;
-    }
-    const headers = ['Guard Name', 'Employee ID', 'Society', 'Date', 'Flags', 'Distance (m)'];
-    const rows = suspiciousData.map((r) => [
-      r.watchman_name,
-      r.employee_id,
-      r.society_name,
-      new Date(r.attendance_date).toLocaleDateString('en-IN'),
-      (r.gps_flags || []).join(' | '),
-      r.distance_from_society ? Math.round(r.distance_from_society) : '',
-    ]);
-    downloadCSV([headers, ...rows], `suspicious-records.csv`);
-  }
+  const { data: journeyData, isLoading: journeyLoading } = useQuery({
+    queryKey: ['report-journey', journeyWatchmanId, journeyStartDate, journeyEndDate, agencyId],
+    queryFn: async () => {
+      const params: any = { watchman_id: journeyWatchmanId, startDate: journeyStartDate, endDate: journeyEndDate };
+      if (isSuperAdmin && agencyId) params.agency_id = agencyId;
+      const { data } = await api.get('/reports/watchman-journey', { params });
+      return { records: data.data as JourneyDay[], stats: data.stats as JourneyStats, watchman: data.watchman };
+    },
+    enabled: tab === 'journey' && !!journeyWatchmanId,
+  });
 
   function downloadCSV(rows: (string | number)[][], filename: string) {
     const csv = rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Exported ${filename}`);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url); toast.success(`Exported ${filename}`);
+  }
+
+  function exportDailyCSV() {
+    if (!dailyData?.length) { toast.error('No daily data to export'); return; }
+    const headers = ['Guard Name','Employee ID','Society','Shift','Date','Check-In','Check-Out','Duration (min)','Status','Verification Status','Offline Sync'];
+    const rows = dailyData.map((r) => [r.full_name,r.employee_id,r.society_name,r.shift_name,date,
+      r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '',
+      r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '',
+      r.duration_minutes ?? '',r.final_status,r.verification_status || '',r.is_offline_sync ? 'Yes' : 'No']);
+    downloadCSV([headers, ...rows], `daily-attendance-${date}.csv`);
+  }
+
+  function exportMonthlyCSV() {
+    if (!monthlyData?.length) { toast.error('No monthly data to export'); return; }
+    const headers = ['Guard Name','Employee ID','Present','Late','Absent','Suspicious Count','Total','Attendance %'];
+    const rows = monthlyData.map((r) => {
+      const total = r.days_present + r.days_late + r.days_absent;
+      const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
+      return [r.full_name,r.employee_id,r.days_present,r.days_late,r.days_absent,r.suspicious_count,total,`${pct}%`];
+    });
+    downloadCSV([headers, ...rows], `monthly-attendance-${year}-${month}.csv`);
+  }
+
+  function exportSuspiciousCSV() {
+    if (!suspiciousData?.length) { toast.error('No suspicious data to export'); return; }
+    const headers = ['Guard Name','Employee ID','Society','Date','Flags','Distance (m)'];
+    const rows = suspiciousData.map((r) => [r.watchman_name,r.employee_id,r.society_name,
+      new Date(r.attendance_date).toLocaleDateString('en-IN'),(r.gps_flags||[]).join(' | '),
+      r.distance_from_society ? Math.round(r.distance_from_society) : '']);
+    downloadCSV([headers, ...rows], `suspicious-records.csv`);
+  }
+
+  function exportJourneyCSV() {
+    if (!journeyData?.records?.length) { toast.error('No journey data to export'); return; }
+    const wm = journeyData.watchman;
+    const headers = ['Date','Status','Society','Shift','Check-In','Check-Out','Duration (min)'];
+    const rows = journeyData.records.map((r) => [r.date,r.status,r.society_name||'ABSENT',r.shift_name||'',
+      r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '',
+      r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '',
+      r.duration_minutes ?? '']);
+    downloadCSV([headers, ...rows], `journey-${wm?.employee_id||'watchman'}-${journeyStartDate}-to-${journeyEndDate}.csv`);
   }
 
   const tabs: { id: ReportTab; label: string; icon: React.ElementType }[] = [
     { id: 'daily', label: 'Daily Attendance', icon: Calendar },
     { id: 'monthly', label: 'Monthly Summary', icon: BarChart3 },
+    { id: 'journey', label: 'Watchman Journey', icon: Route },
     { id: 'suspicious', label: 'Suspicious Records', icon: AlertTriangle },
   ];
 
@@ -229,194 +203,96 @@ export default function ReportsPage() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex gap-2 border-b border-surface-700 pb-px">
+      <div className="flex gap-2 border-b border-surface-700 pb-px flex-wrap">
         {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+          <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-              tab === t.id
-                ? 'border-brand-500 text-brand-400 bg-brand-500/10'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
+              tab === t.id ? 'border-brand-500 text-brand-400 bg-brand-500/10' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
       </div>
 
-      {/* Common Filters Bar */}
-      <div className="card p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-brand-400" />
-          <span className="text-sm font-semibold text-slate-300">Report Filters</span>
-        </div>
-        <div className="flex gap-3 flex-wrap items-center">
-          {tab === 'daily' && (
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input w-44"
-            />
-          )}
-
-          {tab === 'monthly' && (
-            <div className="flex gap-2">
-              <select className="input w-36" value={month} onChange={(e) => setMonth(parseInt(e.target.value))}>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {new Date(2000, m - 1).toLocaleString('en-IN', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-              <select className="input w-28" value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-                {[2024, 2025, 2026, 2027].map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Agency Filter (super_admin only) */}
-          {isSuperAdmin && (
-            <select
-              value={agencyId}
-              onChange={(e) => {
-                setAgencyId(e.target.value);
-                setSocietyId('');
-              }}
-              className="input w-52"
-            >
-              <option value="">All Agencies</option>
-              {agencies?.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Society Filter */}
-          <select
-            value={societyId}
-            onChange={(e) => setSocietyId(e.target.value)}
-            className="input w-52"
-          >
-            <option value="">All Societies</option>
-            {societies?.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Clear Filters */}
-          {(societyId || agencyId) && (
-            <button
-              onClick={() => {
-                setSocietyId('');
-                setAgencyId('');
-              }}
-              className="flex items-center gap-1.5 text-xs text-danger-400 hover:text-danger-300 px-3 py-1.5 rounded-lg hover:bg-danger-500/10 transition-colors border border-danger-500/20"
-            >
-              <X className="w-3.5 h-3.5" /> Clear Filters
-            </button>
-          )}
-
-          <div className="ml-auto">
-            {tab === 'daily' && (
-              <button onClick={exportDailyCSV} disabled={!dailyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
-                <Download className="w-4 h-4" /> Export CSV
-              </button>
-            )}
+      {/* Common Filters — hidden for journey */}
+      {tab !== 'journey' && (
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Filter className="w-4 h-4 text-brand-400" />
+            <span className="text-sm font-semibold text-slate-300">Report Filters</span>
+          </div>
+          <div className="flex gap-3 flex-wrap items-center">
+            {tab === 'daily' && <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-44" />}
             {tab === 'monthly' && (
-              <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
-                <Download className="w-4 h-4" /> Export CSV
+              <div className="flex gap-2">
+                <select className="input w-36" value={month} onChange={(e) => setMonth(parseInt(e.target.value))}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('en-IN', { month: 'long' })}</option>
+                  ))}
+                </select>
+                <select className="input w-28" value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
+                  {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            )}
+            {isSuperAdmin && (
+              <select value={agencyId} onChange={(e) => { setAgencyId(e.target.value); setSocietyId(''); }} className="input w-52">
+                <option value="">All Agencies</option>
+                {agencies?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            )}
+            <select value={societyId} onChange={(e) => setSocietyId(e.target.value)} className="input w-52">
+              <option value="">All Societies</option>
+              {societies?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {(societyId || agencyId) && (
+              <button onClick={() => { setSocietyId(''); setAgencyId(''); }}
+                className="flex items-center gap-1.5 text-xs text-danger-400 hover:text-danger-300 px-3 py-1.5 rounded-lg hover:bg-danger-500/10 transition-colors border border-danger-500/20">
+                <X className="w-3.5 h-3.5" /> Clear Filters
               </button>
             )}
-            {tab === 'suspicious' && (
-              <button onClick={exportSuspiciousCSV} disabled={!suspiciousData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
-                <Download className="w-4 h-4" /> Export CSV
-              </button>
-            )}
+            <div className="ml-auto">
+              {tab === 'daily' && <button onClick={exportDailyCSV} disabled={!dailyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
+              {tab === 'monthly' && <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
+              {tab === 'suspicious' && <button onClick={exportSuspiciousCSV} disabled={!suspiciousData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Daily */}
       {tab === 'daily' && (
         <div className="space-y-4">
           <div className="table-wrapper">
             <table className="table">
-              <thead>
-                <tr>
-                  <th>Guard</th>
-                  <th>Society</th>
-                  <th>Shift</th>
-                  <th>Check-in</th>
-                  <th>Check-out</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Guard</th><th>Society</th><th>Shift</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
               <tbody>
-                {dailyLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={6}>
-                        <div className="h-10 bg-surface-700 animate-pulse rounded" />
-                      </td>
-                    </tr>
-                  ))
-                ) : dailyData?.map((r, i) => (
+                {dailyLoading ? Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}><td colSpan={6}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                )) : dailyData?.map((r, i) => (
                   <tr key={i}>
-                    <td>
-                      <div>
-                        <p className="font-medium">{r.full_name}</p>
-                        <p className="text-xs text-slate-500">{r.employee_id}</p>
-                      </div>
-                    </td>
-                    <td>{r.society_name}</td>
-                    <td>{r.shift_name}</td>
+                    <td><div><p className="font-medium">{r.full_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
+                    <td>{r.society_name}</td><td>{r.shift_name}</td>
                     <td className="text-slate-300 text-sm whitespace-nowrap">
-                      {r.check_in_time
-                        ? new Date(r.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-                        : '—'}
+                      {r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—'}
                     </td>
                     <td className="text-slate-300 text-sm whitespace-nowrap">
                       {r.check_out_time ? (
                         <div>
-                          <span>
-                            {new Date(r.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                          </span>
-                          {r.duration_minutes != null && (
-                            <span className="text-xs text-slate-500 block">
-                              {Math.floor(r.duration_minutes / 60)}h {r.duration_minutes % 60}m
-                            </span>
-                          )}
+                          <span>{new Date(r.check_out_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}</span>
+                          {r.duration_minutes != null && <span className="text-xs text-slate-500 block">{Math.floor(r.duration_minutes/60)}h {r.duration_minutes%60}m</span>}
                         </div>
-                      ) : (
-                        <span className="text-slate-600 text-xs">—</span>
-                      )}
+                      ) : <span className="text-slate-600 text-xs">—</span>}
                     </td>
-                    <td>
-                      <StatusBadge status={r.final_status} />
-                    </td>
+                    <td><StatusBadge status={r.final_status} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {!dailyLoading && (!dailyData || dailyData.length === 0) && (
-              <div className="text-center py-12 text-slate-600">
-                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No records found for the selected date / filters</p>
-              </div>
+              <div className="text-center py-12 text-slate-600"><Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No records found for the selected date / filters</p></div>
             )}
           </div>
-
-          {/* Summary */}
           {dailyData && dailyData.length > 0 && (
             <div className="grid grid-cols-3 gap-4">
               {[
@@ -439,36 +315,16 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="table-wrapper">
             <table className="table">
-              <thead>
-                <tr>
-                  <th>Guard</th>
-                  <th>Present</th>
-                  <th>Late</th>
-                  <th>Absent</th>
-                  <th>Suspicious</th>
-                  <th>Attendance %</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Guard</th><th>Present</th><th>Late</th><th>Absent</th><th>Suspicious</th><th>Attendance %</th></tr></thead>
               <tbody>
-                {monthlyLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={6}>
-                        <div className="h-10 bg-surface-700 animate-pulse rounded" />
-                      </td>
-                    </tr>
-                  ))
-                ) : monthlyData?.map((r) => {
+                {monthlyLoading ? Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}><td colSpan={6}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                )) : monthlyData?.map((r) => {
                   const total = r.days_present + r.days_late + r.days_absent;
                   const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
                   return (
                     <tr key={r.watchman_id}>
-                      <td>
-                        <div>
-                          <p className="font-medium">{r.full_name}</p>
-                          <p className="text-xs text-slate-500">{r.employee_id}</p>
-                        </div>
-                      </td>
+                      <td><div><p className="font-medium">{r.full_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
                       <td className="text-success-400 font-bold">{r.days_present}</td>
                       <td className="text-warning-400 font-bold">{r.days_late}</td>
                       <td className="text-danger-400 font-bold">{r.days_absent}</td>
@@ -487,12 +343,173 @@ export default function ReportsPage() {
               </tbody>
             </table>
             {!monthlyLoading && (!monthlyData || monthlyData.length === 0) && (
-              <div className="text-center py-12 text-slate-600">
-                <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No monthly summary found</p>
-              </div>
+              <div className="text-center py-12 text-slate-600"><BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No monthly summary found</p></div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Watchman Journey */}
+      {tab === 'journey' && (
+        <div className="space-y-5">
+          <div className="card p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Route className="w-4 h-4 text-brand-400" />
+              <span className="text-sm font-semibold text-slate-300">Select Watchman & Date Range</span>
+            </div>
+            <div className="flex gap-3 flex-wrap items-end">
+              {isSuperAdmin && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 font-medium">Agency</label>
+                  <select value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="input w-48">
+                    <option value="">All Agencies</option>
+                    {agencies?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 font-medium">Watchman *</label>
+                <select value={journeyWatchmanId} onChange={(e) => setJourneyWatchmanId(e.target.value)} className="input w-60">
+                  <option value="">— Select a Guard —</option>
+                  {watchmenOptions?.map((w) => (
+                    <option key={w._id || w.id} value={w._id || w.id}>{w.full_name} ({w.employee_id})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 font-medium">From</label>
+                <input type="date" value={journeyStartDate} onChange={(e) => setJourneyStartDate(e.target.value)} className="input w-40" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 font-medium">To</label>
+                <input type="date" value={journeyEndDate} onChange={(e) => setJourneyEndDate(e.target.value)} className="input w-40" />
+              </div>
+              {journeyData?.records?.length ? (
+                <button onClick={exportJourneyCSV} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm self-end">
+                  <Download className="w-4 h-4" /> Export CSV
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {journeyData?.watchman && (
+            <div className="card p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
+                    <User className="w-5 h-5 text-brand-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-100 text-lg">{journeyData.watchman.full_name}</p>
+                    <p className="text-slate-500 text-sm">ID: {journeyData.watchman.employee_id}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  {[
+                    { label: 'Present', val: journeyData.stats.presentDays, cls: 'text-success-400', bg: 'bg-success-500/10 border-success-500/20' },
+                    { label: 'Late', val: journeyData.stats.lateDays, cls: 'text-warning-400', bg: 'bg-warning-500/10 border-warning-500/20' },
+                    { label: 'Absent', val: journeyData.stats.absentDays, cls: 'text-danger-400', bg: 'bg-danger-500/10 border-danger-500/20' },
+                    { label: 'Total', val: journeyData.stats.totalDays, cls: 'text-slate-300', bg: 'bg-surface-700 border-surface-600' },
+                  ].map((s) => (
+                    <div key={s.label} className={`${s.bg} border px-4 py-2 rounded-xl text-center min-w-[68px]`}>
+                      <p className={`text-2xl font-black ${s.cls}`}>{s.val}</p>
+                      <p className="text-slate-500 text-xs">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {journeyData.stats.totalDays > 0 && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>Attendance Rate</span>
+                    <span className="font-semibold text-slate-300">
+                      {Math.round(((journeyData.stats.presentDays + journeyData.stats.lateDays) / journeyData.stats.totalDays) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-2.5 bg-surface-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all"
+                      style={{ width: `${Math.round(((journeyData.stats.presentDays + journeyData.stats.lateDays) / journeyData.stats.totalDays) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!journeyWatchmanId && (
+            <div className="card p-12 text-center text-slate-600">
+              <Route className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium text-slate-400">Select a watchman to view their journey</p>
+              <p className="text-sm mt-1">Day-by-day breakdown showing which society they attended and absent days</p>
+            </div>
+          )}
+
+          {journeyLoading && journeyWatchmanId && (
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-16 bg-surface-800 animate-pulse rounded-xl" />)}
+            </div>
+          )}
+
+          {!journeyLoading && journeyWatchmanId && journeyData && (
+            <div className="space-y-2">
+              {journeyData.records.length === 0 ? (
+                <div className="card p-12 text-center text-slate-600">
+                  <Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No records found for this date range</p>
+                </div>
+              ) : journeyData.records.map((day, i) => (
+                <div key={i} className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all ${
+                  day.status === 'absent' ? 'bg-danger-500/5 border-danger-500/20'
+                  : day.status === 'late' ? 'bg-warning-500/5 border-warning-500/20'
+                  : 'bg-success-500/5 border-success-500/20'
+                }`}>
+                  <div className="w-16 shrink-0 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase">
+                      {new Date(day.date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
+                    </p>
+                    <p className="text-xl font-black text-slate-200 leading-tight">
+                      {new Date(day.date + 'T12:00:00').getDate()}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {new Date(day.date + 'T12:00:00').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+                    </p>
+                  </div>
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    day.status === 'absent' ? 'bg-danger-500' : day.status === 'late' ? 'bg-warning-500' : 'bg-success-500'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    {day.status === 'absent' ? (
+                      <p className="text-danger-400 font-bold text-sm">Absent — did not attend any society</p>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <span className="text-slate-100 font-semibold text-sm">{day.society_name}</span>
+                        </div>
+                        {day.shift_name && (
+                          <span className="text-xs text-slate-500 bg-surface-700 px-2 py-0.5 rounded-full">{day.shift_name}</span>
+                        )}
+                      </div>
+                    )}
+                    {day.check_in_time && (
+                      <div className="flex gap-3 mt-0.5 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          In: {new Date(day.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                        </span>
+                        {day.check_out_time && (
+                          <span>Out: {new Date(day.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        )}
+                        {day.duration_minutes && (
+                          <span>{Math.floor(day.duration_minutes / 60)}h {day.duration_minutes % 60}m</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <StatusBadge status={day.status} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -501,40 +518,19 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="table-wrapper">
             <table className="table">
-              <thead>
-                <tr>
-                  <th>Guard</th>
-                  <th>Society</th>
-                  <th>Date</th>
-                  <th>Flags</th>
-                  <th>Distance</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Guard</th><th>Society</th><th>Date</th><th>Flags</th><th>Distance</th></tr></thead>
               <tbody>
-                {suspiciousLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={5}>
-                        <div className="h-10 bg-surface-700 animate-pulse rounded" />
-                      </td>
-                    </tr>
-                  ))
-                ) : suspiciousData?.map((r) => (
+                {suspiciousLoading ? Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}><td colSpan={5}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                )) : suspiciousData?.map((r) => (
                   <tr key={r.id}>
-                    <td>
-                      <div>
-                        <p className="font-medium">{r.watchman_name}</p>
-                        <p className="text-xs text-slate-500">{r.employee_id}</p>
-                      </div>
-                    </td>
+                    <td><div><p className="font-medium">{r.watchman_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
                     <td>{r.society_name}</td>
                     <td className="text-slate-400 text-sm">{new Date(r.attendance_date).toLocaleDateString('en-IN')}</td>
                     <td>
                       <div className="flex flex-wrap gap-1">
                         {r.gps_flags?.map((f, i) => (
-                          <span key={i} className="text-xs bg-warning-500/20 text-warning-400 border border-warning-500/20 px-1.5 py-0.5 rounded-full">
-                            {f}
-                          </span>
+                          <span key={i} className="text-xs bg-warning-500/20 text-warning-400 border border-warning-500/20 px-1.5 py-0.5 rounded-full">{f}</span>
                         ))}
                       </div>
                     </td>
@@ -544,10 +540,7 @@ export default function ReportsPage() {
               </tbody>
             </table>
             {!suspiciousLoading && (!suspiciousData || suspiciousData.length === 0) && (
-              <div className="text-center py-12 text-slate-600">
-                <AlertTriangle className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No suspicious records in last 30 days</p>
-              </div>
+              <div className="text-center py-12 text-slate-600"><AlertTriangle className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No suspicious records in last 30 days</p></div>
             )}
           </div>
         </div>

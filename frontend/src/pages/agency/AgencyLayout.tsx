@@ -13,7 +13,6 @@ const navItems = [
   { to: '/agency/watchmen', label: 'Watchmen', icon: Users },
   { to: '/agency/shifts', label: 'Shifts', icon: Clock },
   { to: '/agency/gates', label: 'QR Codes', icon: QrCode },
-  { to: '/agency/assignments', label: 'Assignments', icon: GitBranch },
   { to: '/agency/attendance', label: 'Attendance', icon: ClipboardList },
   { to: '/agency/replacements', label: 'Replacements', icon: ArrowLeftRight },
   { to: '/agency/reports', label: 'Reports', icon: BarChart3 },
