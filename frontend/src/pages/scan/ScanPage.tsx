@@ -830,12 +830,29 @@ export default function ScanPage() {
                 <div className="pt-1">
                   <button
                     onClick={async () => { await startCamera(); setStep('take_photo'); }}
-                    disabled={!selectedShiftId || !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)}
-                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-[15px] ${
-                      selectedShiftId && !(gateInfo?.society.gates && gateInfo.society.gates.length > 0 && !selectedGate)
-                        ? 'bg-[#0b5cda] hover:bg-[#094bb8] text-white shadow-lg shadow-blue-600/30'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}>
+                    disabled={(() => {
+                      if (!selectedShiftId) return true;
+                      const hasGates = !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0);
+                      const hasWings = !!(gateInfo?.society.wings && gateInfo.society.wings.length > 0);
+                      // If only gates, gate is required
+                      if (hasGates && !hasWings) return !selectedGate;
+                      // If only wings, wing is required
+                      if (hasWings && !hasGates) return !selectedWing;
+                      // If both, at least one must be selected
+                      if (hasGates && hasWings) return !selectedGate && !selectedWing;
+                      return false;
+                    })()}
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-[15px] ${(
+                      (() => {
+                        if (!selectedShiftId) return false;
+                        const hasGates = !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0);
+                        const hasWings = !!(gateInfo?.society.wings && gateInfo.society.wings.length > 0);
+                        if (hasGates && !hasWings) return !!selectedGate;
+                        if (hasWings && !hasGates) return !!selectedWing;
+                        if (hasGates && hasWings) return !!(selectedGate || selectedWing);
+                        return true;
+                      })()
+                    ) ? 'bg-[#0b5cda] hover:bg-[#094bb8] text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
                     <Camera className="w-4 h-4" /> {t.take_photo} <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

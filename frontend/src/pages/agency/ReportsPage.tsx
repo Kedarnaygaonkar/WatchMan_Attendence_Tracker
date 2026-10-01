@@ -1,11 +1,11 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, CheckCircle, Clock, Building2 } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
-type ReportTab = 'daily' | 'monthly' | 'suspicious' | 'journey';
+type ReportTab = 'daily' | 'monthly' | 'suspicious' | 'journey' | 'society_calendar';
 
 interface Society { id: string; name: string; }
 interface Agency { id: string; name: string; }
@@ -40,6 +40,15 @@ interface JourneyDay {
 }
 
 interface JourneyStats { totalDays: number; presentDays: number; lateDays: number; absentDays: number; }
+
+interface CalendarWatchman { watchman_id: string; watchman_name: string; employee_id: string; days_attended: number; wings: string[]; gates: string[]; }
+interface CalendarSection { name: string; days: boolean[]; }
+interface SocietyCalendarData {
+  year: number; month: number; daysInMonth: number;
+  watchmen: CalendarWatchman[];
+  wings: CalendarSection[];
+  gates: CalendarSection[];
+}
 
 function StatusBadge({ status }: { status: string }) {
   const cls: Record<string, string> = { present: 'badge-present', late: 'badge-late', absent: 'badge-absent', rejected: 'badge-absent' };
@@ -137,6 +146,21 @@ export default function ReportsPage() {
     enabled: tab === 'journey' && !!journeyWatchmanId,
   });
 
+  const [calendarSocietyId, setCalendarSocietyId] = useState('');
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
+
+  const { data: calendarData, isLoading: calendarLoading } = useQuery({
+    queryKey: ['report-society-calendar', calendarSocietyId, calendarYear, calendarMonth, agencyId],
+    queryFn: async () => {
+      const params: any = { society_id: calendarSocietyId, year: calendarYear, month: calendarMonth };
+      if (isSuperAdmin && agencyId) params.agency_id = agencyId;
+      const { data } = await api.get('/reports/society-calendar', { params });
+      return data as SocietyCalendarData;
+    },
+    enabled: tab === 'society_calendar' && !!calendarSocietyId,
+  });
+
   function downloadCSV(rows: (string | number)[][], filename: string) {
     const csv = rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -190,6 +214,7 @@ export default function ReportsPage() {
     { id: 'daily', label: 'Daily Attendance', icon: Calendar },
     { id: 'monthly', label: 'Monthly Summary', icon: BarChart3 },
     { id: 'journey', label: 'Watchman Journey', icon: Route },
+    { id: 'society_calendar', label: 'Society Calendar', icon: Grid3X3 },
     { id: 'suspicious', label: 'Suspicious Records', icon: AlertTriangle },
   ];
 
@@ -543,6 +568,177 @@ export default function ReportsPage() {
               <div className="text-center py-12 text-slate-600"><AlertTriangle className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No suspicious records in last 30 days</p></div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Society Calendar */}
+      {tab === 'society_calendar' && (
+        <div className="space-y-5">
+          <div className="card p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Grid3X3 className="w-4 h-4 text-brand-400" />
+              <span className="text-sm font-semibold text-slate-300">Society Calendar — Wing & Gate Breakdown</span>
+            </div>
+            <div className="flex gap-3 flex-wrap items-end">
+              {isSuperAdmin && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-500 font-medium">Agency</label>
+                  <select value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="input w-48">
+                    <option value="">All Agencies</option>
+                    {agencies?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 font-medium">Society *</label>
+                <select value={calendarSocietyId} onChange={(e) => setCalendarSocietyId(e.target.value)} className="input w-56">
+                  <option value="">— Select a Society —</option>
+                  {societies?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 font-medium">Month</label>
+                <select className="input w-36" value={calendarMonth} onChange={(e) => setCalendarMonth(parseInt(e.target.value))}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('en-IN', { month: 'long' })}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 font-medium">Year</label>
+                <select className="input w-28" value={calendarYear} onChange={(e) => setCalendarYear(parseInt(e.target.value))}>
+                  {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          {!calendarSocietyId && (
+            <div className="card p-12 text-center text-slate-600">
+              <Grid3X3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium text-slate-400">Select a society to view its monthly calendar</p>
+              <p className="text-sm mt-1">See which wings and gates had watchmen on duty each day</p>
+            </div>
+          )}
+          {calendarLoading && calendarSocietyId && (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-surface-800 animate-pulse rounded-xl" />)}
+            </div>
+          )}
+          {!calendarLoading && calendarSocietyId && calendarData && (
+            <div className="space-y-5">
+              <div className="card p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="w-4 h-4 text-brand-400" />
+                  <span className="text-sm font-semibold text-slate-200">Guards Who Attended This Month</span>
+                  <span className="ml-auto text-xs text-slate-500 bg-surface-700 px-2 py-0.5 rounded-full">{calendarData.watchmen.length} guard(s)</span>
+                </div>
+                {calendarData.watchmen.length === 0 ? (
+                  <p className="text-slate-600 text-sm py-4 text-center">No attendance recorded this month for this society</p>
+                ) : (
+                  <div className="table-wrapper">
+                    <table className="table">
+                      <thead><tr><th>Guard</th><th>Employee ID</th><th>Days Attended</th><th>Wings</th><th>Gates</th></tr></thead>
+                      <tbody>
+                        {calendarData.watchmen.map((w) => (
+                          <tr key={w.watchman_id}>
+                            <td className="font-medium">{w.watchman_name}</td>
+                            <td className="text-slate-400 text-sm">{w.employee_id}</td>
+                            <td><span className="text-success-400 font-bold">{w.days_attended}</span><span className="text-slate-600 text-xs"> / {calendarData.daysInMonth}</span></td>
+                            <td><div className="flex flex-wrap gap-1">{w.wings.length ? w.wings.map((wg) => (<span key={wg} className="text-xs bg-blue-500/15 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">{wg}</span>)) : <span className="text-slate-600 text-xs">—</span>}</div></td>
+                            <td><div className="flex flex-wrap gap-1">{w.gates.length ? w.gates.map((g) => (<span key={g} className="text-xs bg-purple-500/15 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">{g}</span>)) : <span className="text-slate-600 text-xs">—</span>}</div></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              {(calendarData.wings.length > 0 || calendarData.gates.length > 0) && (() => {
+                const days = Array.from({ length: calendarData.daysInMonth }, (_, i) => i + 1);
+                const weekDayOf1 = new Date(calendarData.year, calendarData.month - 1, 1).getDay();
+                function CalGrid({ section, presentColor }: { section: CalendarSection; presentColor: string }) {
+                  const cells: (number | null)[] = [...Array(weekDayOf1).fill(null), ...days];
+                  while (cells.length % 7 !== 0) cells.push(null);
+                  const weeks: (number | null)[][] = [];
+                  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+                  return (
+                    <div className="mt-2 select-none">
+                      <div className="grid grid-cols-7 gap-0.5 mb-1">
+                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d) => (<div key={d} className="text-center text-[9px] font-bold text-slate-600 py-0.5">{d}</div>))}
+                      </div>
+                      {weeks.map((week, wi) => (
+                        <div key={wi} className="grid grid-cols-7 gap-0.5 mb-0.5">
+                          {week.map((day, di) => (
+                            <div key={di} className={`aspect-square rounded flex items-center justify-center text-[10px] font-bold ${day === null ? 'opacity-0 pointer-events-none' : section.days[day - 1] ? presentColor + ' text-white shadow-sm' : 'bg-danger-500/25 text-danger-400'}`}>
+                              {day ?? ''}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-5">
+                    {calendarData.wings.length > 0 && (
+                      <div className="card p-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Layers className="w-4 h-4 text-blue-400" />
+                          <span className="text-sm font-semibold text-slate-200">Wing-wise Presence Calendar</span>
+                          <span className="text-xs text-slate-500 ml-2 flex items-center gap-3">
+                            <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-success-500 inline-block" /> Present</span>
+                            <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-danger-500/40 inline-block" /> Absent</span>
+                          </span>
+                        </div>
+                        <div className={`grid gap-5 ${calendarData.wings.length === 1 ? 'grid-cols-1 max-w-xs' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+                          {calendarData.wings.map((w) => (
+                            <div key={w.name} className="bg-surface-800/80 border border-surface-700 rounded-xl p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                <span className="text-sm font-bold text-slate-200 truncate">{w.name}</span>
+                                <span className="ml-auto text-xs font-semibold shrink-0"><span className="text-success-400">{w.days.filter(Boolean).length}</span><span className="text-slate-600">/{calendarData.daysInMonth}</span></span>
+                              </div>
+                              <CalGrid section={w} presentColor="bg-success-500" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {calendarData.gates.length > 0 && (
+                      <div className="card p-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <DoorOpen className="w-4 h-4 text-purple-400" />
+                          <span className="text-sm font-semibold text-slate-200">Gate-wise Presence Calendar</span>
+                          <span className="text-xs text-slate-500 ml-2 flex items-center gap-3">
+                            <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-500 inline-block" /> Present</span>
+                            <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-danger-500/40 inline-block" /> Absent</span>
+                          </span>
+                        </div>
+                        <div className={`grid gap-5 ${calendarData.gates.length === 1 ? 'grid-cols-1 max-w-xs' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+                          {calendarData.gates.map((g) => (
+                            <div key={g.name} className="bg-surface-800/80 border border-surface-700 rounded-xl p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <DoorOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                <span className="text-sm font-bold text-slate-200 truncate">{g.name}</span>
+                                <span className="ml-auto text-xs font-semibold shrink-0"><span className="text-success-400">{g.days.filter(Boolean).length}</span><span className="text-slate-600">/{calendarData.daysInMonth}</span></span>
+                              </div>
+                              <CalGrid section={g} presentColor="bg-purple-500" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              {calendarData.wings.length === 0 && calendarData.gates.length === 0 && calendarData.watchmen.length > 0 && (
+                <div className="card p-8 text-center text-slate-600">
+                  <Grid3X3 className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No wing/gate breakdown — watchmen did not select a wing or gate this month</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

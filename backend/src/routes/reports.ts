@@ -382,6 +382,118 @@ router.get('/suspicious', asyncHandler(async (req: Request, res: Response) => {
 
 
 /**
+ * GET /api/reports/society-calendar?society_id=&year=&month=&agency_id=
+ * Monthly calendar view for a society broken down by wing and gate.
+ * Returns:
+ *  - watchmen: list of all watchmen who attended this month
+ *  - wings: { [wingName]: { [day]: boolean } } - presence per wing per day
+ *  - gates: { [gateName]: { [day]: boolean } } - presence per gate per day
+ */
+router.get('/society-calendar', asyncHandler(async (req: Request, res: Response) => {
+  const agencyId = getAgencyId(req);
+  const societyId = (req.query.society_id || req.query.societyId) as string;
+  const year = parseInt(req.query.year as string) || new Date().getFullYear();
+  const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+
+  if (!societyId) {
+    res.status(400).json({ success: false, message: 'society_id is required' });
+    return;
+  }
+
+  const startDate = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  startDate.setUTCHours(0, 0, 0, 0);
+
+  const matchStage: any = {
+    society_id: new mongoose.Types.ObjectId(societyId),
+    $or: [
+      { attendance_date: { $gte: startDate, $lte: endDate } },
+      { check_in_time: { $gte: startDate, $lte: endDate } },
+    ],
+    status: { $in: ['present', 'late'] },
+  };
+  if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+
+  const records = await Attendance.aggregate([
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: 'watchmen',
+        localField: 'watchman_id',
+        foreignField: '_id',
+        as: 'watchman',
+      },
+    },
+    { $unwind: { path: '$watchman', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        watchman_name: { $ifNull: ['$watchman.full_name', 'Unknown'] },
+        employee_id: { $ifNull: ['$watchman.employee_id', ''] },
+        day: {
+          $dayOfMonth: { $ifNull: ['$attendance_date', '$check_in_time'] },
+        },
+      },
+    },
+    {
+      $project: {
+        watchman_id: 1, watchman_name: 1, employee_id: 1,
+        day: 1, status: 1,
+        selected_gate: 1, selected_wing: 1,
+      },
+    },
+    { $sort: { day: 1 } },
+  ]);
+
+  // Build watchmen summary
+  const watchmenMap: Record<string, { watchman_id: string; watchman_name: string; employee_id: string; days_attended: number; wings: string[]; gates: string[] }> = {};
+  const wingsMap: Record<string, Record<number, boolean>> = {};
+  const gatesMap: Record<string, Record<number, boolean>> = {};
+
+  for (const r of records) {
+    const wid = r.watchman_id?.toString() || 'unknown';
+
+    if (!watchmenMap[wid]) {
+      watchmenMap[wid] = { watchman_id: wid, watchman_name: r.watchman_name, employee_id: r.employee_id, days_attended: 0, wings: [], gates: [] };
+    }
+    watchmenMap[wid].days_attended++;
+
+    // Wing breakdown
+    if (r.selected_wing) {
+      const w = r.selected_wing.trim();
+      if (!wingsMap[w]) wingsMap[w] = {};
+      wingsMap[w][r.day] = true;
+      if (!watchmenMap[wid].wings.includes(w)) watchmenMap[wid].wings.push(w);
+    }
+
+    // Gate breakdown
+    if (r.selected_gate) {
+      const g = r.selected_gate.trim();
+      if (!gatesMap[g]) gatesMap[g] = {};
+      gatesMap[g][r.day] = true;
+      if (!watchmenMap[wid].gates.includes(g)) watchmenMap[wid].gates.push(g);
+    }
+  }
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  // Convert wing/gate maps to array of { name, days: boolean[] }
+  const formatCalendar = (map: Record<string, Record<number, boolean>>) =>
+    Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([name, dayMap]) => ({
+      name,
+      days: Array.from({ length: daysInMonth }, (_, i) => !!dayMap[i + 1]),
+    }));
+
+  res.json({
+    success: true,
+    year, month,
+    daysInMonth,
+    watchmen: Object.values(watchmenMap).sort((a, b) => a.watchman_name.localeCompare(b.watchman_name)),
+    wings: formatCalendar(wingsMap),
+    gates: formatCalendar(gatesMap),
+  });
+}));
+
+/**
  * GET /api/reports/watchman-journey?watchman_id=&startDate=&endDate=&agency_id=
  * Day-by-day attendance journey for a specific watchman across all societies.
  * Shows PRESENT/LATE at which society, or ABSENT if no attendance that day.
