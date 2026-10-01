@@ -749,7 +749,12 @@ export default function ScanPage() {
                   <div className="mb-3">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <Building2 className="w-4 h-4 text-[#1a2a5e]" />
-                      <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">{t.select_gate}</label>
+                      <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">
+                        {t.select_gate} 
+                        {(!selectedWing && gateInfo.society.wings && gateInfo.society.wings.length > 0) || !(gateInfo.society.wings && gateInfo.society.wings.length > 0) 
+                          ? ' *' 
+                          : <span className="font-normal opacity-70 text-[#4a5580] ml-1">{t.optional}</span>}
+                      </label>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {gateInfo.society.gates.map(g => {
@@ -774,7 +779,12 @@ export default function ScanPage() {
                   <div className="mb-3">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <Building className="w-4 h-4 text-[#1a2a5e]" />
-                      <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">{t.select_wing} <span className="font-normal opacity-70 text-[#4a5580]">{t.optional}</span></label>
+                      <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">
+                        {t.select_wing} 
+                        {(!selectedGate && gateInfo.society.gates && gateInfo.society.gates.length > 0) || !(gateInfo.society.gates && gateInfo.society.gates.length > 0)
+                          ? ' *' 
+                          : <span className="font-normal opacity-70 text-[#4a5580] ml-1">{t.optional}</span>}
+                      </label>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {gateInfo.society.wings.map(w => {
