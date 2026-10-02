@@ -409,9 +409,20 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     },
     { $unwind: { path: '$watchman', preserveNullAndEmptyArrays: true } },
     {
+      $lookup: {
+        from: 'shifts',
+        localField: 'shift_id',
+        foreignField: '_id',
+        as: 'shift',
+      },
+    },
+    { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
+    {
       $addFields: {
         watchman_name: { $ifNull: ['$watchman.full_name', 'Unknown'] },
         employee_id: { $ifNull: ['$watchman.employee_id', ''] },
+        phone: { $ifNull: ['$watchman.phone', ''] },
+        shift_name: { $ifNull: ['$shift.name', ''] },
         day: {
           $dayOfMonth: { $ifNull: ['$attendance_date', '$check_in_time'] },
         },
@@ -419,7 +430,7 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     },
     {
       $project: {
-        watchman_id: 1, watchman_name: 1, employee_id: 1,
+        watchman_id: 1, watchman_name: 1, employee_id: 1, phone: 1, shift_name: 1,
         day: 1, status: 1,
         selected_gate: 1, selected_wing: 1,
       },
@@ -428,7 +439,7 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
   ]);
 
   // Build watchmen summary
-  const watchmenMap: Record<string, { watchman_id: string; watchman_name: string; employee_id: string; days_attended: number; wings: string[]; gates: string[] }> = {};
+  const watchmenMap: Record<string, { watchman_id: string; watchman_name: string; employee_id: string; phone: string; shift_name: string; days_attended: number; wings: string[]; gates: string[] }> = {};
   const wingsMap: Record<string, Record<number, boolean>> = {};
   const gatesMap: Record<string, Record<number, boolean>> = {};
 
@@ -436,7 +447,7 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     const wid = r.watchman_id?.toString() || 'unknown';
 
     if (!watchmenMap[wid]) {
-      watchmenMap[wid] = { watchman_id: wid, watchman_name: r.watchman_name, employee_id: r.employee_id, days_attended: 0, wings: [], gates: [] };
+      watchmenMap[wid] = { watchman_id: wid, watchman_name: r.watchman_name, employee_id: r.employee_id, phone: r.phone, shift_name: r.shift_name, days_attended: 0, wings: [], gates: [] };
     }
     watchmenMap[wid].days_attended++;
 

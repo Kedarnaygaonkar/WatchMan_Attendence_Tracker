@@ -41,7 +41,7 @@ interface JourneyDay {
 
 interface JourneyStats { totalDays: number; presentDays: number; lateDays: number; absentDays: number; }
 
-interface CalendarWatchman { watchman_id: string; watchman_name: string; employee_id: string; days_attended: number; wings: string[]; gates: string[]; }
+interface CalendarWatchman { watchman_id: string; watchman_name: string; employee_id: string; phone: string; shift_name: string; days_attended: number; wings: string[]; gates: string[]; }
 interface CalendarSection { name: string; days: boolean[]; }
 interface SocietyCalendarData {
   year: number; month: number; daysInMonth: number;
@@ -334,145 +334,327 @@ export default function ReportsPage() {
       {/* Monthly */}
       {tab === 'monthly' && (
         <>
-          <div className="space-y-4">
-          <div className="table-wrapper">
-            <table className="table">
-              <thead><tr><th>Guard</th><th>Present</th><th>Late</th><th>Absent</th><th>Suspicious</th><th>Attendance %</th></tr></thead>
-              <tbody>
-                {monthlyLoading ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}><td colSpan={6}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
-                )) : monthlyData?.map((r) => {
-                  const total = r.days_present + r.days_late + r.days_absent;
-                  const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
-                  return (
-                    <tr key={r.watchman_id}>
-                      <td><div><p className="font-medium">{r.full_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
-                      <td className="text-success-400 font-bold">{r.days_present}</td>
-                      <td className="text-warning-400 font-bold">{r.days_late}</td>
-                      <td className="text-danger-400 font-bold">{r.days_absent}</td>
-                      <td className="text-orange-400">{r.suspicious_count}</td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-surface-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-sm font-medium">{pct}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!monthlyLoading && (!monthlyData || monthlyData.length === 0) && (
-              <div className="text-center py-12 text-slate-600"><BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No monthly summary found</p></div>
-            )}
-          </div>
-        </div>
-
-        {/* Society Calendar appended to Monthly Summary when a Society is selected */}
-        {societyId && (
-          <div className="mt-8 pt-8 border-t border-surface-700">
-            <div className="flex items-center gap-2 mb-6">
-              <Grid3X3 className="w-5 h-5 text-brand-400" />
-              <h2 className="text-lg font-bold text-slate-100">Society Calendar — Wing & Gate Breakdown</h2>
-            </div>
-            
-            {calendarLoading && (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-surface-800 animate-pulse rounded-xl" />)}
-              </div>
-            )}
-            
-            {!calendarLoading && calendarData && (
-              <div className="space-y-5">
-                {(calendarData.wings.length > 0 || calendarData.gates.length > 0) ? (() => {
-                  const days = Array.from({ length: calendarData.daysInMonth }, (_, i) => i + 1);
-                  const weekDayOf1 = new Date(calendarData.year, calendarData.month - 1, 1).getDay();
-                  function CalGrid({ section, presentColor }: { section: any; presentColor: string }) {
-                    const cells: (number | null)[] = [...Array(weekDayOf1).fill(null), ...days];
-                    while (cells.length % 7 !== 0) cells.push(null);
-                    const weeks: (number | null)[][] = [];
-                    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-                    return (
-                      <div className="mt-2 select-none">
-                        <div className="grid grid-cols-7 gap-0.5 mb-1">
-                          {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d) => (<div key={d} className="text-center text-[9px] font-bold text-slate-600 py-0.5">{d}</div>))}
-                        </div>
-                        {weeks.map((week, wi) => (
-                          <div key={wi} className="grid grid-cols-7 gap-0.5 mb-0.5">
-                            {week.map((day, di) => (
-                              <div key={di} className={`aspect-square rounded flex items-center justify-center text-[10px] font-bold ${day === null ? 'opacity-0 pointer-events-none' : section.days[day - 1] ? presentColor + ' text-white shadow-sm' : 'bg-danger-500/25 text-danger-400'}`}>
-                                {day ?? ''}
+          {!societyId && (
+            <div className="space-y-4">
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead><tr><th>Guard</th><th>Present</th><th>Late</th><th>Absent</th><th>Suspicious</th><th>Attendance %</th></tr></thead>
+                  <tbody>
+                    {monthlyLoading ? Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i}><td colSpan={6}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                    )) : monthlyData?.map((r) => {
+                      const total = r.days_present + r.days_late + r.days_absent;
+                      const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
+                      return (
+                        <tr key={r.watchman_id}>
+                          <td><div><p className="font-medium">{r.full_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
+                          <td className="text-success-400 font-bold">{r.days_present}</td>
+                          <td className="text-warning-400 font-bold">{r.days_late}</td>
+                          <td className="text-danger-400 font-bold">{r.days_absent}</td>
+                          <td className="text-orange-400">{r.suspicious_count}</td>
+                          <td>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-2 bg-surface-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                               </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="space-y-5">
-                      {calendarData.wings.length > 0 && (
-                        <div className="card p-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Layers className="w-4 h-4 text-blue-400" />
-                            <span className="text-sm font-semibold text-slate-200">Wing-wise Presence Calendar</span>
-                            <span className="text-xs text-slate-500 ml-2 flex items-center gap-3">
-                              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-success-500 inline-block" /> Present</span>
-                              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-danger-500/40 inline-block" /> Absent</span>
-                            </span>
-                          </div>
-                          <div className={`grid gap-5 ${calendarData.wings.length === 1 ? 'grid-cols-1 max-w-xs' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-                            {calendarData.wings.map((w: any) => (
-                              <div key={w.name} className="bg-surface-800/80 border border-surface-700 rounded-xl p-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                                  <span className="text-sm font-bold text-slate-200 truncate">{w.name}</span>
-                                  <span className="ml-auto text-xs font-semibold shrink-0"><span className="text-success-400">{w.days.filter(Boolean).length}</span><span className="text-slate-600">/{calendarData.daysInMonth}</span></span>
-                                </div>
-                                <CalGrid section={w} presentColor="bg-success-500" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {calendarData.gates.length > 0 && (
-                        <div className="card p-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <DoorOpen className="w-4 h-4 text-purple-400" />
-                            <span className="text-sm font-semibold text-slate-200">Gate-wise Presence Calendar</span>
-                            <span className="text-xs text-slate-500 ml-2 flex items-center gap-3">
-                              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-500 inline-block" /> Present</span>
-                              <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-danger-500/40 inline-block" /> Absent</span>
-                            </span>
-                          </div>
-                          <div className={`grid gap-5 ${calendarData.gates.length === 1 ? 'grid-cols-1 max-w-xs' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-                            {calendarData.gates.map((g: any) => (
-                              <div key={g.name} className="bg-surface-800/80 border border-surface-700 rounded-xl p-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <DoorOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                                  <span className="text-sm font-bold text-slate-200 truncate">{g.name}</span>
-                                  <span className="ml-auto text-xs font-semibold shrink-0"><span className="text-success-400">{g.days.filter(Boolean).length}</span><span className="text-slate-600">/{calendarData.daysInMonth}</span></span>
-                                </div>
-                                <CalGrid section={g} presentColor="bg-purple-500" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })() : (
-                  <div className="card p-8 text-center text-slate-600">
-                    <Grid3X3 className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">No wing/gate breakdown available for this month</p>
-                  </div>
+                              <span className="text-sm font-medium">{pct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {!monthlyLoading && (!monthlyData || monthlyData.length === 0) && (
+                  <div className="text-center py-12 text-slate-600"><BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No monthly summary found</p></div>
                 )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+
+          {/* Fully Custom PDF-Style Report for a specific Society */}
+          {societyId && (
+            <div className="bg-white text-slate-800 rounded-xl shadow-2xl overflow-hidden mt-6 print:shadow-none print:mt-0 max-w-[1000px] mx-auto border border-slate-200" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {calendarLoading ? (
+                <div className="p-12 text-center space-y-4">
+                  <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-slate-500 font-medium animate-pulse">Generating Report...</p>
+                </div>
+              ) : calendarData ? (() => {
+                const selSociety = societies?.find(s => s.id === societyId)?.name || 'Society';
+                const selAgency = agencies?.find(a => a.id === agencyId)?.name || 'Security Services';
+                
+                // Calculations
+                let totalPresentScans = 0;
+                let totalLate = 0;
+                let absentDays = 0;
+                monthlyData?.forEach(m => {
+                  totalPresentScans += m.days_present + m.days_late;
+                  totalLate += m.days_late;
+                  absentDays += m.days_absent;
+                });
+
+                return (
+                  <div className="flex flex-col relative pb-8">
+                    {/* Print Button (hidden when printing) */}
+                    <button onClick={() => window.print()} className="absolute top-4 right-4 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md transition-all print:hidden flex items-center gap-2">
+                      <Download className="w-4 h-4" /> Print / Save PDF
+                    </button>
+
+                    {/* Top Branding Section */}
+                    <div className="flex justify-between items-center p-6 border-b-4 border-[#0F3B68] bg-slate-50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-[#0F3B68] text-white rounded-xl flex items-center justify-center">
+                          <Building2 className="w-8 h-8" />
+                        </div>
+                        <div>
+                          <h1 className="text-3xl font-extrabold text-[#0F3B68] leading-tight">{selSociety}</h1>
+                          <p className="text-slate-500 font-medium text-sm flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" /> Pune, Maharashtra</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-4">
+                        <div className="flex flex-col items-end">
+                          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Managed By</p>
+                          <h2 className="text-xl font-bold text-[#0F3B68]">{selAgency}</h2>
+                          <p className="text-slate-500 text-xs mt-1">Safety • Service • Trust</p>
+                        </div>
+                        <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center">
+                          <User className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Blue Title & Stats Bar */}
+                    <div className="bg-[#0F3B68] text-white px-8 py-4 flex flex-wrap justify-between items-center gap-4 shadow-inner">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-2.5 rounded-lg">
+                          <Calendar className="w-6 h-6 text-blue-100" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold tracking-wide">Watchman Attendance Report</h2>
+                          <p className="text-blue-200 font-medium text-sm flex items-center gap-1.5 mt-0.5">
+                            <span className="bg-white/20 px-2 py-0.5 rounded text-xs">
+                              {new Date(calendarData.year, calendarData.month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-8">
+                        <div className="flex items-center gap-2">
+                          <User className="w-5 h-5 text-blue-200 opacity-80" />
+                          <div><p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider leading-none">Total Watchmen</p><p className="text-2xl font-black leading-none mt-1">{calendarData.watchmen.length}</p></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-5 h-5 text-blue-200 opacity-80" />
+                          <div><p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider leading-none">Total Wings</p><p className="text-2xl font-black leading-none mt-1">{calendarData.wings.length}</p></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DoorOpen className="w-5 h-5 text-blue-200 opacity-80" />
+                          <div><p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider leading-none">Total Gates</p><p className="text-2xl font-black leading-none mt-1">{calendarData.gates.length}</p></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-8 space-y-8">
+                      {/* Watchman List Table */}
+                      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-2">
+                          <User className="w-5 h-5 text-[#0F3B68]" />
+                          <h3 className="font-bold text-[#0F3B68] text-lg">Watchman List</h3>
+                          <span className="text-xs text-slate-500 ml-auto font-medium">Present Days = Total times QR scanned at society</span>
+                        </div>
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                            <tr>
+                              <th className="px-4 py-3 w-16">Sr. No.</th>
+                              <th className="px-4 py-3">Watchman ID</th>
+                              <th className="px-4 py-3">Name</th>
+                              <th className="px-4 py-3">Type</th>
+                              <th className="px-4 py-3">Contact No.</th>
+                              <th className="px-4 py-3">Shift</th>
+                              <th className="px-4 py-3 text-center">Present Days</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {calendarData.watchmen.map((w, i) => (
+                              <tr key={w.watchman_id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                                <td className="px-4 py-2.5 font-medium text-slate-400">{i + 1}</td>
+                                <td className="px-4 py-2.5 font-semibold text-[#0F3B68]">{w.employee_id}</td>
+                                <td className="px-4 py-2.5 font-bold text-slate-700">{w.watchman_name}</td>
+                                <td className="px-4 py-2.5 text-slate-600">{w.wings.length > 0 ? 'Wing Watchman' : w.gates.length > 0 ? 'Gate Watchman' : 'General'}</td>
+                                <td className="px-4 py-2.5 text-slate-600">{w.phone || '-'}</td>
+                                <td className="px-4 py-2.5 text-slate-600">{w.shift_name || '-'}</td>
+                                <td className="px-4 py-2.5 text-center font-black text-[#0F3B68]">{w.days_attended}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Calendar Renderer Function */}
+                      {(() => {
+                        const days = Array.from({ length: calendarData.daysInMonth }, (_, i) => i + 1);
+                        const weekDayOf1 = new Date(calendarData.year, calendarData.month - 1, 1).getDay();
+                        function PdfCalGrid({ section, accentColor }: { section: any; accentColor: string }) {
+                          const cells: (number | null)[] = [...Array(weekDayOf1).fill(null), ...days];
+                          while (cells.length % 7 !== 0) cells.push(null);
+                          const weeks: (number | null)[][] = [];
+                          for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+                          
+                          return (
+                            <div className="mt-3">
+                              <div className="grid grid-cols-7 gap-1 mb-1">
+                                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (<div key={d} className="text-center text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{d}</div>))}
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                {weeks.map((week, wi) => (
+                                  <div key={wi} className="grid grid-cols-7 gap-1">
+                                    {week.map((day, di) => {
+                                      const isPres = day !== null && section.days[day - 1];
+                                      return (
+                                        <div key={di} className={`aspect-square rounded flex items-center justify-center text-[11px] font-bold transition-all ${
+                                          day === null ? 'opacity-0' 
+                                          : isPres ? 'bg-[#2ECC71] text-white shadow-sm border border-[#27AE60]' 
+                                          : 'bg-[#FFEDED] text-[#E74C3C] border border-[#FADBD8]'
+                                        }`}>
+                                          {day ?? ''}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-6">
+                            {/* Wing Breakdown */}
+                            {calendarData.wings.length > 0 && (
+                              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="w-5 h-5 text-[#3498DB]" />
+                                    <h3 className="font-bold text-[#0F3B68] text-lg">Wing Watchmen Attendance (Wing Wise)</h3>
+                                  </div>
+                                  <div className="flex gap-4 text-xs font-semibold text-slate-600">
+                                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#2ECC71]" /> Present</span>
+                                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#F1C40F]" /> Late Check-in</span>
+                                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#E74C3C]" /> No Watchman</span>
+                                  </div>
+                                </div>
+                                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-slate-50/50">
+                                  {calendarData.wings.map((w: any) => {
+                                    // Find primary watchman for this wing
+                                    const primaryWM = calendarData.watchmen.find(wm => wm.wings.includes(w.name));
+                                    return (
+                                      <div key={w.name} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex gap-3 items-start pb-2 border-b border-slate-100">
+                                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                            <Building2 className="w-4 h-4" />
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <h4 className="font-extrabold text-[#0F3B68] text-sm truncate">{w.name}</h4>
+                                            <p className="text-[10px] text-slate-500 truncate mt-0.5"><span className="font-semibold text-slate-600">Watchman:</span> {primaryWM?.watchman_name || 'Multiple'}</p>
+                                          </div>
+                                        </div>
+                                        <PdfCalGrid section={w} accentColor="blue" />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Gate Breakdown */}
+                            {calendarData.gates.length > 0 && (
+                              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <DoorOpen className="w-5 h-5 text-[#9B59B6]" />
+                                    <h3 className="font-bold text-[#0F3B68] text-lg">Gate Watchmen Attendance (Gate Wise)</h3>
+                                  </div>
+                                </div>
+                                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-slate-50/50">
+                                  {calendarData.gates.map((g: any) => {
+                                    const primaryWM = calendarData.watchmen.find(wm => wm.gates.includes(g.name));
+                                    return (
+                                      <div key={g.name} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex gap-3 items-start pb-2 border-b border-slate-100">
+                                          <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                                            <DoorOpen className="w-4 h-4" />
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <h4 className="font-extrabold text-[#0F3B68] text-sm truncate">{g.name}</h4>
+                                            <p className="text-[10px] text-slate-500 truncate mt-0.5"><span className="font-semibold text-slate-600">Watchman:</span> {primaryWM?.watchman_name || 'Multiple'}</p>
+                                          </div>
+                                        </div>
+                                        <PdfCalGrid section={g} accentColor="purple" />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Footer Stats & Remarks */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <div className="border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-center">
+                          <h3 className="font-bold text-[#0F3B68] flex items-center gap-2 mb-4"><BarChart3 className="w-5 h-5 text-blue-500" /> Monthly Overview</h3>
+                          <div className="grid grid-cols-4 gap-3 text-center">
+                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                              <Calendar className="w-5 h-5 mx-auto text-slate-400 mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-slate-500 leading-tight">Total Days</p>
+                              <p className="text-xl font-black text-[#0F3B68] mt-1">{calendarData.daysInMonth}</p>
+                            </div>
+                            <div className="bg-[#E8F8F5] rounded-lg p-3 border border-[#D1F2EB]">
+                              <User className="w-5 h-5 mx-auto text-[#1ABC9C] mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-[#16A085] leading-tight">Present Scans</p>
+                              <p className="text-xl font-black text-[#1ABC9C] mt-1">{totalPresentScans}</p>
+                            </div>
+                            <div className="bg-[#FEF9E7] rounded-lg p-3 border border-[#FCF3CF]">
+                              <AlertTriangle className="w-5 h-5 mx-auto text-[#F39C12] mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-[#D68910] leading-tight">Late Check-ins</p>
+                              <p className="text-xl font-black text-[#F39C12] mt-1">{totalLate}</p>
+                            </div>
+                            <div className="bg-[#FDEDEC] rounded-lg p-3 border border-[#FADBD8]">
+                              <X className="w-5 h-5 mx-auto text-[#E74C3C] mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-[#CB4335] leading-tight">No Watchman</p>
+                              <p className="text-xl font-black text-[#E74C3C] mt-1">{absentDays}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-200 bg-slate-50 rounded-xl p-5 shadow-sm">
+                          <h3 className="font-bold text-[#0F3B68] flex items-center gap-2 mb-3"><AlertTriangle className="w-4 h-4 text-slate-500" /> Remarks</h3>
+                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 marker:text-slate-400">
+                            <li>Attendance is recorded based on QR scan by watchman at respective wing/gate.</li>
+                            <li><span className="font-bold text-[#27AE60]">Green</span> indicates watchman was present.</li>
+                            <li><span className="font-bold text-[#F39C12]">Yellow</span> indicates late check-in.</li>
+                            <li><span className="font-bold text-[#E74C3C]">Red</span> indicates no watchman was present.</li>
+                            <li>Regular monitoring is advised for better security coverage.</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Signatures */}
+                      <div className="flex justify-between items-end mt-8 pt-6 border-t border-slate-200">
+                        <p className="text-xs text-slate-400 font-medium">Generated on: {new Date().toLocaleString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                        <div className="text-center">
+                          <div className="w-32 border-b-2 border-slate-300 mb-2 pb-1 text-slate-400 font-cursive italic text-lg opacity-60">Admin</div>
+                          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Authorized Signatory</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })() : null}
+            </div>
+          )}
         </>
       )}
 
