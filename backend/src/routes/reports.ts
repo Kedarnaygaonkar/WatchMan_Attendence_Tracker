@@ -12,7 +12,7 @@ function getAgencyId(req: Request): string | undefined {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
     if (id) return id as string;
-    if (req.user!.agencyId) return req.user!.agencyId;
+    
     return undefined;
   }
   return req.user!.agencyId!;

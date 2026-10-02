@@ -272,9 +272,19 @@ export default function ReportsPage() {
                 <X className="w-3.5 h-3.5" /> Clear Filters
               </button>
             )}
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
               {tab === 'daily' && <button onClick={exportDailyCSV} disabled={!dailyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
-              {tab === 'monthly' && <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
+              {tab === 'monthly' && (
+                <>
+                  <button onClick={() => {
+                    if (!societyId) toast.error('Please select a Society to generate the PDF report');
+                    else window.print();
+                  }} className="bg-brand-600 hover:bg-brand-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm">
+                    <Download className="w-4 h-4" /> Print PDF Report
+                  </button>
+                  <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>
+                </>
+              )}
               {tab === 'suspicious' && <button onClick={exportSuspiciousCSV} disabled={!suspiciousData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
             </div>
           </div>

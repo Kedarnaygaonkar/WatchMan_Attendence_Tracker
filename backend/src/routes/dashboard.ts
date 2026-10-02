@@ -11,7 +11,7 @@ function getAgencyId(req: Request): string {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
     if (id) return id as string;
-    if (req.user!.agencyId) return req.user!.agencyId;
+    
     throw new AppError('agency_id required', 400);
   }
   return req.user!.agencyId!;
