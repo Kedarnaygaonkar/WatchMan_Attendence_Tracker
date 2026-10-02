@@ -207,10 +207,12 @@ export default function ReportsPage() {
     downloadCSV([headers, ...rows], `journey-${wm?.employee_id||'watchman'}-${journeyStartDate}-to-${journeyEndDate}.csv`);
   }
 
+  const tabs: { id: ReportTab; label: string; icon: React.ElementType }[] = [
     { id: 'daily', label: 'Daily Attendance', icon: Calendar },
     { id: 'monthly', label: 'Monthly Summary & Calendar', icon: BarChart3 },
     { id: 'journey', label: 'Watchman Journey', icon: Route },
     { id: 'suspicious', label: 'Suspicious Records', icon: AlertTriangle },
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -331,7 +333,8 @@ export default function ReportsPage() {
 
       {/* Monthly */}
       {tab === 'monthly' && (
-        <div className="space-y-4">
+        <>
+          <div className="space-y-4">
           <div className="table-wrapper">
             <table className="table">
               <thead><tr><th>Guard</th><th>Present</th><th>Late</th><th>Absent</th><th>Suspicious</th><th>Attendance %</th></tr></thead>
@@ -470,6 +473,7 @@ export default function ReportsPage() {
             )}
           </div>
         )}
+        </>
       )}
 
       {/* Watchman Journey */}
@@ -667,8 +671,6 @@ export default function ReportsPage() {
             )}
           </div>
         </div>
-      )}
-
       )}
     </div>
   );
