@@ -28,23 +28,27 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load face-api.js models
+  // Use singleton model cache — models may already be loaded by WatchmanHome
+  let faceModelsPromise: Promise<void> | null = (window as any).__faceModelsPromise || null;
+  function ensureFaceModels(): Promise<void> {
+    if (!faceModelsPromise) {
+      faceModelsPromise = Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_PATH),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_PATH),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_PATH),
+      ]).then(() => {});
+      (window as any).__faceModelsPromise = faceModelsPromise;
+    }
+    return faceModelsPromise;
+  }
+
   useEffect(() => {
-    async function loadModels() {
-      try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_PATH),
-          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_PATH),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_PATH),
-        ]);
-        setStep('ready');
-      } catch (err) {
-        console.error('Failed to load face-api models:', err);
+    ensureFaceModels()
+      .then(() => setStep('ready'))
+      .catch(() => {
         setStep('error');
         setErrorMsg('Failed to load face detection models. Please check your connection and refresh.');
-      }
-    }
-    loadModels();
+      });
     return () => stopCamera();
   }, []);
 
@@ -134,16 +138,16 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
 
   // ─── RENDER ──────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-surface-950/95 z-50 flex flex-col items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-sm space-y-6 text-center">
+    <div className="fixed inset-0 bg-surface-950/95 z-50 flex flex-col animate-fade-in">
+      <div className="flex flex-col h-full max-w-sm mx-auto w-full p-4 gap-3">
 
-        {/* Header */}
-        <div>
-          <div className="w-16 h-16 rounded-2xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck className="w-8 h-8 text-brand-400" />
+        {/* Header — compact, always at top */}
+        <div className="text-center shrink-0 pt-2">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center mx-auto mb-2">
+            <ShieldCheck className="w-6 h-6 text-brand-400" />
           </div>
-          <h1 className="text-2xl font-black text-slate-100">Face Registration</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-xl font-black text-slate-100">Face Registration</h1>
+          <p className="text-slate-500 text-xs mt-0.5">
             {step === 'loading_models' && 'Loading AI models...'}
             {step === 'ready' && 'Register your face to secure your attendance'}
             {step === 'capturing' && 'Look straight at the camera'}
@@ -191,8 +195,8 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
 
         {/* Camera capturing */}
         {step === 'capturing' && (
-          <div className="space-y-4">
-            <div className="relative rounded-2xl overflow-hidden bg-surface-800 aspect-[4/3]">
+          <div className="flex flex-col flex-1 min-h-0 gap-3">
+            <div className="relative flex-1 min-h-0 rounded-2xl overflow-hidden bg-surface-800">
               <video
                 ref={videoRef}
                 autoPlay
@@ -222,17 +226,13 @@ export default function FaceRegistration({ onComplete }: FaceRegistrationProps) 
             <button
               onClick={captureAndRegister}
               disabled={!faceDetected}
-              className={`w-full py-4 text-lg rounded-2xl font-bold transition-all duration-300 ${
-                faceDetected
-                  ? 'btn-success animate-pulse-slow'
-                  : 'bg-surface-700 text-slate-500 cursor-not-allowed'
+              className={`shrink-0 w-full py-4 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
+                faceDetected ? 'btn-success animate-pulse-slow' : 'bg-surface-700 text-slate-500 cursor-not-allowed'
               }`}
             >
-              {faceDetected ? (
-                <><CheckCircle2 className="w-5 h-5 inline mr-2" />Register My Face</>
-              ) : (
-                'Waiting for face detection...'
-              )}
+              {faceDetected
+                ? <><CheckCircle2 className="w-5 h-5" />Register My Face</>
+                : 'Waiting for face detection...'}
             </button>
           </div>
         )}

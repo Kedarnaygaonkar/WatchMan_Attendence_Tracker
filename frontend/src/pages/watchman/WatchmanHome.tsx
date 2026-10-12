@@ -1,11 +1,8 @@
 /**
  * WatchmanHome — The core watchman experience.
  *
- * The screen does everything automatically:
- * 1. Loads today's assignment (society + shift)
- * 2. On button press: gets GPS → verifies geofence → opens camera → submits
- *
- * The watchman only presses ONE button.
+ * Every screen is designed to fit within 100dvh with no scrolling on any device.
+ * GPS + face models start loading in parallel as soon as the user is on the home screen.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -64,6 +61,19 @@ function formatTimestamp(isoString: string) {
   });
 }
 
+// Singleton model loading — shared across renders
+let faceModelsPromise: Promise<void> | null = null;
+function ensureFaceModels(): Promise<void> {
+  if (!faceModelsPromise) {
+    faceModelsPromise = Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri('/models'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+    ]).then(() => {});
+  }
+  return faceModelsPromise;
+}
+
 export default function WatchmanHome() {
   const { user } = useAuthStore();
   const [step, setStep] = useState<Step>('home');
@@ -90,26 +100,11 @@ export default function WatchmanHome() {
   const [faceLiveDetected, setFaceLiveDetected] = useState(false);
   const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
 
-  const MODELS_PATH = '/models';
-  const FACE_MATCH_THRESHOLD = 0.45; // distance < 0.45 = same person (more secure)
+  const FACE_MATCH_THRESHOLD = 0.45;
 
-  // Load face-api.js models (once)
+  // Pre-load face models immediately on mount (singleton, won't double-load)
   useEffect(() => {
-    async function loadFaceModels() {
-      try {
-        if (!faceapi.nets.tinyFaceDetector.params) {
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_PATH),
-            faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_PATH),
-            faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_PATH),
-          ]);
-        }
-        setFaceModelsLoaded(true);
-      } catch (err) {
-        console.error('Face models load error:', err);
-      }
-    }
-    loadFaceModels();
+    ensureFaceModels().then(() => setFaceModelsLoaded(true)).catch(() => {});
   }, []);
 
   // Online/offline tracking
@@ -121,10 +116,7 @@ export default function WatchmanHome() {
     const onOffline = () => setIsOnline(false);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
-
-    // Check pending count
     offlineQueue.getPendingCount().then(setPendingCount);
-
     return () => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
@@ -139,7 +131,7 @@ export default function WatchmanHome() {
       return data;
     },
     enabled: !!user?.watchman,
-    refetchInterval: 2 * 60 * 1000, // Refresh every 2 minutes
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const assignment: Assignment | null = assignmentData?.data;
@@ -159,7 +151,6 @@ export default function WatchmanHome() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setGpsData(position.coords);
-        // After GPS, start face verification (this will set step to face_verify)
         startFaceVerification();
       },
       (error) => {
@@ -169,7 +160,7 @@ export default function WatchmanHome() {
         if (error.code === 3) msg = 'Location request timed out. Please try again.';
         setGpsError(msg);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 } // faster: 10s timeout, allow 30s cached GPS
     );
   }, []);
 
@@ -181,11 +172,11 @@ export default function WatchmanHome() {
     setFaceDetecting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } }, // lower res = faster on mobile
         audio: false,
       });
       faceStreamRef.current = stream;
-      setStep('face_verify'); // render video element first, stream attached via useEffect
+      setStep('face_verify');
     } catch {
       toast.error('Camera access required for face verification.');
       setStep('home');
@@ -211,12 +202,10 @@ export default function WatchmanHome() {
     setFaceDetecting(false);
 
     try {
-      // Fetch stored descriptor from backend
       const { data } = await api.get('/watchmen/face-status');
       const storedDescriptorArr: number[] | null = data.data.face_descriptor;
 
       if (!storedDescriptorArr) {
-        // Watchman has no registered face — skip verification
         setFaceVerified(true);
         setFaceMatchScore(0);
         stopFaceVerification();
@@ -224,7 +213,6 @@ export default function WatchmanHome() {
         return;
       }
 
-      // Detect live face
       const detection = await faceapi
         .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
         .withFaceLandmarks(true)
@@ -237,7 +225,6 @@ export default function WatchmanHome() {
         return;
       }
 
-      // Compare descriptors
       const stored = new Float32Array(storedDescriptorArr);
       const distance = faceapi.euclideanDistance(Array.from(stored), Array.from(detection.descriptor));
       const verified = distance < FACE_MATCH_THRESHOLD;
@@ -247,11 +234,9 @@ export default function WatchmanHome() {
       stopFaceVerification();
 
       if (verified) {
-        // Face matched — proceed to selfie camera
         startCamera();
       } else {
-        // Face mismatch — block
-        setStep('face_verify'); // stay on screen to show mismatch
+        setStep('face_verify');
       }
     } catch (err) {
       console.error('Face verification error:', err);
@@ -265,11 +250,11 @@ export default function WatchmanHome() {
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } },
         audio: false,
       });
       streamRef.current = stream;
-      setStep('camera'); // render video element first, stream attached via useEffect
+      setStep('camera');
     } catch {
       toast.error('Camera access denied. Please enable camera access.');
       setStep('home');
@@ -280,10 +265,8 @@ export default function WatchmanHome() {
   useEffect(() => {
     if (step === 'face_verify' && faceVideoRef.current && faceStreamRef.current) {
       faceVideoRef.current.srcObject = faceStreamRef.current;
-      // Start polling for live face detection using async recursion
       if (!faceDetectionInterval.current) {
         let isRunning = true;
-        
         const detectLoop = async () => {
           if (!isRunning) return;
           if (faceVideoRef.current && faceVideoRef.current.readyState >= 2) {
@@ -292,17 +275,13 @@ export default function WatchmanHome() {
                 .detectSingleFace(faceVideoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
                 .withFaceLandmarks(true);
               setFaceLiveDetected(!!detection);
-            } catch (err) {
-              // ignore minor tracking errors
-            }
+            } catch { /* ignore */ }
           }
           if (isRunning) {
-            faceDetectionInterval.current = setTimeout(detectLoop, 300);
+            faceDetectionInterval.current = setTimeout(detectLoop, 400); // 400ms is enough on mobile
           }
         };
-
         faceDetectionInterval.current = setTimeout(detectLoop, 0);
-
         return () => {
           isRunning = false;
           if (faceDetectionInterval.current) clearTimeout(faceDetectionInterval.current);
@@ -311,7 +290,7 @@ export default function WatchmanHome() {
     }
   }, [step]);
 
-  // Attach attendance selfie stream after camera screen renders
+  // Attach selfie camera stream
   useEffect(() => {
     if (step === 'camera' && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
@@ -332,25 +311,19 @@ export default function WatchmanHome() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d')!;
-
-    // Timestamp overlay on photo
     ctx.drawImage(video, 0, 0);
     const now = new Date();
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 16px Inter, sans-serif';
-    ctx.fillText(
-      `${now.toLocaleDateString('en-IN')} ${now.toLocaleTimeString('en-IN')}`,
-      10, canvas.height - 14
-    );
-
+    ctx.fillText(`${now.toLocaleDateString('en-IN')} ${now.toLocaleTimeString('en-IN')}`, 10, canvas.height - 14);
     canvas.toBlob((blob) => {
       if (blob) {
         setCapturedBlob(blob);
-        setCapturedPhoto(canvas.toDataURL('image/jpeg', 0.85));
+        setCapturedPhoto(canvas.toDataURL('image/jpeg', 0.8));
       }
-    }, 'image/jpeg', 0.85);
+    }, 'image/jpeg', 0.8);
   }, []);
 
   const retakePhoto = useCallback(() => {
@@ -372,36 +345,17 @@ export default function WatchmanHome() {
     formData.append('gpsAccuracy', String(gpsData.accuracy));
     formData.append('clientTimestamp', new Date().toISOString());
     formData.append('isOfflineSync', 'false');
-    formData.append('deviceInfo', JSON.stringify({
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-    }));
-
-    if (capturedBlob) {
-      formData.append('selfie', capturedBlob, 'selfie.jpg');
-    }
-
-    // Include face verification results
-    if (faceVerified !== null) {
-      formData.append('faceVerified', String(faceVerified));
-    }
-    if (faceMatchScore !== null) {
-      formData.append('faceMatchScore', String(faceMatchScore));
-    }
+    formData.append('deviceInfo', JSON.stringify({ userAgent: navigator.userAgent, platform: navigator.platform }));
+    if (capturedBlob) formData.append('selfie', capturedBlob, 'selfie.jpg');
+    if (faceVerified !== null) formData.append('faceVerified', String(faceVerified));
+    if (faceMatchScore !== null) formData.append('faceMatchScore', String(faceMatchScore));
 
     if (!isOnline) {
-      // Offline — save to IndexedDB
       const record = {
-        id: uuidv4(),
-        assignmentId: assignment.id,
-        latitude: gpsData.latitude,
-        longitude: gpsData.longitude,
-        gpsAccuracy: gpsData.accuracy,
-        clientTimestamp: new Date().toISOString(),
-        selfieDataUrl: capturedPhoto || undefined,
-        deviceInfo: { userAgent: navigator.userAgent },
-        createdAt: new Date().toISOString(),
-        syncStatus: 'pending' as const,
+        id: uuidv4(), assignmentId: assignment.id, latitude: gpsData.latitude,
+        longitude: gpsData.longitude, gpsAccuracy: gpsData.accuracy,
+        clientTimestamp: new Date().toISOString(), selfieDataUrl: capturedPhoto || undefined,
+        deviceInfo: { userAgent: navigator.userAgent }, createdAt: new Date().toISOString(), syncStatus: 'pending' as const,
       };
       await offlineQueue.add(record);
       setPendingCount(prev => prev + 1);
@@ -411,10 +365,7 @@ export default function WatchmanHome() {
     }
 
     try {
-      const { data } = await api.post('/attendance/mark', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
+      const { data } = await api.post('/attendance/mark', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (data.success) {
         setSuccessData({
           status: data.data.status,
@@ -425,20 +376,17 @@ export default function WatchmanHome() {
         refetch();
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message || 'Something went wrong. Please try again.';
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Something went wrong. Please try again.';
       setSubmitError(msg);
       setStep('failed');
     }
-  }, [gpsData, assignment, capturedBlob, capturedPhoto, isOnline, stopCamera, refetch]);
+  }, [gpsData, assignment, capturedBlob, capturedPhoto, isOnline, stopCamera, refetch, faceVerified, faceMatchScore]);
 
   // ── Sync offline queue ────────────────────────────────────────────
   const syncOfflineQueue = async () => {
     const pending = await offlineQueue.getPending();
     if (pending.length === 0) return;
-
     toast.success(`Syncing ${pending.length} offline record${pending.length > 1 ? 's' : ''}...`);
-
     for (const record of pending) {
       await offlineQueue.updateStatus(record.id, 'syncing');
       try {
@@ -449,22 +397,17 @@ export default function WatchmanHome() {
         formData.append('gpsAccuracy', String(record.gpsAccuracy));
         formData.append('clientTimestamp', record.clientTimestamp);
         formData.append('isOfflineSync', 'true');
-
         if (record.selfieDataUrl) {
           const res = await fetch(record.selfieDataUrl);
           const blob = await res.blob();
           formData.append('selfie', blob, 'selfie.jpg');
         }
-
-        await api.post('/attendance/mark', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/attendance/mark', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
         await offlineQueue.remove(record.id);
       } catch {
         await offlineQueue.updateStatus(record.id, 'failed', 'Sync failed');
       }
     }
-
     const remaining = await offlineQueue.getPendingCount();
     setPendingCount(remaining);
     toast.success('Offline attendance synced!');
@@ -487,17 +430,24 @@ export default function WatchmanHome() {
   }, [stopCamera, stopFaceVerification]);
 
   // ────────────────────────────────────────────────────────────────
-  // RENDER
+  // RENDER — all screens use h-[100dvh] flex-col so nothing scrolls
   // ────────────────────────────────────────────────────────────────
+
+  // Wrapper for non-home screens (simple dark bg, centered content)
+  const FullScreen = ({ children }: { children: React.ReactNode }) => (
+    <div className="flex flex-col h-[100dvh] w-full bg-surface-950 overflow-hidden">
+      {children}
+    </div>
+  );
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-brand-400 mx-auto mb-4" />
-          <p className="text-slate-400">Loading your assignment...</p>
+      <FullScreen>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-12 h-12 animate-spin text-brand-400" />
+          <p className="text-slate-400 text-sm">Loading your assignment...</p>
         </div>
-      </div>
+      </FullScreen>
     );
   }
 
@@ -505,157 +455,130 @@ export default function WatchmanHome() {
   if (step === 'success' && successData) {
     const isOfflineRecord = successData.status === 'offline';
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 animate-fade-in">
-        <div className="w-full max-w-sm text-center space-y-6">
-          <div className={`w-28 h-28 rounded-full mx-auto flex items-center justify-center shadow-2xl ${
-            isOfflineRecord
-              ? 'bg-warning-500/20 border-2 border-warning-500'
-              : 'bg-success-500/20 border-2 border-success-500 shadow-glow-success'
+      <FullScreen>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-5 animate-fade-in">
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl ${
+            isOfflineRecord ? 'bg-warning-500/20 border-2 border-warning-500' : 'bg-success-500/20 border-2 border-success-500'
           }`}>
-            {isOfflineRecord
-              ? <WifiOff className="w-14 h-14 text-warning-400" />
-              : <CheckCircle2 className="w-14 h-14 text-success-400" />
-            }
+            {isOfflineRecord ? <WifiOff className="w-12 h-12 text-warning-400" /> : <CheckCircle2 className="w-12 h-12 text-success-400" />}
           </div>
-
-          {isOfflineRecord ? (
-            <>
-              <h2 className="text-2xl font-black text-warning-400">Saved Offline</h2>
-              <p className="text-slate-400">
-                Attendance saved locally at <strong className="text-slate-200">{successData.time}</strong>.
-                It will sync automatically when internet is available.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-3xl font-black text-success-400">
-                {successData.status === 'late' ? 'Marked Late' : 'Attendance Marked!'}
-              </h2>
-              <div className="space-y-2">
+          <div className="text-center space-y-2">
+            {isOfflineRecord ? (
+              <>
+                <h2 className="text-2xl font-black text-warning-400">Saved Offline</h2>
+                <p className="text-slate-400 text-sm">Saved at <strong className="text-slate-200">{successData.time}</strong>. Will sync when online.</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-3xl font-black text-success-400">
+                  {successData.status === 'late' ? 'Marked Late' : 'Attendance Marked!'}
+                </h2>
                 <p className="text-4xl font-black text-slate-100">{successData.time}</p>
                 <p className="text-slate-400 text-sm">{successData.society}</p>
-              </div>
-              {successData.status === 'late' && (
-                <div className="p-3 rounded-xl bg-warning-500/10 border border-warning-500/20">
-                  <p className="text-warning-400 text-sm">⚠ You were marked as late. Please arrive on time tomorrow.</p>
-                </div>
-              )}
-              <p className="text-success-400 text-sm font-medium">✓ Location Verified</p>
-            </>
-          )}
-
-          <button onClick={resetToHome} className="btn-outline w-full py-3">
-            Back to Home
-          </button>
+                {successData.status === 'late' && (
+                  <div className="p-3 rounded-xl bg-warning-500/10 border border-warning-500/20">
+                    <p className="text-warning-400 text-sm">⚠ You were marked late. Please arrive on time tomorrow.</p>
+                  </div>
+                )}
+                <p className="text-success-400 text-sm font-medium">✓ Location Verified</p>
+              </>
+            )}
+          </div>
+          <button onClick={resetToHome} className="btn-outline w-full max-w-xs py-3">Back to Home</button>
         </div>
-      </div>
+      </FullScreen>
     );
   }
 
   // ── CAMERA screen ─────────────────────────────────────────────────
   if (step === 'camera' || step === 'submitting') {
     return (
-      <div className="flex-1 flex flex-col p-4 animate-fade-in">
-        <div className="max-w-sm mx-auto w-full space-y-4">
-          <div className="text-center">
-            <div className="badge-present mx-auto inline-flex mb-2">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Location Verified
+      <FullScreen>
+        <div className="flex flex-col h-full p-4 gap-3 animate-fade-in max-w-sm mx-auto w-full">
+          {/* Header — compact */}
+          <div className="text-center shrink-0 pt-2">
+            <div className="badge-present mx-auto inline-flex mb-1">
+              <ShieldCheck className="w-3.5 h-3.5" /> Location Verified
             </div>
-            <h2 className="text-xl font-bold text-slate-100">Take Your Photo</h2>
-            <p className="text-slate-500 text-sm">This confirms your attendance</p>
+            <h2 className="text-lg font-bold text-slate-100">Take Your Photo</h2>
+            <p className="text-slate-500 text-xs">This confirms your attendance</p>
           </div>
 
-          {/* Camera or captured photo */}
-          <div className="relative w-56 mx-auto rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4] shadow-2xl ring-2 ring-white/10 border border-white/20">
+          {/* Camera feed — fills remaining space */}
+          <div className="relative flex-1 rounded-2xl overflow-hidden bg-surface-800 shadow-2xl ring-2 ring-white/10 border border-white/20 min-h-0">
             {capturedPhoto ? (
               <img src={capturedPhoto} alt="Selfie" className="w-full h-full object-cover" />
             ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover scale-x-[-1]"
-              />
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
             )}
             <canvas ref={canvasRef} className="hidden" />
-
-            {/* Overlay guide */}
             {!capturedPhoto && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-48 h-48 rounded-full border-2 border-white/30 border-dashed" />
+                <div className="w-36 h-36 rounded-full border-2 border-white/30 border-dashed" />
               </div>
             )}
           </div>
 
-          {/* Buttons */}
-          {capturedPhoto ? (
-            <div className="space-y-3">
-              <button
-                onClick={submitAttendance}
-                disabled={step === 'submitting'}
-                className="btn-success w-full py-4 text-lg"
-              >
-                {step === 'submitting' ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</>
-                ) : (
-                  <><CheckCircle2 className="w-5 h-5" /> Submit Attendance</>
-                )}
+          {/* Buttons — always at bottom */}
+          <div className="shrink-0 space-y-2 pb-2">
+            {capturedPhoto ? (
+              <>
+                <button onClick={submitAttendance} disabled={step === 'submitting'} className="btn-success w-full py-4 text-base">
+                  {step === 'submitting'
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</>
+                    : <><CheckCircle2 className="w-5 h-5" /> Submit Attendance</>}
+                </button>
+                <button onClick={retakePhoto} className="btn-ghost w-full py-2 text-sm">
+                  <RefreshCw className="w-4 h-4" /> Retake Photo
+                </button>
+              </>
+            ) : (
+              <button onClick={capturePhoto} className="btn-primary w-full py-4 text-base">
+                <Camera className="w-6 h-6" /> Capture Photo
               </button>
-              <button onClick={retakePhoto} className="btn-ghost w-full py-3">
-                <RefreshCw className="w-4 h-4" /> Retake Photo
-              </button>
-            </div>
-          ) : (
-            <button onClick={capturePhoto} className="btn-primary w-full py-5 text-lg">
-              <Camera className="w-6 h-6" /> Capture Photo
-            </button>
-          )}
-
-          <button onClick={resetToHome} className="btn-ghost w-full py-2 text-sm">
-            Cancel
-          </button>
+            )}
+            <button onClick={resetToHome} className="btn-ghost w-full py-2 text-xs text-slate-500">Cancel</button>
+          </div>
         </div>
-      </div>
+      </FullScreen>
     );
   }
 
   // ── GPS LOADING screen ────────────────────────────────────────────
   if (step === 'gps') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 animate-fade-in">
-        <div className="w-full max-w-sm text-center space-y-6">
+      <FullScreen>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6 animate-fade-in">
           {gpsError ? (
             <>
-              <div className="w-24 h-24 rounded-full bg-danger-500/20 border-2 border-danger-500 mx-auto flex items-center justify-center">
-                <AlertCircle className="w-12 h-12 text-danger-400" />
+              <div className="w-20 h-20 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center">
+                <AlertCircle className="w-10 h-10 text-danger-400" />
               </div>
-              <h2 className="text-xl font-bold text-slate-100">Location Error</h2>
-              <p className="text-slate-400">{gpsError}</p>
-              <button onClick={getGPS} className="btn-primary w-full py-4">
-                <Navigation className="w-5 h-5" /> Try Again
-              </button>
-              <button onClick={resetToHome} className="btn-ghost w-full py-3">
-                Cancel
-              </button>
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold text-slate-100">Location Error</h2>
+                <p className="text-slate-400 text-sm">{gpsError}</p>
+              </div>
+              <div className="w-full max-w-xs space-y-2">
+                <button onClick={getGPS} className="btn-primary w-full py-4"><Navigation className="w-5 h-5" /> Try Again</button>
+                <button onClick={resetToHome} className="btn-ghost w-full py-3">Cancel</button>
+              </div>
             </>
           ) : (
             <>
-              <div className="relative w-24 h-24 mx-auto">
+              <div className="relative w-20 h-20">
                 <div className="absolute inset-0 rounded-full bg-brand-500/20 animate-ping" />
-                <div className="relative w-24 h-24 rounded-full bg-brand-500/30 border-2 border-brand-500 flex items-center justify-center">
-                  <Navigation className="w-10 h-10 text-brand-400 animate-bounce-gentle" />
+                <div className="relative w-20 h-20 rounded-full bg-brand-500/30 border-2 border-brand-500 flex items-center justify-center">
+                  <Navigation className="w-9 h-9 text-brand-400 animate-bounce-gentle" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-100">Getting Location...</h2>
-              <p className="text-slate-400 text-sm">
-                Please wait. Make sure Location is enabled in your phone settings.
-              </p>
+              <div className="text-center space-y-1">
+                <h2 className="text-xl font-bold text-slate-100">Getting Location...</h2>
+                <p className="text-slate-400 text-sm">Make sure Location is enabled in your phone settings.</p>
+              </div>
             </>
           )}
         </div>
-      </div>
+      </FullScreen>
     );
   }
 
@@ -663,117 +586,105 @@ export default function WatchmanHome() {
   if (step === 'face_verify') {
     const isMismatch = faceVerified === false;
     return (
-      <div className="flex-1 flex flex-col p-4 animate-fade-in">
-        <div className="max-w-sm mx-auto w-full space-y-4">
-          <div className="text-center">
-            <div className={`badge-present mx-auto inline-flex mb-2 ${isMismatch ? 'badge-absent' : ''}`}>
+      <FullScreen>
+        <div className="flex flex-col h-full p-4 gap-3 animate-fade-in max-w-sm mx-auto w-full">
+          {/* Header — compact */}
+          <div className="text-center shrink-0 pt-2">
+            <div className={`badge-present mx-auto inline-flex mb-1 ${isMismatch ? 'badge-absent' : ''}`}>
               <ShieldCheck className="w-3.5 h-3.5" />
               {isMismatch ? 'Face Mismatch' : 'Face Verification'}
             </div>
-            <h2 className="text-xl font-bold text-slate-100">
+            <h2 className="text-lg font-bold text-slate-100">
               {isMismatch ? 'Attendance Blocked' : 'Verify Your Identity'}
             </h2>
-            <p className="text-slate-500 text-sm">
-              {isMismatch
-                ? 'Your face did not match your registered photo.'
-                : 'Look straight at the camera. Press verify when ready.'}
+            <p className="text-slate-500 text-xs">
+              {isMismatch ? 'Your face did not match your registered photo.' : 'Look straight at the camera. Press verify when ready.'}
             </p>
           </div>
 
-          {isMismatch ? (
-            // Mismatch state
-            <div className="card p-6 flex flex-col items-center gap-4 border-danger-500/30">
-              <div className="w-20 h-20 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center">
-                <AlertCircle className="w-10 h-10 text-danger-400" />
-              </div>
-              <p className="text-danger-400 font-bold text-lg">Face Mismatch ✕</p>
-              <p className="text-slate-400 text-sm text-center">
-                Attendance cannot be marked. If this is a mistake, please try again in better lighting or contact your agency.
-              </p>
-            </div>
-          ) : (
-            // Camera feed + verify button
-            <div className="relative w-56 mx-auto rounded-2xl overflow-hidden bg-surface-800 aspect-[3/4] shadow-2xl ring-2 ring-white/10 border border-white/20">
-              <video
-                ref={faceVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover scale-x-[-1]"
-              />
-              {/* Oval guide */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div
-                  className={`w-48 h-56 rounded-full border-4 transition-colors duration-300 ${
-                    faceLiveDetected ? 'border-success-400' : 'border-white/30 border-dashed'
-                  }`}
-                />
-              </div>
-              {faceLiveDetected && (
-                <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-                  <span className="badge-present text-xs px-3 py-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Face Detected ✓
-                  </span>
+          {/* Camera or mismatch view — fills space */}
+          <div className="flex-1 min-h-0">
+            {isMismatch ? (
+              <div className="h-full flex flex-col items-center justify-center gap-4 card p-6 border-danger-500/30">
+                <div className="w-20 h-20 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center">
+                  <AlertCircle className="w-10 h-10 text-danger-400" />
                 </div>
-              )}
-            </div>
-          )}
+                <p className="text-danger-400 font-bold text-lg">Face Mismatch ✕</p>
+                <p className="text-slate-400 text-sm text-center">
+                  Attendance cannot be marked. Try again in better lighting or contact your agency.
+                </p>
+              </div>
+            ) : (
+              <div className="relative h-full rounded-2xl overflow-hidden bg-surface-800 shadow-2xl ring-2 ring-white/10 border border-white/20">
+                <video ref={faceVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                {/* Oval guide */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className={`w-40 h-48 rounded-full border-4 transition-colors duration-300 ${
+                    faceLiveDetected ? 'border-success-400' : 'border-white/30 border-dashed'
+                  }`} />
+                </div>
+                {faceLiveDetected && (
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+                    <span className="badge-present text-xs px-3 py-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Face Detected ✓
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-          {isMismatch ? (
-            <button onClick={resetToHome} className="btn-primary w-full py-4">
-              Go Back
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={runFaceVerification}
-                disabled={!faceLiveDetected || !faceModelsLoaded}
-                className={`w-full py-4 text-lg rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
-                  faceLiveDetected && faceModelsLoaded
-                    ? 'btn-primary'
-                    : 'bg-surface-700 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                <ScanFace className="w-5 h-5" />
-                {!faceModelsLoaded ? 'Loading AI...' : faceLiveDetected ? 'Verify My Face' : 'Waiting for face...'}
-              </button>
-              <button onClick={resetToHome} className="btn-ghost w-full py-2 text-sm">
-                Cancel
-              </button>
-            </>
-          )}
+          {/* Buttons — always visible at bottom */}
+          <div className="shrink-0 space-y-2 pb-2">
+            {isMismatch ? (
+              <button onClick={resetToHome} className="btn-primary w-full py-4">Go Back</button>
+            ) : (
+              <>
+                <button
+                  onClick={runFaceVerification}
+                  disabled={!faceLiveDetected || !faceModelsLoaded}
+                  className={`w-full py-4 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
+                    faceLiveDetected && faceModelsLoaded ? 'btn-primary' : 'bg-surface-700 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  <ScanFace className="w-5 h-5" />
+                  {!faceModelsLoaded ? 'Loading AI...' : faceLiveDetected ? 'Verify My Face' : 'Waiting for face...'}
+                </button>
+                <button onClick={resetToHome} className="btn-ghost w-full py-2 text-xs text-slate-500">Cancel</button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </FullScreen>
     );
   }
 
   // ── FAILED screen ────────────────────────────────────────────────
   if (step === 'failed') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 animate-fade-in">
-        <div className="w-full max-w-sm text-center space-y-6">
-          <div className="w-24 h-24 rounded-full bg-danger-500/20 border-2 border-danger-500 mx-auto flex items-center justify-center">
-            <AlertCircle className="w-12 h-12 text-danger-400" />
+      <FullScreen>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-5 animate-fade-in">
+          <div className="w-20 h-20 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center">
+            <AlertCircle className="w-10 h-10 text-danger-400" />
           </div>
-          <h2 className="text-xl font-bold text-slate-100">Cannot Mark Attendance</h2>
-          <p className="text-slate-300">{submitError}</p>
-          <button onClick={resetToHome} className="btn-primary w-full py-4">
-            Back to Home
-          </button>
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-bold text-slate-100">Cannot Mark Attendance</h2>
+            <p className="text-slate-300 text-sm">{submitError}</p>
+          </div>
+          <button onClick={resetToHome} className="btn-primary w-full max-w-xs py-4">Back to Home</button>
         </div>
-      </div>
+      </FullScreen>
     );
   }
 
-  // ── HOME screen (main watchman dashboard) ────────────────────────
+  // ── HOME screen ───────────────────────────────────────────────────
   const now = new Date();
   const greeting = now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
 
   return (
-    <div className="flex-1 flex flex-col animate-fade-in relative min-h-[100dvh]">
-      {/* ── Full Screen Background ── */}
-      <div className="absolute inset-0 z-0 bg-[#e6f0fa]">
+    <div className="flex flex-col h-[100dvh] w-full overflow-hidden relative animate-fade-in">
+      {/* Background */}
+      <div className="absolute inset-0 z-0">
         {assignment?.agency_background_url ? (
           <img src={assignment.agency_background_url} alt="Background" className="w-full h-full object-cover object-center" />
         ) : (
@@ -781,153 +692,132 @@ export default function WatchmanHome() {
         )}
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-y-auto">
-        
-        {/* ── Brand Header (Logo + Agency Name) ── */}
-        <div className="shrink-0 w-full pt-8 pb-2 px-4 flex flex-col items-center relative">
+      <div className="relative z-10 flex flex-col h-full overflow-hidden">
+
+        {/* ── Agency Logo + Name (compact, shrinks if needed) */}
+        <div className="shrink-0 flex flex-col items-center pt-4 pb-1 px-4">
           {assignment?.agency_logo_url ? (
             <img
               src={assignment.agency_logo_url}
               alt="Agency Logo"
-              className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.25)] h-28 max-h-[120px]"
+              className="object-contain drop-shadow-lg"
+              style={{ maxHeight: '80px', maxWidth: '120px' }}
             />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-[#1a2a5e]/20 flex items-center justify-center border-2 border-white/40 shadow-xl backdrop-blur-sm">
-              <ShieldCheck className="w-12 h-12 text-[#1a2a5e]" />
+            <div className="w-16 h-16 rounded-full bg-[#1a2a5e]/20 flex items-center justify-center border-2 border-white/40 shadow-xl backdrop-blur-sm">
+              <ShieldCheck className="w-8 h-8 text-[#1a2a5e]" />
             </div>
           )}
           {assignment?.agency_name && (
-            <p className="text-[#1a2a5e] text-[20px] font-black tracking-wide mt-2 text-center drop-shadow-sm">{assignment.agency_name}</p>
+            <p className="text-[#1a2a5e] text-base font-black tracking-wide mt-1 text-center drop-shadow-sm">{assignment.agency_name}</p>
           )}
         </div>
 
-        <div className="flex-1 flex flex-col p-4">
-          <div className="max-w-sm mx-auto w-full space-y-5">
+        {/* ── Online/Offline pill */}
+        <div className="shrink-0 flex justify-center pb-2">
+          <div className={`flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium backdrop-blur-md shadow-sm ${
+            isOnline ? 'bg-white/90 text-success-600 border border-success-500/30' : 'bg-white/90 text-warning-600 border border-warning-500/30'
+          }`}>
+            {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            {isOnline ? 'Online' : 'Offline Mode'}
+            {pendingCount > 0 && (
+              <span className="ml-1 bg-warning-500 text-white rounded-full px-1.5 text-xs font-bold">{pendingCount}</span>
+            )}
+          </div>
+        </div>
 
-            {/* Offline/Online indicator */}
-            <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-medium mx-auto w-fit backdrop-blur-md shadow-sm ${
-              isOnline
-                ? 'bg-white/90 text-success-600 border border-success-500/30'
-                : 'bg-white/90 text-warning-600 border border-warning-500/30'
-            }`}>
-              {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-              {isOnline ? 'Online' : 'Offline Mode'}
-              {pendingCount > 0 && (
-                <span className="ml-1 bg-warning-500 text-white rounded-full px-1.5 text-xs font-bold">
-                  {pendingCount} pending
-                </span>
-              )}
-            </div>
+        {/* ── Greeting */}
+        <div className="shrink-0 mx-4 text-center bg-white/40 backdrop-blur-md border border-white/50 rounded-2xl py-2 px-4 shadow-sm">
+          <p className="text-[#4a5580] text-xs font-semibold">{greeting},</p>
+          <h1 className="text-xl font-black text-[#1a2a5e] leading-tight">{user?.watchman?.full_name || user?.name}</h1>
+          <p className="text-[#3b5bdb] font-bold text-xs mt-0.5">
+            {user?.watchman?.employee_id} • {now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+          </p>
+        </div>
 
-            {/* Greeting */}
-            <div className="text-center bg-white/40 backdrop-blur-md border border-white/50 rounded-3xl py-4 shadow-sm">
-              <p className="text-[#4a5580] text-sm font-semibold">{greeting},</p>
-              <h1 className="text-2xl font-black text-[#1a2a5e]">
-                {user?.watchman?.full_name || user?.name}
-              </h1>
-              <p className="text-[#3b5bdb] font-bold text-xs mt-1 tracking-wide">
-                {user?.watchman?.employee_id} • {now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
-              </p>
-            </div>
-
-            {/* Assignment Card */}
-            {assignment ? (
-              <div className={`rounded-[2rem] border shadow-2xl backdrop-blur-xl bg-slate-900/90 p-6 space-y-4 ${alreadyMarked ? 'border-success-500/50' : 'border-slate-700/80'}`}>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-brand-400 animate-pulse-slow" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's Duty</span>
-            </div>
-
-            {/* Society */}
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5 text-brand-400" />
+        {/* ── Assignment Card (flex-1, scrollable only if truly needed) */}
+        <div className="flex-1 mx-4 mt-3 min-h-0 overflow-y-auto">
+          {assignment ? (
+            <div className={`rounded-2xl border shadow-xl backdrop-blur-xl bg-slate-900/90 p-4 space-y-3 ${alreadyMarked ? 'border-success-500/50' : 'border-slate-700/80'}`}>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-brand-400 animate-pulse-slow" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's Duty</span>
               </div>
-              <div>
-                <p className="font-bold text-lg text-slate-100 leading-tight">{assignment.society_name}</p>
-                <p className="text-slate-500 text-xs mt-0.5 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> {assignment.society_address}
-                </p>
-              </div>
-            </div>
 
-            {/* Shift */}
-            <div className="flex items-center gap-3 pt-2 border-t border-surface-700">
-              <div className="w-10 h-10 rounded-xl bg-surface-700 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-slate-400" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-200">{assignment.shift_name}</p>
-                <p className="text-slate-500 text-sm">
-                  {formatTimeDisplay(assignment.start_time)} — {formatTimeDisplay(assignment.end_time)}
-                  {assignment.is_overnight && (
-                    <span className="ml-1.5 text-xs bg-brand-500/20 text-brand-400 px-1.5 py-0.5 rounded-full">
-                      overnight
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {/* Already marked */}
-            {alreadyMarked && (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-success-500/10 border border-success-500/20">
-                <CheckCircle2 className="w-5 h-5 text-success-400 shrink-0" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-brand-500/20 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 text-brand-400" />
+                </div>
                 <div>
-                  <p className="font-semibold text-success-400 text-sm">Attendance Marked</p>
-                  <p className="text-xs text-slate-500">
-                    {attendance && formatTimestamp(attendance.check_in_time)} •{' '}
-                    <span className={attendance?.status === 'late' ? 'text-warning-400' : 'text-success-400'}>
-                      {attendance?.status?.toUpperCase()}
-                    </span>
+                  <p className="font-bold text-base text-slate-100 leading-tight">{assignment.society_name}</p>
+                  <p className="text-slate-500 text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> {assignment.society_address}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2 border-t border-surface-700">
+                <div className="w-9 h-9 rounded-xl bg-surface-700 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5 text-slate-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-200 text-sm">{assignment.shift_name}</p>
+                  <p className="text-slate-500 text-xs">
+                    {formatTimeDisplay(assignment.start_time)} — {formatTimeDisplay(assignment.end_time)}
+                    {assignment.is_overnight && <span className="ml-1.5 text-xs bg-brand-500/20 text-brand-400 px-1.5 py-0.5 rounded-full">overnight</span>}
                   </p>
                 </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="card p-6 text-center space-y-3">
-            <Building2 className="w-12 h-12 text-slate-600 mx-auto" />
-            <p className="text-slate-400 font-medium">No assignment for today</p>
-            <p className="text-slate-600 text-sm">Please contact your agency if this is incorrect.</p>
-          </div>
-        )}
 
-        {/* MARK ATTENDANCE button */}
-        {!alreadyMarked && assignment && (
-          <button
-            onClick={getGPS}
-            className="btn-mark-attendance animate-fade-in"
-          >
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-3">
-                <MapPin className="w-8 h-8" />
-                <span>MARK ATTENDANCE</span>
-              </div>
-              <p className="text-sm font-normal opacity-70">
-                Tap to verify location & take photo
-              </p>
+              {alreadyMarked && (
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-success-500/10 border border-success-500/20">
+                  <CheckCircle2 className="w-5 h-5 text-success-400 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-success-400 text-xs">Attendance Marked</p>
+                    <p className="text-xs text-slate-500">
+                      {attendance && formatTimestamp(attendance.check_in_time)} •{' '}
+                      <span className={attendance?.status === 'late' ? 'text-warning-400' : 'text-success-400'}>
+                        {attendance?.status?.toUpperCase()}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          </button>
-        )}
+          ) : (
+            <div className="card p-5 text-center space-y-2">
+              <Building2 className="w-10 h-10 text-slate-600 mx-auto" />
+              <p className="text-slate-400 font-medium text-sm">No assignment for today</p>
+              <p className="text-slate-600 text-xs">Please contact your agency if this is incorrect.</p>
+            </div>
+          )}
+        </div>
 
-        {/* Sync offline button */}
-        {isOnline && pendingCount > 0 && (
-          <button onClick={syncOfflineQueue} className="btn-outline w-full py-3 text-sm gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Sync {pendingCount} Offline Record{pendingCount > 1 ? 's' : ''}
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </button>
-        )}
+        {/* ── Bottom action area — always visible, never pushed off screen */}
+        <div className="shrink-0 px-4 pb-4 pt-3 space-y-2">
+          {!alreadyMarked && assignment && (
+            <button onClick={getGPS} className="btn-mark-attendance animate-fade-in w-full">
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-6 h-6" />
+                  <span className="text-lg">MARK ATTENDANCE</span>
+                </div>
+                <p className="text-xs font-normal opacity-70">Tap to verify location & take photo</p>
+              </div>
+            </button>
+          )}
 
-        {/* Instructions for already marked */}
-        {alreadyMarked && (
-          <div className="text-center py-4">
-            <p className="text-slate-600 text-sm">Have a safe and productive shift! 🛡️</p>
-          </div>
-        )}
-      </div>
-      </div>
+          {isOnline && pendingCount > 0 && (
+            <button onClick={syncOfflineQueue} className="btn-outline w-full py-2.5 text-sm gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Sync {pendingCount} Offline Record{pendingCount > 1 ? 's' : ''}
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            </button>
+          )}
+
+          {alreadyMarked && (
+            <p className="text-center text-slate-500 text-xs py-1">Have a safe and productive shift! 🛡️</p>
+          )}
+        </div>
+
       </div>
     </div>
   );
