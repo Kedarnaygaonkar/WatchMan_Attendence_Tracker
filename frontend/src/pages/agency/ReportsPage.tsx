@@ -551,13 +551,13 @@ export default function ReportsPage() {
               {/* Printable Document Sheet */}
               <div
                 id="printable-society-report"
-                className="printable-document bg-white text-slate-900 rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden print:shadow-none print:mt-0 print:border-none print:rounded-none max-w-[1050px] mx-auto border border-slate-200 transition-all"
+                className="printable-document bg-white text-[#0f172a] rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden print:shadow-none print:mt-0 print:border-none print:rounded-none max-w-[1050px] mx-auto border border-[#e2e8f0] transition-all"
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 {calendarLoading ? (
                   <div className="p-16 text-center space-y-4">
                     <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-slate-600 font-semibold animate-pulse">Compiling Executive Attendance Report...</p>
+                    <p className="text-[#64748b] font-semibold animate-pulse">Compiling Executive Attendance Report...</p>
                   </div>
                 ) : calendarData ? (() => {
                   const selSociety = calendarData.society?.name || societies?.find(s => s.id === societyId)?.name || 'Society';
@@ -596,26 +596,26 @@ export default function ReportsPage() {
                     : 96;
 
                   return (
-                    <div className="flex flex-col relative">
+                    <div className="flex flex-col relative bg-white text-[#0f172a]">
                       {/* Top Accent Gradient Bar */}
                       <div className="h-2.5 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 print:h-2" />
 
                       {/* Top Branding Section */}
-                      <div className="flex flex-wrap justify-between items-start gap-6 p-6 sm:p-8 bg-slate-50/80 border-b border-slate-200">
+                      <div className="flex flex-wrap justify-between items-start gap-6 p-6 sm:p-8 bg-[#f8fafc] border-b border-[#e2e8f0]">
                         <div className="flex items-start gap-4">
                           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-600/20 shrink-0">
                             <Building2 className="w-7 h-7" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                              <h1 className="text-2xl sm:text-3xl font-black text-[#0f172a] tracking-tight leading-tight">
                                 {selSociety}
                               </h1>
-                              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <ShieldCheck className="w-3 h-3 text-emerald-600" /> Active Property
+                              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]">
+                                <ShieldCheck className="w-3 h-3 text-[#10b981]" /> Active Property
                               </span>
                             </div>
-                            <p className="text-slate-500 font-medium text-xs sm:text-sm flex items-center gap-1.5 mt-1.5">
+                            <p className="text-[#64748b] font-medium text-xs sm:text-sm flex items-center gap-1.5 mt-1.5">
                               <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" /> {selSocietyAddress} • Verified Geofence Zone
                             </p>
                           </div>
@@ -632,89 +632,89 @@ export default function ReportsPage() {
                           </div>
                           <div className="text-left sm:text-right">
                             <p className="text-[10px] font-black uppercase tracking-wider text-indigo-600">Managing Security Agency</p>
-                            <h2 className="text-base sm:text-lg font-black text-slate-900">{selAgency}</h2>
-                            <p className="text-slate-500 text-xs">24×7 Guard Oversight • GPS & Biometric Authenticated</p>
-                            <p className="text-slate-400 text-[11px] font-mono mt-0.5">{selAgencyPhone} • {selAgencyEmail}</p>
+                            <h2 className="text-base sm:text-lg font-black text-[#0f172a]">{selAgency}</h2>
+                            <p className="text-[#64748b] text-xs">24×7 Guard Oversight • GPS & Biometric Authenticated</p>
+                            <p className="text-[#94a3b8] text-[11px] font-mono mt-0.5">{selAgencyPhone} • {selAgencyEmail}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Metadata Strip & High-Impact KPI Cards */}
-                      <div className="bg-white p-6 sm:p-8 border-b border-slate-200 space-y-6">
+                      <div className="bg-white p-6 sm:p-8 border-b border-[#e2e8f0] space-y-6">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-blue-100/80 text-blue-700 flex items-center justify-center font-bold">
+                            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] text-[#1d4ed8] flex items-center justify-center font-bold">
                               <Calendar className="w-4 h-4" />
                             </div>
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Audit Period</span>
-                              <h3 className="text-base font-black text-slate-900 leading-tight">
+                              <span className="text-xs font-bold text-[#64748b] uppercase tracking-wider">Audit Period</span>
+                              <h3 className="text-base font-black text-[#0f172a] leading-tight">
                                 {new Date(calendarData.year, calendarData.month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
                               </h3>
                             </div>
                           </div>
 
-                          <span className="text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                          <span className="text-xs text-[#64748b] font-medium bg-[#f1f5f9] px-3 py-1 rounded-full border border-[#e2e8f0]">
                             Report ID: SEC-{calendarData.year}{String(calendarData.month).padStart(2, '0')}-{societyId.slice(-4).toUpperCase()}
                           </span>
                         </div>
 
-                        {/* 4 Light KPI Cards */}
+                        {/* 4 Light KPI Cards with Sharp Legible Numbers */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                          <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200/80 flex flex-col justify-between">
-                            <div className="flex items-center justify-between text-sky-700 mb-2">
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">Total Watchmen</span>
-                              <Users className="w-4 h-4 text-sky-600" />
+                          <div className="p-4 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[#0369a1] mb-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wider">Total Watchmen</span>
+                              <Users className="w-4 h-4 text-[#0284c7]" />
                             </div>
-                            <p className="text-2xl sm:text-3xl font-black text-slate-900">{calendarData.watchmen.length}</p>
-                            <span className="text-[10px] text-sky-700 font-semibold mt-1">Dedicated On-site Roster</span>
+                            <p className="text-2xl sm:text-3xl font-black text-[#0f172a]">{calendarData.watchmen.length}</p>
+                            <span className="text-[10px] text-[#0284c7] font-semibold mt-1">Dedicated On-site Roster</span>
                           </div>
 
-                          <div className="p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200/80 flex flex-col justify-between">
-                            <div className="flex items-center justify-between text-indigo-700 mb-2">
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Monitored Wings</span>
-                              <Layers className="w-4 h-4 text-indigo-600" />
+                          <div className="p-4 rounded-2xl bg-[#e0e7ff] border border-[#c7d2fe] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[#4338ca] mb-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wider">Monitored Wings</span>
+                              <Layers className="w-4 h-4 text-[#4f46e5]" />
                             </div>
-                            <p className="text-2xl sm:text-3xl font-black text-slate-900">{calendarData.wings.length}</p>
-                            <span className="text-[10px] text-indigo-700 font-semibold mt-1">Physical Checkpoints</span>
+                            <p className="text-2xl sm:text-3xl font-black text-[#0f172a]">{calendarData.wings.length}</p>
+                            <span className="text-[10px] text-[#4f46e5] font-semibold mt-1">Physical Checkpoints</span>
                           </div>
 
-                          <div className="p-4 rounded-2xl bg-purple-50/80 border border-purple-200/80 flex flex-col justify-between">
-                            <div className="flex items-center justify-between text-purple-700 mb-2">
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800">Secured Gates</span>
-                              <DoorOpen className="w-4 h-4 text-purple-600" />
+                          <div className="p-4 rounded-2xl bg-[#f3e8ff] border border-[#e9d5ff] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[#7e22ce] mb-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wider">Secured Gates</span>
+                              <DoorOpen className="w-4 h-4 text-[#9333ea]" />
                             </div>
-                            <p className="text-2xl sm:text-3xl font-black text-slate-900">{calendarData.gates.length}</p>
-                            <span className="text-[10px] text-purple-700 font-semibold mt-1">Access Control Gates</span>
+                            <p className="text-2xl sm:text-3xl font-black text-[#0f172a]">{calendarData.gates.length}</p>
+                            <span className="text-[10px] text-[#9333ea] font-semibold mt-1">Access Control Gates</span>
                           </div>
 
-                          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex flex-col justify-between">
-                            <div className="flex items-center justify-between text-emerald-700 mb-2">
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Coverage Rate</span>
-                              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <div className="p-4 rounded-2xl bg-[#ecfdf5] border border-[#a7f3d0] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[#047857] mb-2">
+                              <span className="text-[11px] font-bold uppercase tracking-wider">Coverage Rate</span>
+                              <ShieldCheck className="w-4 h-4 text-[#10b981]" />
                             </div>
-                            <p className="text-2xl sm:text-3xl font-black text-slate-900">{coverageRate}%</p>
-                            <span className="text-[10px] text-emerald-700 font-semibold mt-1">Verified Duty Compliance</span>
+                            <p className="text-2xl sm:text-3xl font-black text-[#0f172a]">{coverageRate}%</p>
+                            <span className="text-[10px] text-[#059669] font-semibold mt-1">Verified Duty Compliance</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-6 sm:p-8 space-y-8">
+                      <div className="p-6 sm:p-8 space-y-8 bg-white">
                         {/* Watchman Roster Table */}
-                        <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs print-avoid-break">
-                          <div className="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                        <div className="border border-[#e2e8f0] rounded-2xl overflow-hidden shadow-xs print-avoid-break">
+                          <div className="bg-[#f8fafc] px-5 py-3.5 border-b border-[#e2e8f0] flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-blue-600" />
-                              <h3 className="font-extrabold text-slate-900 text-base">Watchman Attendance Roster</h3>
+                              <h3 className="font-extrabold text-[#0f172a] text-base">Watchman Attendance Roster</h3>
                             </div>
-                            <span className="text-xs text-slate-500 font-medium bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                            <span className="text-xs text-[#64748b] font-medium bg-white px-2.5 py-1 rounded-md border border-[#e2e8f0]">
                               Present Days = Total verified QR scans at society
                             </span>
                           </div>
 
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs text-left">
-                              <thead className="bg-slate-100/80 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                              <thead className="bg-[#f1f5f9] text-[#334155] font-bold uppercase tracking-wider text-[10px] border-b border-[#e2e8f0]">
                                 <tr>
                                   <th className="px-4 py-3 w-12 text-center">#</th>
                                   <th className="px-4 py-3">Guard ID</th>
@@ -725,17 +725,17 @@ export default function ReportsPage() {
                                   <th className="px-4 py-3 text-center">Present Days</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                              <tbody className="divide-y divide-[#f1f5f9] font-medium text-[#334155]">
                                 {calendarData.watchmen.map((w, i) => (
-                                  <tr key={w.watchman_id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40 hover:bg-blue-50/30'}>
-                                    <td className="px-4 py-2.5 text-center text-slate-400 font-semibold">{i + 1}</td>
+                                  <tr key={w.watchman_id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'}>
+                                    <td className="px-4 py-2.5 text-center text-[#94a3b8] font-semibold">{i + 1}</td>
                                     <td className="px-4 py-2.5">
-                                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                      <span className="font-mono font-bold text-[#1d4ed8] bg-[#eff6ff] px-2 py-0.5 rounded border border-[#bfdbfe]">
                                         {w.employee_id}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-2.5 font-bold text-slate-900 flex items-center gap-2">
-                                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                    <td className="px-4 py-2.5 font-bold text-[#0f172a] flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-[#dbeafe] text-[#1d4ed8] flex items-center justify-center font-bold text-[10px] shrink-0">
                                         {w.watchman_name.charAt(0)}
                                       </div>
                                       {w.watchman_name}
@@ -743,16 +743,16 @@ export default function ReportsPage() {
                                     <td className="px-4 py-2.5">
                                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                         w.wings.length > 0 
-                                          ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                                          : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                          ? 'bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]' 
+                                          : 'bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]'
                                       }`}>
                                         {w.wings.length > 0 ? 'Wing Guard' : w.gates.length > 0 ? 'Gate Guard' : 'General Patrol'}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-2.5 text-slate-600 font-mono text-[11px]">{w.phone || '—'}</td>
-                                    <td className="px-4 py-2.5 text-slate-600">{w.shift_name || 'Standard Day'}</td>
+                                    <td className="px-4 py-2.5 text-[#475569] font-mono text-[11px]">{w.phone || '—'}</td>
+                                    <td className="px-4 py-2.5 text-[#475569]">{w.shift_name || 'Standard Day'}</td>
                                     <td className="px-4 py-2.5 text-center">
-                                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-md font-black text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      <span className="inline-flex items-center justify-center min-w-[28px] px-2.5 py-0.5 rounded-md font-black text-sm bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]">
                                         {w.days_attended}
                                       </span>
                                     </td>
@@ -778,7 +778,7 @@ export default function ReportsPage() {
                               <div className="mt-3">
                                 <div className="grid grid-cols-7 gap-1 mb-1.5 text-center">
                                   {['S','M','T','W','T','F','S'].map((d, di) => (
-                                    <div key={di} className="text-[10px] font-extrabold text-slate-400">
+                                    <div key={di} className="text-[10px] font-extrabold text-[#94a3b8]">
                                       {d}
                                     </div>
                                   ))}
@@ -798,13 +798,13 @@ export default function ReportsPage() {
 
                                         let cellClass = '';
                                         if (isUpcoming) {
-                                          cellClass = 'bg-slate-50 text-slate-300 border border-slate-100 font-normal';
+                                          cellClass = 'bg-[#f8fafc] text-[#cbd5e1] border border-[#f1f5f9] font-normal';
                                         } else if (isPresent) {
-                                          cellClass = 'bg-emerald-500 text-white font-bold shadow-xs';
+                                          cellClass = 'bg-[#10b981] text-white font-bold shadow-xs';
                                         } else if (isLate) {
-                                          cellClass = 'bg-amber-400 text-slate-950 font-bold shadow-xs';
+                                          cellClass = 'bg-[#f59e0b] text-white font-bold shadow-xs';
                                         } else {
-                                          cellClass = 'bg-rose-50 text-rose-500 border border-rose-100 font-medium';
+                                          cellClass = 'bg-[#fff1f2] text-[#e11d48] border border-[#fecdd3] font-medium';
                                         }
 
                                         return (
@@ -828,22 +828,22 @@ export default function ReportsPage() {
                             <div className="space-y-8">
                               {/* Wing Breakdown */}
                               {calendarData.wings.length > 0 && (
-                                <div className="p-5 sm:p-6 bg-slate-50/70 border border-slate-200/80 rounded-2xl print-avoid-break">
-                                  <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-200">
+                                <div className="p-5 sm:p-6 bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl print-avoid-break">
+                                  <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-[#e2e8f0]">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                                      <div className="w-8 h-8 rounded-lg bg-[#eff6ff] text-[#1d4ed8] flex items-center justify-center">
                                         <Building2 className="w-4 h-4" />
                                       </div>
                                       <div>
-                                        <h3 className="font-black text-slate-900 text-base">Wing Attendance Breakdown (Wing Wise)</h3>
-                                        <p className="text-xs text-slate-500 font-medium">Daily verified physical presence per wing</p>
+                                        <h3 className="font-black text-[#0f172a] text-base">Wing Attendance Breakdown (Wing Wise)</h3>
+                                        <p className="text-xs text-[#64748b] font-medium">Daily verified physical presence per wing</p>
                                       </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-                                      <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present</span>
-                                      <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Late</span>
-                                      <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-rose-400" /> Off / No Watchman</span>
-                                      {isCurrentMonth && <span className="flex items-center gap-1.5 text-slate-400"><div className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Upcoming</span>}
+                                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-[#334155] bg-white px-3 py-1.5 rounded-xl border border-[#e2e8f0] shadow-xs">
+                                      <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" /> Present</span>
+                                      <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" /> Late</span>
+                                      <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#e11d48]" /> Off / No Watchman</span>
+                                      {isCurrentMonth && <span className="flex items-center gap-1.5 text-[#94a3b8]"><div className="w-2.5 h-2.5 rounded-full bg-[#cbd5e1]" /> Upcoming</span>}
                                     </div>
                                   </div>
 
@@ -855,15 +855,15 @@ export default function ReportsPage() {
                                       const coveragePct = totalDaysEvaluated > 0 ? Math.round((attendedCount / totalDaysEvaluated) * 100) : 0;
 
                                       return (
-                                        <div key={w.name} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
-                                          <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                        <div key={w.name} className="bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
+                                          <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#f1f5f9]">
                                             <div>
-                                              <h4 className="font-black text-slate-900 text-sm">{w.name}</h4>
-                                              <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                                                Guard: <span className="font-bold text-slate-700">{primaryWM?.watchman_name || 'Assigned Guard'}</span>
+                                              <h4 className="font-black text-[#0f172a] text-sm">{w.name}</h4>
+                                              <p className="text-[11px] text-[#64748b] font-medium truncate mt-0.5">
+                                                Guard: <span className="font-bold text-[#1e293b]">{primaryWM?.watchman_name || 'Assigned Guard'}</span>
                                               </p>
                                             </div>
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe] shrink-0">
                                               {coveragePct}%
                                             </span>
                                           </div>
@@ -877,15 +877,15 @@ export default function ReportsPage() {
 
                               {/* Gate Breakdown */}
                               {calendarData.gates.length > 0 && (
-                                <div className="p-5 sm:p-6 bg-slate-50/70 border border-slate-200/80 rounded-2xl print-avoid-break">
-                                  <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-200">
+                                <div className="p-5 sm:p-6 bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl print-avoid-break">
+                                  <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-[#e2e8f0]">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center">
+                                      <div className="w-8 h-8 rounded-lg bg-[#f3e8ff] text-[#7e22ce] flex items-center justify-center">
                                         <DoorOpen className="w-4 h-4" />
                                       </div>
                                       <div>
-                                        <h3 className="font-black text-slate-900 text-base">Gate Attendance Breakdown (Gate Wise)</h3>
-                                        <p className="text-xs text-slate-500 font-medium">Access point security monitoring</p>
+                                        <h3 className="font-black text-[#0f172a] text-base">Gate Attendance Breakdown (Gate Wise)</h3>
+                                        <p className="text-xs text-[#64748b] font-medium">Access point security monitoring</p>
                                       </div>
                                     </div>
                                   </div>
@@ -898,15 +898,15 @@ export default function ReportsPage() {
                                       const coveragePct = totalDaysEvaluated > 0 ? Math.round((attendedCount / totalDaysEvaluated) * 100) : 0;
 
                                       return (
-                                        <div key={g.name} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
-                                          <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                        <div key={g.name} className="bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
+                                          <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#f1f5f9]">
                                             <div>
-                                              <h4 className="font-black text-slate-900 text-sm">{g.name}</h4>
-                                              <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                                                Guard: <span className="font-bold text-slate-700">{primaryWM?.watchman_name || 'Gate Sentry'}</span>
+                                              <h4 className="font-black text-[#0f172a] text-sm">{g.name}</h4>
+                                              <p className="text-[11px] text-[#64748b] font-medium truncate mt-0.5">
+                                                Guard: <span className="font-bold text-[#1e293b]">{primaryWM?.watchman_name || 'Gate Sentry'}</span>
                                               </p>
                                             </div>
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff] shrink-0">
                                               {coveragePct}%
                                             </span>
                                           </div>
@@ -923,53 +923,53 @@ export default function ReportsPage() {
 
                         {/* Monthly Overview & Audit Remarks */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-avoid-break">
-                          <div className="border border-slate-200/90 rounded-2xl p-5 bg-white shadow-xs flex flex-col justify-between">
-                            <h3 className="font-extrabold text-slate-900 flex items-center gap-2 mb-4 text-base">
+                          <div className="border border-[#e2e8f0] rounded-2xl p-5 bg-white shadow-xs flex flex-col justify-between">
+                            <h3 className="font-extrabold text-[#0f172a] flex items-center gap-2 mb-4 text-base">
                               <BarChart3 className="w-5 h-5 text-blue-600" /> Monthly Audit Summary
                             </h3>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/70">
-                                <Calendar className="w-4 h-4 mx-auto text-slate-400 mb-1" />
-                                <p className="text-[10px] font-bold uppercase text-slate-500">Days in Month</p>
-                                <p className="text-xl font-black text-slate-900 mt-0.5">{calendarData.daysInMonth}</p>
+                              <div className="bg-[#f8fafc] rounded-xl p-3 border border-[#e2e8f0]">
+                                <Calendar className="w-4 h-4 mx-auto text-[#94a3b8] mb-1" />
+                                <p className="text-[10px] font-bold uppercase text-[#64748b]">Days in Month</p>
+                                <p className="text-xl font-black text-[#0f172a] mt-0.5">{calendarData.daysInMonth}</p>
                               </div>
-                              <div className="bg-emerald-50/70 rounded-xl p-3 border border-emerald-200/70">
-                                <CheckCircle2 className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
-                                <p className="text-[10px] font-bold uppercase text-emerald-800">Present Scans</p>
-                                <p className="text-xl font-black text-emerald-700 mt-0.5">{totalPresentScans}</p>
+                              <div className="bg-[#ecfdf5] rounded-xl p-3 border border-[#a7f3d0]">
+                                <CheckCircle2 className="w-4 h-4 mx-auto text-[#10b981] mb-1" />
+                                <p className="text-[10px] font-bold uppercase text-[#047857]">Present Scans</p>
+                                <p className="text-xl font-black text-[#047857] mt-0.5">{totalPresentScans}</p>
                               </div>
-                              <div className="bg-amber-50/70 rounded-xl p-3 border border-amber-200/70">
-                                <Clock className="w-4 h-4 mx-auto text-amber-600 mb-1" />
-                                <p className="text-[10px] font-bold uppercase text-amber-800">Late Check-ins</p>
-                                <p className="text-xl font-black text-amber-700 mt-0.5">{totalLate}</p>
+                              <div className="bg-[#fffbeb] rounded-xl p-3 border border-[#fde68a]">
+                                <Clock className="w-4 h-4 mx-auto text-[#f59e0b] mb-1" />
+                                <p className="text-[10px] font-bold uppercase text-[#b45309]">Late Check-ins</p>
+                                <p className="text-xl font-black text-[#b45309] mt-0.5">{totalLate}</p>
                               </div>
-                              <div className="bg-rose-50/70 rounded-xl p-3 border border-rose-200/70">
-                                <X className="w-4 h-4 mx-auto text-rose-600 mb-1" />
-                                <p className="text-[10px] font-bold uppercase text-rose-800">Off / Missed</p>
-                                <p className="text-xl font-black text-rose-700 mt-0.5">{absentDays}</p>
+                              <div className="bg-[#fff1f2] rounded-xl p-3 border border-[#fecdd3]">
+                                <X className="w-4 h-4 mx-auto text-[#e11d48] mb-1" />
+                                <p className="text-[10px] font-bold uppercase text-[#be123c]">Off / Missed</p>
+                                <p className="text-xl font-black text-[#be123c] mt-0.5">{absentDays}</p>
                               </div>
                             </div>
                           </div>
 
-                          <div className="border border-slate-200/90 bg-slate-50/60 rounded-2xl p-5 shadow-xs">
-                            <h3 className="font-extrabold text-slate-900 flex items-center gap-2 mb-3 text-base">
+                          <div className="border border-[#e2e8f0] bg-[#f8fafc] rounded-2xl p-5 shadow-xs">
+                            <h3 className="font-extrabold text-[#0f172a] flex items-center gap-2 mb-3 text-base">
                               <ShieldCheck className="w-5 h-5 text-indigo-600" /> Compliance Observations & Notes
                             </h3>
-                            <ul className="text-xs text-slate-600 space-y-2 list-none">
+                            <ul className="text-xs text-[#334155] space-y-2 list-none">
                               <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span className="text-[#10b981] font-bold shrink-0">✓</span>
                                 <span><strong>GPS Geofence Validation:</strong> Guard scan locations authenticated within designated perimeter.</span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span className="text-[#10b981] font-bold shrink-0">✓</span>
                                 <span><strong>Anti-Proxy Biometrics:</strong> Facial descriptor matching enabled at all shift changeovers.</span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span className="text-[#10b981] font-bold shrink-0">✓</span>
                                 <span><strong>Patrol Coverage:</strong> Physical check-ins recorded at both gate sentry and residential wings.</span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span className="text-[#10b981] font-bold shrink-0">✓</span>
                                 <span>Official audit document valid for housing society committee management records.</span>
                               </li>
                             </ul>
@@ -977,29 +977,29 @@ export default function ReportsPage() {
                         </div>
 
                         {/* Official Signatures & Verification Stamp */}
-                        <div className="flex flex-wrap justify-between items-end gap-6 pt-6 border-t-2 border-slate-200/80 print-avoid-break">
+                        <div className="flex flex-wrap justify-between items-end gap-6 pt-6 border-t-2 border-[#e2e8f0] print-avoid-break">
                           <div>
-                            <p className="text-xs text-slate-400 font-medium">
+                            <p className="text-xs text-[#94a3b8] font-medium">
                               System Generated on: {new Date().toLocaleString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
-                            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
                               WatchTrack Cloud • Cryptographically Signed Attendance Log
                             </p>
                           </div>
 
                           <div className="flex items-end gap-10">
                             <div className="text-center">
-                              <div className="w-36 border-b-2 border-slate-400 mb-1.5 pb-1 text-slate-600 font-serif italic text-base">
+                              <div className="w-36 border-b-2 border-[#94a3b8] mb-1.5 pb-1 text-[#0f172a] font-serif italic text-base">
                                 {selAgency} Operations
                               </div>
-                              <p className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Agency Supervisor</p>
+                              <p className="text-[10px] uppercase font-extrabold text-[#64748b] tracking-wider">Agency Supervisor</p>
                             </div>
 
                             <div className="text-center">
-                              <div className="w-36 border-b-2 border-slate-400 mb-1.5 pb-1 text-slate-400 text-xs">
+                              <div className="w-36 border-b-2 border-[#94a3b8] mb-1.5 pb-1 text-[#94a3b8] text-xs">
                                 (Sign & Stamp)
                               </div>
-                              <p className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Society Secretary / Chairman</p>
+                              <p className="text-[10px] uppercase font-extrabold text-[#64748b] tracking-wider">Society Secretary / Chairman</p>
                             </div>
                           </div>
                         </div>
