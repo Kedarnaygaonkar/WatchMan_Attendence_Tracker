@@ -33,12 +33,12 @@ export default function AgencyLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-surface-900 overflow-hidden">
+    <div className="flex h-screen bg-surface-900 overflow-hidden print:h-auto print:overflow-visible print:bg-white">
       {/* ── Sidebar ────────────────────────────────────────────── */}
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-20 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-20 lg:hidden print:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -48,7 +48,7 @@ export default function AgencyLayout() {
         bg-surface-900 border-r border-surface-800
         transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        lg:static lg:z-auto
+        lg:static lg:z-auto print:hidden
       `}>
         {/* Logo & Section Header */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-surface-800">
@@ -126,9 +126,9 @@ export default function AgencyLayout() {
       </aside>
 
       {/* ── Main content ────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible">
         {/* Top bar (mobile) */}
-        <header className="flex items-center gap-4 px-4 py-3 border-b border-surface-800 lg:hidden">
+        <header className="flex items-center gap-4 px-4 py-3 border-b border-surface-800 lg:hidden print:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-surface-800"
@@ -145,7 +145,7 @@ export default function AgencyLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:p-0 print:overflow-visible">
           <Outlet />
         </main>
       </div>

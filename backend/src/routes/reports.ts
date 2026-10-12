@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
-import { Watchman, Attendance, Assignment, Society } from '../models';
+import { Watchman, Attendance, Assignment, Society, Agency } from '../models';
 import mongoose from 'mongoose';
 
 const router = Router();
@@ -484,6 +484,10 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
 
   const daysInMonth = new Date(year, month, 0).getDate();
 
+  const managingAgency = targetSociety?.agency_id
+    ? await Agency.findById(targetSociety.agency_id).lean()
+    : null;
+
   // Convert wing/gate maps to array of { name, days: (string | boolean | null)[] }
   const formatCalendar = (map: Record<string, Record<number, string | boolean>>) =>
     Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([name, dayMap]) => ({
@@ -495,6 +499,18 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     success: true,
     year, month,
     daysInMonth,
+    society: targetSociety ? {
+      id: targetSociety._id.toString(),
+      name: targetSociety.name,
+      address: targetSociety.address,
+      agency: managingAgency ? {
+        id: managingAgency._id.toString(),
+        name: managingAgency.name,
+        phone: managingAgency.phone,
+        email: managingAgency.email,
+        logo_url: managingAgency.logo_url,
+      } : null,
+    } : null,
     watchmen: Object.values(watchmenMap).sort((a, b) => a.watchman_name.localeCompare(b.watchman_name)),
     wings: formatCalendar(wingsMap),
     gates: formatCalendar(gatesMap),

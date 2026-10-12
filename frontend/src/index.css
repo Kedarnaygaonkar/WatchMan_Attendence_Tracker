@@ -198,20 +198,27 @@
     margin: 8mm 8mm 8mm 8mm;
   }
 
-  html, body {
+  *, *:before, *:after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body, #root {
     background: #ffffff !important;
     background-color: #ffffff !important;
     color: #0f172a !important;
     margin: 0 !important;
     padding: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
   }
 
   /* Hide app chrome, sidebars, headers, nav, and interactive filter controls when printing */
   nav, aside, header, .no-print, .print\:hidden,
   #sidebar, .sidebar, .section-header, .tabs, .filter-bar,
-  button, select, input, .navbar {
+  .filters-card, button, select, input, .navbar, .table-wrapper {
     display: none !important;
   }
 
@@ -225,6 +232,8 @@
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
+    overflow: visible !important;
+    position: static !important;
   }
 
   /* Prevent awkward page breaks in the middle of sections or cards */
