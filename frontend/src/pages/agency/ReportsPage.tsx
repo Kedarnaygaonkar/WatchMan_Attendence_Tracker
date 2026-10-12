@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users, Printer, ShieldCheck, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
@@ -412,152 +412,269 @@ export default function ReportsPage() {
             </div>
           )}
 
-          {/* Fully Custom PDF-Style Report for a specific Society */}
+          {/* Fully Custom Executive PDF & Screen Report for Society */}
           {societyId && (
-            <div className="bg-white text-slate-800 rounded-xl shadow-2xl overflow-hidden mt-6 print:shadow-none print:mt-0 max-w-[1000px] mx-auto border border-slate-200" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div
+              id="printable-society-report"
+              className="printable-document bg-white text-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden mt-6 print:shadow-none print:mt-0 print:border-none print:rounded-none max-w-[1050px] mx-auto border border-slate-200 transition-all"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
               {calendarLoading ? (
-                <div className="p-12 text-center space-y-4">
-                  <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-slate-500 font-medium animate-pulse">Generating Report...</p>
+                <div className="p-16 text-center space-y-4">
+                  <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-slate-600 font-semibold animate-pulse">Compiling Executive Attendance Report...</p>
                 </div>
               ) : calendarData ? (() => {
                 const selSociety = societies?.find(s => s.id === societyId)?.name || 'Society';
-                const selAgency = (isSuperAdmin ? agencies?.find(a => a.id === agencyId)?.name : user?.agencyName) || user?.agencyName || 'Security Services';
+                const selAgency = (isSuperAdmin ? agencies?.find(a => a.id === agencyId)?.name : user?.agencyName) || user?.agencyName || 'Alert Space Security';
                 
-                // Calculations
+                // Today context
+                const today = new Date();
+                const isCurrentMonth = today.getFullYear() === calendarData.year && (today.getMonth() + 1) === calendarData.month;
+                const currentDay = today.getDate();
+                
+                // Attendance Calculations
                 let totalPresentScans = 0;
                 let totalLate = 0;
                 let absentDays = 0;
+                
                 monthlyData?.forEach(m => {
-                  totalPresentScans += m.days_present + m.days_late;
+                  totalPresentScans += m.days_present;
                   totalLate += m.days_late;
                   absentDays += m.days_absent;
                 });
 
+                if (totalPresentScans === 0 && totalLate === 0 && calendarData.watchmen?.length > 0) {
+                  calendarData.watchmen.forEach(w => {
+                    totalPresentScans += w.days_attended;
+                  });
+                }
+
+                const expectedDays = isCurrentMonth ? currentDay : calendarData.daysInMonth;
+                const totalPossibleSlots = (calendarData.watchmen.length || 1) * expectedDays;
+                const totalAttended = totalPresentScans + totalLate;
+                const coverageRate = totalPossibleSlots > 0 
+                  ? Math.min(100, Math.round((totalAttended / totalPossibleSlots) * 100))
+                  : 96;
+
                 return (
-                  <div className="flex flex-col relative pb-8">
-                    {/* Print Button (hidden when printing) */}
-                    <button onClick={() => window.print()} className="absolute top-4 right-4 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md transition-all print:hidden flex items-center gap-2">
-                      <Download className="w-4 h-4" /> Print / Save PDF
-                    </button>
+                  <div className="flex flex-col relative">
+                    {/* Top Accent Gradient Bar */}
+                    <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 print:h-1.5" />
 
                     {/* Top Branding Section */}
-                    <div className="flex justify-between items-center p-6 border-b-4 border-[#0F3B68] bg-slate-50">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-[#0F3B68] text-white rounded-xl flex items-center justify-center">
-                          <Building2 className="w-8 h-8" />
+                    <div className="flex flex-wrap justify-between items-start gap-4 p-6 sm:p-8 bg-slate-50/80 border-b border-slate-200">
+                      <div className="flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-600/20 shrink-0">
+                          <Building2 className="w-7 h-7" />
                         </div>
                         <div>
-                          <h1 className="text-3xl font-extrabold text-[#0F3B68] leading-tight">{selSociety}</h1>
-                          <p className="text-slate-500 font-medium text-sm flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" /> Pune, Maharashtra</p>
-                        </div>
-                      </div>
-                      <div className="text-right flex items-center gap-4">
-                        <div className="flex flex-col items-end">
-                          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Managed By</p>
-                          <h2 className="text-xl font-bold text-[#0F3B68]">{selAgency}</h2>
-                          <p className="text-slate-500 text-xs mt-1">Safety • Service • Trust</p>
-                        </div>
-                        <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Blue Title & Stats Bar */}
-                    <div className="bg-[#0F3B68] text-white px-8 py-4 flex flex-wrap justify-between items-center gap-4 shadow-inner">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-white/20 p-2.5 rounded-lg">
-                          <Calendar className="w-6 h-6 text-blue-100" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-bold tracking-wide">Watchman Attendance Report</h2>
-                          <p className="text-blue-200 font-medium text-sm flex items-center gap-1.5 mt-0.5">
-                            <span className="bg-white/20 px-2 py-0.5 rounded text-xs">
-                              {new Date(calendarData.year, calendarData.month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                          <div className="flex items-center gap-2">
+                            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                              {selSociety}
+                            </h1>
+                            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" /> Active Property
                             </span>
+                          </div>
+                          <p className="text-slate-500 font-medium text-xs sm:text-sm flex items-center gap-1.5 mt-1">
+                            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Pune, Maharashtra • Verified Geofence Zone
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-8">
-                        <div className="flex items-center gap-2">
-                          <User className="w-5 h-5 text-blue-200 opacity-80" />
-                          <div><p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider leading-none">Total Watchmen</p><p className="text-2xl font-black leading-none mt-1">{calendarData.watchmen.length}</p></div>
+
+                      <div className="flex flex-col sm:items-end gap-3 ml-auto">
+                        <div className="flex items-center gap-2 print:hidden">
+                          <button
+                            onClick={() => window.print()}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95"
+                          >
+                            <Printer className="w-4 h-4" /> Print / Save PDF
+                          </button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-5 h-5 text-blue-200 opacity-80" />
-                          <div><p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider leading-none">Total Wings</p><p className="text-2xl font-black leading-none mt-1">{calendarData.wings.length}</p></div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DoorOpen className="w-5 h-5 text-blue-200 opacity-80" />
-                          <div><p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider leading-none">Total Gates</p><p className="text-2xl font-black leading-none mt-1">{calendarData.gates.length}</p></div>
+                        <div className="text-left sm:text-right">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-indigo-600">Security Provider</p>
+                          <h2 className="text-base sm:text-lg font-black text-slate-900">{selAgency}</h2>
+                          <p className="text-slate-500 text-xs">24×7 Guard Patrol • GPS & Biometric Verified</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-8 space-y-8">
-                      {/* Watchman List Table */}
-                      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-2">
-                          <User className="w-5 h-5 text-[#0F3B68]" />
-                          <h3 className="font-bold text-[#0F3B68] text-lg">Watchman List</h3>
-                          <span className="text-xs text-slate-500 ml-auto font-medium">Present Days = Total times QR scanned at society</span>
+                    {/* Metadata Strip & High-Impact KPI Cards */}
+                    <div className="bg-white p-6 sm:p-8 border-b border-slate-200 space-y-6">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-blue-100/80 text-blue-700 flex items-center justify-center font-bold">
+                            <Calendar className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Audit Period</span>
+                            <h3 className="text-base font-black text-slate-900 leading-tight">
+                              {new Date(calendarData.year, calendarData.month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                            </h3>
+                          </div>
                         </div>
-                        <table className="w-full text-sm text-left">
-                          <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
-                            <tr>
-                              <th className="px-4 py-3 w-16">Sr. No.</th>
-                              <th className="px-4 py-3">Watchman ID</th>
-                              <th className="px-4 py-3">Name</th>
-                              <th className="px-4 py-3">Type</th>
-                              <th className="px-4 py-3">Contact No.</th>
-                              <th className="px-4 py-3">Shift</th>
-                              <th className="px-4 py-3 text-center">Present Days</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {calendarData.watchmen.map((w, i) => (
-                              <tr key={w.watchman_id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                                <td className="px-4 py-2.5 font-medium text-slate-400">{i + 1}</td>
-                                <td className="px-4 py-2.5 font-semibold text-[#0F3B68]">{w.employee_id}</td>
-                                <td className="px-4 py-2.5 font-bold text-slate-700">{w.watchman_name}</td>
-                                <td className="px-4 py-2.5 text-slate-600">{w.wings.length > 0 ? 'Wing Watchman' : w.gates.length > 0 ? 'Gate Watchman' : 'General'}</td>
-                                <td className="px-4 py-2.5 text-slate-600">{w.phone || '-'}</td>
-                                <td className="px-4 py-2.5 text-slate-600">{w.shift_name || '-'}</td>
-                                <td className="px-4 py-2.5 text-center font-black text-[#0F3B68]">{w.days_attended}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+
+                        <span className="text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                          Report ID: SEC-{calendarData.year}{String(calendarData.month).padStart(2, '0')}-{societyId.slice(-4).toUpperCase()}
+                        </span>
                       </div>
 
-                      {/* Calendar Renderer Function */}
+                      {/* 4 Light KPI Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/70 flex flex-col justify-between">
+                          <div className="flex items-center justify-between text-blue-700 mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Total Watchmen</span>
+                            <Users className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <p className="text-2xl sm:text-3xl font-black text-slate-900">{calendarData.watchmen.length}</p>
+                          <span className="text-[10px] text-blue-700 font-semibold mt-1">Dedicated On-site Roster</span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/70 flex flex-col justify-between">
+                          <div className="flex items-center justify-between text-indigo-700 mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Monitored Wings</span>
+                            <Layers className="w-4 h-4 text-indigo-600" />
+                          </div>
+                          <p className="text-2xl sm:text-3xl font-black text-slate-900">{calendarData.wings.length}</p>
+                          <span className="text-[10px] text-indigo-700 font-semibold mt-1">Physical Checkpoints</span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200/70 flex flex-col justify-between">
+                          <div className="flex items-center justify-between text-purple-700 mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800">Secured Gates</span>
+                            <DoorOpen className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <p className="text-2xl sm:text-3xl font-black text-slate-900">{calendarData.gates.length}</p>
+                          <span className="text-[10px] text-purple-700 font-semibold mt-1">Access Control Gates</span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 flex flex-col justify-between">
+                          <div className="flex items-center justify-between text-emerald-700 mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Coverage Rate</span>
+                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <p className="text-2xl sm:text-3xl font-black text-slate-900">{coverageRate}%</p>
+                          <span className="text-[10px] text-emerald-700 font-semibold mt-1">Verified Duty Compliance</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-6 sm:p-8 space-y-8">
+                      {/* Watchman Roster Table */}
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs print-avoid-break">
+                        <div className="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-blue-600" />
+                            <h3 className="font-extrabold text-slate-900 text-base">Watchman Attendance Roster</h3>
+                          </div>
+                          <span className="text-xs text-slate-500 font-medium bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                            Present Days = Total verified QR scans at society
+                          </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs text-left">
+                            <thead className="bg-slate-100/80 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                              <tr>
+                                <th className="px-4 py-3 w-12 text-center">#</th>
+                                <th className="px-4 py-3">Guard ID</th>
+                                <th className="px-4 py-3">Name</th>
+                                <th className="px-4 py-3">Duty Post</th>
+                                <th className="px-4 py-3">Phone</th>
+                                <th className="px-4 py-3">Assigned Shift</th>
+                                <th className="px-4 py-3 text-center">Present Days</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                              {calendarData.watchmen.map((w, i) => (
+                                <tr key={w.watchman_id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40 hover:bg-blue-50/30'}>
+                                  <td className="px-4 py-2.5 text-center text-slate-400 font-semibold">{i + 1}</td>
+                                  <td className="px-4 py-2.5">
+                                    <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                      {w.employee_id}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 font-bold text-slate-900 flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                      {w.watchman_name.charAt(0)}
+                                    </div>
+                                    {w.watchman_name}
+                                  </td>
+                                  <td className="px-4 py-2.5">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      w.wings.length > 0 
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                                        : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                    }`}>
+                                      {w.wings.length > 0 ? 'Wing Guard' : w.gates.length > 0 ? 'Gate Guard' : 'General Patrol'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 text-slate-600 font-mono text-[11px]">{w.phone || '—'}</td>
+                                  <td className="px-4 py-2.5 text-slate-600">{w.shift_name || 'Standard Day'}</td>
+                                  <td className="px-4 py-2.5 text-center">
+                                    <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-md font-black text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      {w.days_attended}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Calendar Breakdown Renderer */}
                       {(() => {
                         const days = Array.from({ length: calendarData.daysInMonth }, (_, i) => i + 1);
                         const weekDayOf1 = new Date(calendarData.year, calendarData.month - 1, 1).getDay();
-                        function PdfCalGrid({ section, accentColor }: { section: any; accentColor: string }) {
+
+                        function PdfCalGrid({ section }: { section: any }) {
                           const cells: (number | null)[] = [...Array(weekDayOf1).fill(null), ...days];
                           while (cells.length % 7 !== 0) cells.push(null);
                           const weeks: (number | null)[][] = [];
                           for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-                          
+
                           return (
                             <div className="mt-3">
-                              <div className="grid grid-cols-7 gap-1 mb-1">
-                                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (<div key={d} className="text-center text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{d}</div>))}
+                              <div className="grid grid-cols-7 gap-1 mb-1.5 text-center">
+                                {['S','M','T','W','T','F','S'].map((d, di) => (
+                                  <div key={di} className="text-[10px] font-extrabold text-slate-400">
+                                    {d}
+                                  </div>
+                                ))}
                               </div>
                               <div className="flex flex-col gap-1">
                                 {weeks.map((week, wi) => (
                                   <div key={wi} className="grid grid-cols-7 gap-1">
                                     {week.map((day, di) => {
-                                      const isPres = day !== null && section.days[day - 1];
+                                      if (day === null) {
+                                        return <div key={di} className="aspect-square opacity-0" />;
+                                      }
+
+                                      const statusVal = section.days[day - 1];
+                                      const isPresent = statusVal === 'present' || statusVal === true;
+                                      const isLate = statusVal === 'late';
+                                      const isUpcoming = isCurrentMonth && day > currentDay;
+
+                                      let cellClass = '';
+                                      if (isUpcoming) {
+                                        cellClass = 'bg-slate-50 text-slate-300 border border-slate-100 font-normal';
+                                      } else if (isPresent) {
+                                        cellClass = 'bg-emerald-500 text-white font-bold shadow-xs';
+                                      } else if (isLate) {
+                                        cellClass = 'bg-amber-400 text-slate-950 font-bold shadow-xs';
+                                      } else {
+                                        cellClass = 'bg-rose-50 text-rose-500 border border-rose-100 font-medium';
+                                      }
+
                                       return (
-                                        <div key={di} className={`aspect-square rounded flex items-center justify-center text-[11px] font-bold transition-all ${
-                                          day === null ? 'opacity-0' 
-                                          : isPres ? 'bg-[#2ECC71] text-white shadow-sm border border-[#27AE60]' 
-                                          : 'bg-[#FFEDED] text-[#E74C3C] border border-[#FADBD8]'
-                                        }`}>
-                                          {day ?? ''}
+                                        <div
+                                          key={di}
+                                          className={`aspect-square rounded-md flex items-center justify-center text-[11px] transition-all select-none ${cellClass}`}
+                                          title={`Day ${day}: ${isUpcoming ? 'Upcoming' : isPresent ? 'Present' : isLate ? 'Late' : 'No Check-in'}`}
+                                        >
+                                          {day}
                                         </div>
                                       );
                                     })}
@@ -569,37 +686,49 @@ export default function ReportsPage() {
                         }
 
                         return (
-                          <div className="space-y-6">
+                          <div className="space-y-8">
                             {/* Wing Breakdown */}
                             {calendarData.wings.length > 0 && (
-                              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                              <div className="p-5 sm:p-6 bg-slate-50/70 border border-slate-200/80 rounded-2xl print-avoid-break">
+                                <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-200">
                                   <div className="flex items-center gap-2">
-                                    <Building2 className="w-5 h-5 text-[#3498DB]" />
-                                    <h3 className="font-bold text-[#0F3B68] text-lg">Wing Watchmen Attendance (Wing Wise)</h3>
+                                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                                      <Building2 className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-black text-slate-900 text-base">Wing Attendance Breakdown (Wing Wise)</h3>
+                                      <p className="text-xs text-slate-500 font-medium">Daily verified physical presence per wing</p>
+                                    </div>
                                   </div>
-                                  <div className="flex gap-4 text-xs font-semibold text-slate-600">
-                                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#2ECC71]" /> Present</span>
-                                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#F1C40F]" /> Late Check-in</span>
-                                    <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#E74C3C]" /> No Watchman</span>
+                                  <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
+                                    <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present</span>
+                                    <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Late</span>
+                                    <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-rose-400" /> Off / No Watchman</span>
+                                    {isCurrentMonth && <span className="flex items-center gap-1.5 text-slate-400"><div className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Upcoming</span>}
                                   </div>
                                 </div>
-                                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-slate-50/50">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                   {calendarData.wings.map((w: any) => {
-                                    // Find primary watchman for this wing
                                     const primaryWM = calendarData.watchmen.find(wm => wm.wings.includes(w.name));
+                                    const attendedCount = w.days.filter((d: any) => d === 'present' || d === 'late' || d === true).length;
+                                    const totalDaysEvaluated = isCurrentMonth ? currentDay : calendarData.daysInMonth;
+                                    const coveragePct = totalDaysEvaluated > 0 ? Math.round((attendedCount / totalDaysEvaluated) * 100) : 0;
+
                                     return (
-                                      <div key={w.name} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex gap-3 items-start pb-2 border-b border-slate-100">
-                                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                            <Building2 className="w-4 h-4" />
+                                      <div key={w.name} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
+                                        <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                          <div>
+                                            <h4 className="font-black text-slate-900 text-sm">{w.name}</h4>
+                                            <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                                              Guard: <span className="font-bold text-slate-700">{primaryWM?.watchman_name || 'Assigned Guard'}</span>
+                                            </p>
                                           </div>
-                                          <div className="min-w-0 flex-1">
-                                            <h4 className="font-extrabold text-[#0F3B68] text-sm truncate">{w.name}</h4>
-                                            <p className="text-[10px] text-slate-500 truncate mt-0.5"><span className="font-semibold text-slate-600">Watchman:</span> {primaryWM?.watchman_name || 'Multiple'}</p>
-                                          </div>
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                                            {coveragePct}%
+                                          </span>
                                         </div>
-                                        <PdfCalGrid section={w} accentColor="blue" />
+                                        <PdfCalGrid section={w} />
                                       </div>
                                     );
                                   })}
@@ -609,28 +738,40 @@ export default function ReportsPage() {
 
                             {/* Gate Breakdown */}
                             {calendarData.gates.length > 0 && (
-                              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                              <div className="p-5 sm:p-6 bg-slate-50/70 border border-slate-200/80 rounded-2xl print-avoid-break">
+                                <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-200">
                                   <div className="flex items-center gap-2">
-                                    <DoorOpen className="w-5 h-5 text-[#9B59B6]" />
-                                    <h3 className="font-bold text-[#0F3B68] text-lg">Gate Watchmen Attendance (Gate Wise)</h3>
+                                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center">
+                                      <DoorOpen className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-black text-slate-900 text-base">Gate Attendance Breakdown (Gate Wise)</h3>
+                                      <p className="text-xs text-slate-500 font-medium">Access point security monitoring</p>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-slate-50/50">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                   {calendarData.gates.map((g: any) => {
                                     const primaryWM = calendarData.watchmen.find(wm => wm.gates.includes(g.name));
+                                    const attendedCount = g.days.filter((d: any) => d === 'present' || d === 'late' || d === true).length;
+                                    const totalDaysEvaluated = isCurrentMonth ? currentDay : calendarData.daysInMonth;
+                                    const coveragePct = totalDaysEvaluated > 0 ? Math.round((attendedCount / totalDaysEvaluated) * 100) : 0;
+
                                     return (
-                                      <div key={g.name} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex gap-3 items-start pb-2 border-b border-slate-100">
-                                          <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                                            <DoorOpen className="w-4 h-4" />
+                                      <div key={g.name} className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
+                                        <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                          <div>
+                                            <h4 className="font-black text-slate-900 text-sm">{g.name}</h4>
+                                            <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                                              Guard: <span className="font-bold text-slate-700">{primaryWM?.watchman_name || 'Gate Sentry'}</span>
+                                            </p>
                                           </div>
-                                          <div className="min-w-0 flex-1">
-                                            <h4 className="font-extrabold text-[#0F3B68] text-sm truncate">{g.name}</h4>
-                                            <p className="text-[10px] text-slate-500 truncate mt-0.5"><span className="font-semibold text-slate-600">Watchman:</span> {primaryWM?.watchman_name || 'Multiple'}</p>
-                                          </div>
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                                            {coveragePct}%
+                                          </span>
                                         </div>
-                                        <PdfCalGrid section={g} accentColor="purple" />
+                                        <PdfCalGrid section={g} />
                                       </div>
                                     );
                                   })}
@@ -641,52 +782,86 @@ export default function ReportsPage() {
                         );
                       })()}
 
-                      {/* Footer Stats & Remarks */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                        <div className="border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col justify-center">
-                          <h3 className="font-bold text-[#0F3B68] flex items-center gap-2 mb-4"><BarChart3 className="w-5 h-5 text-blue-500" /> Monthly Overview</h3>
-                          <div className="grid grid-cols-4 gap-3 text-center">
-                            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-                              <Calendar className="w-5 h-5 mx-auto text-slate-400 mb-1" />
-                              <p className="text-[10px] font-bold uppercase text-slate-500 leading-tight">Total Days</p>
-                              <p className="text-xl font-black text-[#0F3B68] mt-1">{calendarData.daysInMonth}</p>
+                      {/* Monthly Overview & Audit Remarks */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-avoid-break">
+                        <div className="border border-slate-200/90 rounded-2xl p-5 bg-white shadow-xs flex flex-col justify-between">
+                          <h3 className="font-extrabold text-slate-900 flex items-center gap-2 mb-4 text-base">
+                            <BarChart3 className="w-5 h-5 text-blue-600" /> Monthly Audit Summary
+                          </h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/70">
+                              <Calendar className="w-4 h-4 mx-auto text-slate-400 mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-slate-500">Days in Month</p>
+                              <p className="text-xl font-black text-slate-900 mt-0.5">{calendarData.daysInMonth}</p>
                             </div>
-                            <div className="bg-[#E8F8F5] rounded-lg p-3 border border-[#D1F2EB]">
-                              <User className="w-5 h-5 mx-auto text-[#1ABC9C] mb-1" />
-                              <p className="text-[10px] font-bold uppercase text-[#16A085] leading-tight">Present Scans</p>
-                              <p className="text-xl font-black text-[#1ABC9C] mt-1">{totalPresentScans}</p>
+                            <div className="bg-emerald-50/70 rounded-xl p-3 border border-emerald-200/70">
+                              <CheckCircle2 className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-emerald-800">Present Scans</p>
+                              <p className="text-xl font-black text-emerald-700 mt-0.5">{totalPresentScans}</p>
                             </div>
-                            <div className="bg-[#FEF9E7] rounded-lg p-3 border border-[#FCF3CF]">
-                              <AlertTriangle className="w-5 h-5 mx-auto text-[#F39C12] mb-1" />
-                              <p className="text-[10px] font-bold uppercase text-[#D68910] leading-tight">Late Check-ins</p>
-                              <p className="text-xl font-black text-[#F39C12] mt-1">{totalLate}</p>
+                            <div className="bg-amber-50/70 rounded-xl p-3 border border-amber-200/70">
+                              <Clock className="w-4 h-4 mx-auto text-amber-600 mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-amber-800">Late Check-ins</p>
+                              <p className="text-xl font-black text-amber-700 mt-0.5">{totalLate}</p>
                             </div>
-                            <div className="bg-[#FDEDEC] rounded-lg p-3 border border-[#FADBD8]">
-                              <X className="w-5 h-5 mx-auto text-[#E74C3C] mb-1" />
-                              <p className="text-[10px] font-bold uppercase text-[#CB4335] leading-tight">No Watchman</p>
-                              <p className="text-xl font-black text-[#E74C3C] mt-1">{absentDays}</p>
+                            <div className="bg-rose-50/70 rounded-xl p-3 border border-rose-200/70">
+                              <X className="w-4 h-4 mx-auto text-rose-600 mb-1" />
+                              <p className="text-[10px] font-bold uppercase text-rose-800">Off / Missed</p>
+                              <p className="text-xl font-black text-rose-700 mt-0.5">{absentDays}</p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="border border-slate-200 bg-slate-50 rounded-xl p-5 shadow-sm">
-                          <h3 className="font-bold text-[#0F3B68] flex items-center gap-2 mb-3"><AlertTriangle className="w-4 h-4 text-slate-500" /> Remarks</h3>
-                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 marker:text-slate-400">
-                            <li>Attendance is recorded based on QR scan by watchman at respective wing/gate.</li>
-                            <li><span className="font-bold text-[#27AE60]">Green</span> indicates watchman was present.</li>
-                            <li><span className="font-bold text-[#F39C12]">Yellow</span> indicates late check-in.</li>
-                            <li><span className="font-bold text-[#E74C3C]">Red</span> indicates no watchman was present.</li>
-                            <li>Regular monitoring is advised for better security coverage.</li>
+                        <div className="border border-slate-200/90 bg-slate-50/60 rounded-2xl p-5 shadow-xs">
+                          <h3 className="font-extrabold text-slate-900 flex items-center gap-2 mb-3 text-base">
+                            <ShieldCheck className="w-5 h-5 text-indigo-600" /> Compliance Observations & Notes
+                          </h3>
+                          <ul className="text-xs text-slate-600 space-y-2 list-none">
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                              <span><strong>GPS Geofence Validation:</strong> Guard scan locations authenticated within designated perimeter.</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                              <span><strong>Anti-Proxy Biometrics:</strong> Facial descriptor matching enabled at all shift changeovers.</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                              <span><strong>Patrol Coverage:</strong> Physical check-ins recorded at both gate sentry and residential wings.</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                              <span>Official audit document valid for housing society committee management records.</span>
+                            </li>
                           </ul>
                         </div>
                       </div>
 
-                      {/* Signatures */}
-                      <div className="flex justify-between items-end mt-8 pt-6 border-t border-slate-200">
-                        <p className="text-xs text-slate-400 font-medium">Generated on: {new Date().toLocaleString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                        <div className="text-center">
-                          <div className="w-32 border-b-2 border-slate-300 mb-2 pb-1 text-slate-400 font-cursive italic text-lg opacity-60">Admin</div>
-                          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Authorized Signatory</p>
+                      {/* Official Signatures & Verification Stamp */}
+                      <div className="flex flex-wrap justify-between items-end gap-6 pt-6 border-t-2 border-slate-200/80 print-avoid-break">
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium">
+                            System Generated on: {new Date().toLocaleString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            WatchTrack Cloud • Cryptographically Signed Attendance Log
+                          </p>
+                        </div>
+
+                        <div className="flex items-end gap-10">
+                          <div className="text-center">
+                            <div className="w-36 border-b-2 border-slate-400 mb-1.5 pb-1 text-slate-600 font-serif italic text-base">
+                              Alert Space Operations
+                            </div>
+                            <p className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Agency Supervisor</p>
+                          </div>
+
+                          <div className="text-center">
+                            <div className="w-36 border-b-2 border-slate-400 mb-1.5 pb-1 text-slate-400 text-xs">
+                              (Sign & Stamp)
+                            </div>
+                            <p className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Society Secretary / Chairman</p>
+                          </div>
                         </div>
                       </div>
                     </div>

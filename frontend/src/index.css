@@ -190,3 +190,47 @@
 .leaflet-control-attribution {
   @apply bg-surface-800/80 text-slate-500 !important;
 }
+
+/* ── Print & Executive Report Styles ─────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 8mm 8mm 8mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app chrome, sidebars, headers, nav, and interactive filter controls when printing */
+  nav, aside, header, .no-print, .print\:hidden,
+  #sidebar, .sidebar, .section-header, .tabs, .filter-bar,
+  button, select, input, .navbar {
+    display: none !important;
+  }
+
+  /* Isolate and expand printable report to clean A4 sheet */
+  #printable-society-report {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  /* Prevent awkward page breaks in the middle of sections or cards */
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+

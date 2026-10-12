@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
-import { Watchman, Attendance, Assignment } from '../models';
+import { Watchman, Attendance, Assignment, Society } from '../models';
 import mongoose from 'mongoose';
 
 const router = Router();
@@ -438,10 +438,22 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     { $sort: { day: 1 } },
   ]);
 
+  // Fetch society definition to ensure all configured wings & gates are represented
+  const targetSociety = await Society.findById(societyId).lean();
+
   // Build watchmen summary
   const watchmenMap: Record<string, { watchman_id: string; watchman_name: string; employee_id: string; phone: string; shift_name: string; days_attended: number; wings: string[]; gates: string[] }> = {};
-  const wingsMap: Record<string, Record<number, boolean>> = {};
-  const gatesMap: Record<string, Record<number, boolean>> = {};
+  const wingsMap: Record<string, Record<number, string | boolean>> = {};
+  const gatesMap: Record<string, Record<number, string | boolean>> = {};
+
+  if (targetSociety) {
+    for (const w of targetSociety.wings || []) {
+      if (!wingsMap[w]) wingsMap[w] = {};
+    }
+    for (const g of targetSociety.gates || []) {
+      if (!gatesMap[g]) gatesMap[g] = {};
+    }
+  }
 
   for (const r of records) {
     const wid = r.watchman_id?.toString() || 'unknown';
@@ -451,11 +463,13 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     }
     watchmenMap[wid].days_attended++;
 
+    const statusVal = r.status === 'late' ? 'late' : 'present';
+
     // Wing breakdown
     if (r.selected_wing) {
       const w = r.selected_wing.trim();
       if (!wingsMap[w]) wingsMap[w] = {};
-      wingsMap[w][r.day] = true;
+      wingsMap[w][r.day] = statusVal;
       if (!watchmenMap[wid].wings.includes(w)) watchmenMap[wid].wings.push(w);
     }
 
@@ -463,18 +477,18 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     if (r.selected_gate) {
       const g = r.selected_gate.trim();
       if (!gatesMap[g]) gatesMap[g] = {};
-      gatesMap[g][r.day] = true;
+      gatesMap[g][r.day] = statusVal;
       if (!watchmenMap[wid].gates.includes(g)) watchmenMap[wid].gates.push(g);
     }
   }
 
   const daysInMonth = new Date(year, month, 0).getDate();
 
-  // Convert wing/gate maps to array of { name, days: boolean[] }
-  const formatCalendar = (map: Record<string, Record<number, boolean>>) =>
+  // Convert wing/gate maps to array of { name, days: (string | boolean | null)[] }
+  const formatCalendar = (map: Record<string, Record<number, string | boolean>>) =>
     Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([name, dayMap]) => ({
       name,
-      days: Array.from({ length: daysInMonth }, (_, i) => !!dayMap[i + 1]),
+      days: Array.from({ length: daysInMonth }, (_, i) => dayMap[i + 1] || null),
     }));
 
   res.json({
