@@ -29,7 +29,7 @@ function getAgencyId(req: Request): string | null {
 }
 
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
-  let agencyId = req.user!.agencyId;
+  let agencyId: string | null | undefined = req.user!.agencyId;
   if (req.user!.role === 'super_admin') {
     agencyId = req.query.agency_id ? (req.query.agency_id as string) : null;
   }

@@ -36,11 +36,11 @@ router.get(
   })
 );
 
-// POST /api/gates — create gate
+// POST /api/gates — create gate (Super Admin only — generates QR code)
 router.post(
   '/',
+  requireRole(['super_admin']),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user } = req as any;
     const parse = gateSchema.safeParse(req.body);
     if (!parse.success) {
       throw new AppError(parse.error.flatten().fieldErrors as any, 400);
@@ -51,11 +51,6 @@ router.post(
     // Verify society exists
     const society = await Society.findById(society_id).lean();
     if (!society) throw new AppError('Society not found', 404);
-
-    // Agency admin can only add gates to their own societies
-    if (user.role !== 'super_admin' && String(society.agency_id) !== String(user.agencyId)) {
-      throw new AppError('Forbidden', 403);
-    }
 
     const gate = await Gate.create({
       agency_id: society.agency_id,
@@ -72,16 +67,13 @@ router.post(
 // PUT /api/gates/:id — update gate name
 router.put(
   '/:id',
+  requireRole(['super_admin']),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user } = req as any;
     const { name } = req.body;
     if (!name) throw new AppError('Name is required', 400);
 
     const gate = await Gate.findById(req.params.id);
     if (!gate) throw new AppError('Gate not found', 404);
-    if (user.role !== 'super_admin' && String(gate.agency_id) !== String(user.agency_id)) {
-      throw new AppError('Forbidden', 403);
-    }
 
     gate.name = name;
     await gate.save();
@@ -92,13 +84,10 @@ router.put(
 // DELETE /api/gates/:id — deactivate gate
 router.delete(
   '/:id',
+  requireRole(['super_admin']),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user } = req as any;
     const gate = await Gate.findById(req.params.id);
     if (!gate) throw new AppError('Gate not found', 404);
-    if (user.role !== 'super_admin' && String(gate.agency_id) !== String(user.agency_id)) {
-      throw new AppError('Forbidden', 403);
-    }
 
     gate.is_active = false;
     await gate.save();
@@ -106,16 +95,13 @@ router.delete(
   })
 );
 
-// POST /api/gates/:id/regenerate — generate a new QR token
+// POST /api/gates/:id/regenerate — generate a new QR token (Super Admin only)
 router.post(
   '/:id/regenerate',
+  requireRole(['super_admin']),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user } = req as any;
     const gate = await Gate.findById(req.params.id);
     if (!gate) throw new AppError('Gate not found', 404);
-    if (user.role !== 'super_admin' && String(gate.agency_id) !== String(user.agency_id)) {
-      throw new AppError('Forbidden', 403);
-    }
 
     gate.qr_token = uuidv4();
     await gate.save();

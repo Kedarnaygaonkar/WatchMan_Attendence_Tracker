@@ -151,16 +151,20 @@ export default function DeliveryPage() {
             <Bike className="w-6 h-6 text-orange-400" />
             Delivery Tracking
           </h1>
-          <p className="section-subtitle">Track delivery boy visits and generate QR codes for your gates</p>
+          <p className="section-subtitle">
+            {isSuperAdmin ? 'Track delivery boy visits and generate QR codes for your gates' : 'Track delivery visits across your agency societies'}
+          </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => openQrModal(gates[0])}
-            disabled={!gates.length}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <QrCode className="w-4 h-4" /> QR Codes
-          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => openQrModal(gates[0])}
+              disabled={!gates.length}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <QrCode className="w-4 h-4" /> QR Codes
+            </button>
+          )}
           <button onClick={exportCSV} disabled={!filtered.length} className="btn-primary flex items-center gap-2">
             <Download className="w-4 h-4" /> Export CSV
           </button>

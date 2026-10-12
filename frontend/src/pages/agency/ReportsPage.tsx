@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
-type ReportTab = 'daily' | 'monthly' | 'suspicious' | 'journey' | 'society_calendar';
+type ReportTab = 'daily' | 'monthly' | 'watchmen' | 'suspicious' | 'journey' | 'society_calendar';
 
 interface Society { id: string; name: string; }
 interface Agency { id: string; name: string; }
@@ -196,6 +196,32 @@ export default function ReportsPage() {
     downloadCSV([headers, ...rows], `suspicious-records.csv`);
   }
 
+  const { data: watchmenReportList = [], isLoading: watchmenReportLoading } = useQuery({
+    queryKey: ['report-watchmen-list', agencyId],
+    queryFn: async () => {
+      const params: any = {};
+      if (isSuperAdmin && agencyId) params.agency_id = agencyId;
+      const { data } = await api.get('/watchmen', { params });
+      return (data.data || data) as any[];
+    },
+    enabled: tab === 'watchmen',
+  });
+
+  function exportWatchmenReportCSV() {
+    if (!watchmenReportList?.length) { toast.error('No watchmen data to export'); return; }
+    const headers = ['Guard Name', 'Employee ID', 'Mobile Number', 'Status', 'Joining Date', 'Active Assignments', 'Address'];
+    const rows = watchmenReportList.map((w: any) => [
+      w.full_name,
+      w.employee_id,
+      w.phone,
+      w.status?.toUpperCase() || 'ACTIVE',
+      w.joining_date ? new Date(w.joining_date).toLocaleDateString('en-IN') : '',
+      w.active_assignments ?? 0,
+      w.address || '',
+    ]);
+    downloadCSV([headers, ...rows], `watchmen-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+
   function exportJourneyCSV() {
     if (!journeyData?.records?.length) { toast.error('No journey data to export'); return; }
     const wm = journeyData.watchman;
@@ -209,7 +235,8 @@ export default function ReportsPage() {
 
   const tabs: { id: ReportTab; label: string; icon: React.ElementType }[] = [
     { id: 'daily', label: 'Daily Attendance', icon: Calendar },
-    { id: 'monthly', label: 'Monthly Summary & Calendar', icon: BarChart3 },
+    { id: 'monthly', label: 'Monthly & Society Reports', icon: BarChart3 },
+    { id: 'watchmen', label: 'Watchmen Report', icon: Users },
     { id: 'journey', label: 'Watchman Journey', icon: Route },
     { id: 'suspicious', label: 'Suspicious Records', icon: AlertTriangle },
   ];
@@ -219,7 +246,7 @@ export default function ReportsPage() {
       <div className="section-header">
         <div>
           <h1 className="section-title">Reports</h1>
-          <p className="text-slate-500 text-sm">Attendance analytics and CSV exports</p>
+          <p className="text-slate-500 text-sm">Attendance analytics, society summaries and watchmen roster exports</p>
         </div>
       </div>
 
@@ -262,11 +289,13 @@ export default function ReportsPage() {
                 {agencies?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             )}
-            <select value={societyId} onChange={(e) => setSocietyId(e.target.value)} className="input w-52">
-              <option value="">All Societies</option>
-              {societies?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            {(societyId || agencyId) && (
+            {tab !== 'watchmen' && (
+              <select value={societyId} onChange={(e) => setSocietyId(e.target.value)} className="input w-52">
+                <option value="">All Societies</option>
+                {societies?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            )}
+            {((tab !== 'watchmen' && societyId) || agencyId) && (
               <button onClick={() => { setSocietyId(''); setAgencyId(''); }}
                 className="flex items-center gap-1.5 text-xs text-danger-400 hover:text-danger-300 px-3 py-1.5 rounded-lg hover:bg-danger-500/10 transition-colors border border-danger-500/20">
                 <X className="w-3.5 h-3.5" /> Clear Filters
@@ -285,6 +314,7 @@ export default function ReportsPage() {
                   <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>
                 </>
               )}
+              {tab === 'watchmen' && <button onClick={exportWatchmenReportCSV} disabled={!watchmenReportList?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export Watchmen Report</button>}
               {tab === 'suspicious' && <button onClick={exportSuspiciousCSV} disabled={!suspiciousData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
             </div>
           </div>
@@ -392,7 +422,7 @@ export default function ReportsPage() {
                 </div>
               ) : calendarData ? (() => {
                 const selSociety = societies?.find(s => s.id === societyId)?.name || 'Society';
-                const selAgency = agencies?.find(a => a.id === agencyId)?.name || 'Security Services';
+                const selAgency = (isSuperAdmin ? agencies?.find(a => a.id === agencyId)?.name : user?.agencyName) || user?.agencyName || 'Security Services';
                 
                 // Calculations
                 let totalPresentScans = 0;
@@ -829,6 +859,65 @@ export default function ReportsPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Watchmen Roster Report */}
+      {tab === 'watchmen' && (
+        <div className="space-y-4">
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Guard Name</th>
+                  <th>Employee ID</th>
+                  <th>Mobile Number</th>
+                  <th>Status</th>
+                  <th>Joining Date</th>
+                  <th>Active Assignments</th>
+                  <th>Address</th>
+                </tr>
+              </thead>
+              <tbody>
+                {watchmenReportLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}><td colSpan={7}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                  ))
+                ) : watchmenReportList?.map((w: any) => (
+                  <tr key={w.id || w._id}>
+                    <td>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-xs">
+                          {w.full_name?.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-slate-100">{w.full_name}</span>
+                      </div>
+                    </td>
+                    <td className="text-slate-300 font-mono text-xs">{w.employee_id}</td>
+                    <td className="text-slate-300 text-sm">{w.phone}</td>
+                    <td>
+                      <span className={`badge text-xs ${
+                        w.status === 'active' ? 'badge-present' : w.status === 'suspended' ? 'badge-late' : 'badge-absent'
+                      }`}>
+                        {w.status?.toUpperCase() || 'ACTIVE'}
+                      </span>
+                    </td>
+                    <td className="text-slate-400 text-sm">
+                      {w.joining_date ? new Date(w.joining_date).toLocaleDateString('en-IN') : '—'}
+                    </td>
+                    <td className="text-slate-300 font-semibold">{w.active_assignments ?? 0}</td>
+                    <td className="text-slate-400 text-xs max-w-xs truncate">{w.address || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!watchmenReportLoading && (!watchmenReportList || watchmenReportList.length === 0) && (
+              <div className="text-center py-12 text-slate-600">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">No watchmen records found</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

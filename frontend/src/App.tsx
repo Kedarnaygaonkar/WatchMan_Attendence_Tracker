@@ -47,6 +47,9 @@ function ProtectedRoute({
   }
 
   if (!allowedRoles.includes(user.role)) {
+    if (user.role === 'agency_admin') {
+      return <Navigate to="/admin" replace />;
+    }
     return <Navigate to="/agency" replace />;
   }
 
@@ -57,6 +60,7 @@ function ProtectedRoute({
 function RoleRedirect() {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'agency_admin') return <Navigate to="/admin" replace />;
   return <Navigate to="/agency" replace />;
 }
 
@@ -68,17 +72,42 @@ export default function App() {
           {/* Root redirect */}
           <Route path="/" element={<RoleRedirect />} />
 
-          {/* Login */}
+          {/* Login routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin/login" element={<LoginPage defaultPortal="admin" />} />
+          <Route path="/super-admin/login" element={<LoginPage defaultPortal="super_admin" />} />
 
           {/* PUBLIC QR Scan page — no auth required */}
           <Route path="/scan/:token" element={<ScanPage />} />
 
-          {/* Super Admin / Agency Admin dashboard */}
+          {/* ── AGENCY ADMIN PORTAL (/admin) ─────────────────────────────────── */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['agency_admin']}>
+                <AgencyLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AgencyDashboard />} />
+            <Route path="societies" element={<SocietiesPage />} />
+            <Route path="watchmen" element={<WatchmenPage />} />
+            <Route path="shifts" element={<ShiftsPage />} />
+            <Route path="assignments" element={<AssignmentsPage />} />
+            <Route path="attendance" element={<AttendancePage />} />
+            <Route path="replacements" element={<ReplacementsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="delivery" element={<DeliveryPage />} />
+            {/* Block Agency Admin from gates / QR code generation or agencies list */}
+            <Route path="gates" element={<Navigate to="/admin" replace />} />
+            <Route path="agencies" element={<Navigate to="/admin" replace />} />
+          </Route>
+
+          {/* ── SUPER ADMIN PORTAL (/agency & /super-admin) ──────────────────── */}
           <Route
             path="/agency"
             element={
-              <ProtectedRoute allowedRoles={['agency_admin', 'super_admin']}>
+              <ProtectedRoute allowedRoles={['super_admin']}>
                 <AgencyLayout />
               </ProtectedRoute>
             }
@@ -95,6 +124,10 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="delivery" element={<DeliveryPage />} />
           </Route>
+
+          {/* Alias for super-admin */}
+          <Route path="/super-admin" element={<Navigate to="/agency" replace />} />
+          <Route path="/super-admin/*" element={<Navigate to="/agency" replace />} />
 
           {/* 404 */}
           <Route path="*" element={<Navigate to="/" replace />} />

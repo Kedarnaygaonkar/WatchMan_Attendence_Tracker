@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Users, Building2, CheckCircle2, AlertCircle, Clock,
-  ShieldAlert, RefreshCw, TrendingUp, MapPin
+  ShieldAlert, RefreshCw, TrendingUp, MapPin, Shield
 } from 'lucide-react';
 import api from '../../api/client';
+import { useAuthStore } from '../../stores/authStore';
 
 interface DashboardSummary {
   date: string;
@@ -84,49 +86,105 @@ function getVerificationBadge(status: string) {
 }
 
 export default function AgencyDashboard() {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const [agencyFilter, setAgencyFilter] = useState('');
 
-  const { data: summaryData, isLoading: summaryLoading, refetch } = useQuery({
-    queryKey: ['dashboard-summary'],
+  const { data: agencies } = useQuery({
+    queryKey: ['agencies-dashboard'],
     queryFn: async () => {
-      const { data } = await api.get('/dashboard/summary');
+      const { data } = await api.get('/agencies');
+      return data.data;
+    },
+    enabled: isSuperAdmin,
+  });
+
+  const { data: summaryData, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
+    queryKey: ['dashboard-summary', agencyFilter],
+    queryFn: async () => {
+      const params: any = {};
+      if (isSuperAdmin && agencyFilter) params.agency_id = agencyFilter;
+      const { data } = await api.get('/dashboard/summary', { params });
       return data.data as DashboardSummary;
     },
     refetchInterval: 60 * 1000,
   });
 
-  const { data: liveData } = useQuery({
-    queryKey: ['live-attendance'],
+  const { data: liveData, refetch: refetchLive } = useQuery({
+    queryKey: ['live-attendance', agencyFilter],
     queryFn: async () => {
-      const { data } = await api.get('/dashboard/live-attendance');
+      const params: any = {};
+      if (isSuperAdmin && agencyFilter) params.agency_id = agencyFilter;
+      const { data } = await api.get('/dashboard/live-attendance', { params });
       return data.data as LiveAttendance[];
     },
     refetchInterval: 30 * 1000,
   });
 
-  const { data: missingData } = useQuery({
-    queryKey: ['missing-attendance'],
+  const { data: missingData, refetch: refetchMissing } = useQuery({
+    queryKey: ['missing-attendance', agencyFilter],
     queryFn: async () => {
-      const { data } = await api.get('/dashboard/missing-attendance');
+      const params: any = {};
+      if (isSuperAdmin && agencyFilter) params.agency_id = agencyFilter;
+      const { data } = await api.get('/dashboard/missing-attendance', { params });
       return data.data as MissingAttendance[];
     },
     refetchInterval: 60 * 1000,
   });
+
+  function handleRefreshAll() {
+    refetchSummary();
+    refetchLive();
+    refetchMissing();
+  }
 
   const summary = summaryData;
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="section-header">
+      <div className="section-header flex-wrap gap-4">
         <div>
-          <h1 className="section-title">Agency Dashboard</h1>
-          <p className="text-slate-500 text-sm">
+          <div className="flex items-center gap-2">
+            <h1 className="section-title">
+              {isSuperAdmin
+                ? 'Super Admin Dashboard'
+                : `${user?.agencyName || 'Agency'} Dashboard`}
+            </h1>
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+              isSuperAdmin
+                ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                : 'bg-brand-500/10 text-brand-300 border-brand-500/30'
+            }`}>
+              {isSuperAdmin ? 'Master Oversight' : 'Agency Admin'}
+            </span>
+          </div>
+          <p className="text-slate-500 text-sm mt-0.5">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {isSuperAdmin
+              ? ' • Platform-wide security agencies overview'
+              : ` • Live attendance & operations for ${user?.agencyName || 'your agency'}`}
           </p>
         </div>
-        <button onClick={() => refetch()} className="btn-ghost p-2 rounded-xl">
-          <RefreshCw className="w-4 h-4" />
-        </button>
+
+        <div className="flex items-center gap-2 ml-auto">
+          {isSuperAdmin && (
+            <select
+              value={agencyFilter}
+              onChange={(e) => setAgencyFilter(e.target.value)}
+              className="input text-xs py-2 h-9 w-48"
+            >
+              <option value="">All Agencies</option>
+              {agencies?.map((a: any) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          )}
+
+          <button onClick={handleRefreshAll} title="Refresh data" className="btn-ghost p-2 rounded-xl">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}

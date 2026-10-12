@@ -6,23 +6,26 @@ import {
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 
-const navItems = [
-  { to: '/agency', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/agency/agencies', label: 'Agencies', icon: Building2, roles: ['super_admin'] },
-  { to: '/agency/societies', label: 'Societies', icon: Building2 },
-  { to: '/agency/watchmen', label: 'Watchmen', icon: Users },
-  { to: '/agency/shifts', label: 'Shifts', icon: Clock },
-  { to: '/agency/gates', label: 'QR Codes', icon: QrCode },
-  { to: '/agency/attendance', label: 'Attendance', icon: ClipboardList },
-  { to: '/agency/replacements', label: 'Replacements', icon: ArrowLeftRight },
-  { to: '/agency/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/agency/delivery', label: 'Delivery Tracking', icon: Bike },
-];
-
 export default function AgencyLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isSuperAdmin = user?.role === 'super_admin';
+  const basePath = isSuperAdmin ? '/agency' : '/admin';
+
+  const navItems = [
+    { to: basePath, label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: `${basePath}/agencies`, label: 'Agencies', icon: Building2, roles: ['super_admin'] },
+    { to: `${basePath}/societies`, label: 'Societies', icon: Building2 },
+    { to: `${basePath}/watchmen`, label: 'Watchmen', icon: Users },
+    { to: `${basePath}/shifts`, label: 'Shifts', icon: Clock },
+    { to: `${basePath}/gates`, label: 'QR Codes', icon: QrCode, roles: ['super_admin'] },
+    { to: `${basePath}/attendance`, label: 'Attendance', icon: ClipboardList },
+    { to: `${basePath}/replacements`, label: 'Replacements', icon: ArrowLeftRight },
+    { to: `${basePath}/reports`, label: 'Reports', icon: BarChart3 },
+    { to: `${basePath}/delivery`, label: 'Delivery Tracking', icon: Bike },
+  ];
 
   function handleLogout() {
     logout();
@@ -47,14 +50,31 @@ export default function AgencyLayout() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         lg:static lg:z-auto
       `}>
-        {/* Logo */}
+        {/* Logo & Section Header */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-surface-800">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-glow shrink-0">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-glow shrink-0 ${
+            isSuperAdmin
+              ? 'bg-gradient-to-br from-purple-500 to-indigo-700'
+              : 'bg-gradient-to-br from-brand-500 to-brand-700'
+          }`}>
             <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
           </div>
-          <div>
-            <p className="font-bold text-sm text-slate-100">WatchTrack</p>
-            <p className="text-xs text-slate-500 truncate max-w-[140px]">{user?.agencyName}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="font-bold text-sm text-slate-100 truncate">WatchTrack</p>
+              {isSuperAdmin ? (
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                  Super
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 shrink-0">
+                  Admin
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 truncate max-w-[140px]">
+              {isSuperAdmin ? 'Master Oversight' : (user?.agencyName || 'Agency Portal')}
+            </p>
           </div>
         </div>
 
@@ -82,14 +102,20 @@ export default function AgencyLayout() {
         {/* User info + logout */}
         <div className="p-3 border-t border-surface-800">
           <div className="flex items-center gap-3 px-3 py-2 mb-1">
-            <div className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
-              <span className="text-sm font-bold text-brand-400">
+            <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${
+              isSuperAdmin
+                ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                : 'bg-brand-500/20 border-brand-500/30 text-brand-400'
+            }`}>
+              <span className="text-sm font-bold">
                 {user?.name?.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-200 truncate">{user?.name}</p>
-              <p className="text-xs text-slate-500 capitalize">{user?.role?.replace('_', ' ')}</p>
+              <p className="text-xs text-slate-400 truncate">
+                {isSuperAdmin ? 'Super Admin' : (user?.agencyName || 'Agency Admin')}
+              </p>
             </div>
           </div>
           <button onClick={handleLogout} className="nav-item w-full text-danger-400 hover:text-danger-300 hover:bg-danger-500/10">

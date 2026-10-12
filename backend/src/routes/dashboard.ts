@@ -1,4 +1,5 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { Attendance, Society, Assignment, Watchman } from '../models';
@@ -7,12 +8,11 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole(['agency_admin', 'super_admin']));
 
-function getAgencyId(req: Request): string {
+function getAgencyId(req: Request): string | null {
   if (req.user!.role === 'super_admin') {
     const id = req.query.agency_id || req.body.agencyId;
     if (id) return id as string;
-    
-    throw new AppError('agency_id required', 400);
+    return null;
   }
   return req.user!.agencyId!;
 }
@@ -26,21 +26,24 @@ router.get('/summary', asyncHandler(async (req: Request, res: Response) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const today = new Date(todayStr);
 
+  const agencyFilter: any = {};
+  if (agencyId) agencyFilter.agency_id = new mongoose.Types.ObjectId(agencyId);
+
   const [
     attendanceList,
     societiesCount,
     assignmentsCount,
     watchmenCount,
   ] = await Promise.all([
-    Attendance.find({ agency_id: agencyId, attendance_date: today }),
-    Society.countDocuments({ agency_id: agencyId, is_active: true }),
+    Attendance.find({ ...agencyFilter, attendance_date: today }),
+    Society.countDocuments({ ...agencyFilter, is_active: true }),
     Assignment.countDocuments({
-      agency_id: agencyId,
+      ...agencyFilter,
       is_active: true,
       start_date: { $lte: today },
       $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: today } }],
     }),
-    Watchman.countDocuments({ agency_id: agencyId, status: 'active' }),
+    Watchman.countDocuments({ ...agencyFilter, status: 'active' }),
   ]);
 
   let presentCount = 0;
@@ -79,8 +82,9 @@ router.get('/live-attendance', asyncHandler(async (req: Request, res: Response) 
   const today = new Date(new Date().toISOString().split('T')[0]);
   const { societyId, status } = req.query;
 
-  const matchStage: any = { agency_id: agencyId, attendance_date: today };
-  if (societyId) matchStage.society_id = societyId;
+  const matchStage: any = { attendance_date: today };
+  if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+  if (societyId) matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
   if (status) matchStage.status = status;
 
   const list = await Attendance.aggregate([
@@ -147,14 +151,16 @@ router.get('/missing-attendance', asyncHandler(async (req: Request, res: Respons
   const today = new Date(todayStr);
   const now = new Date().toTimeString().slice(0, 5);
 
+  const matchAssignment: any = {
+    is_active: true,
+    start_date: { $lte: today },
+    $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: today } }],
+  };
+  if (agencyId) matchAssignment.agency_id = new mongoose.Types.ObjectId(agencyId);
+
   const assignments = await Assignment.aggregate([
     {
-      $match: {
-        agency_id: agencyId,
-        is_active: true,
-        start_date: { $lte: today },
-        $or: [{ end_date: null }, { end_date: { $exists: false } }, { end_date: { $gte: today } }],
-      },
+      $match: matchAssignment,
     },
     {
       $lookup: {
@@ -243,8 +249,11 @@ router.get('/society-coverage', asyncHandler(async (req: Request, res: Response)
   const agencyId = getAgencyId(req);
   const today = new Date(new Date().toISOString().split('T')[0]);
 
+  const matchSoc: any = { is_active: true };
+  if (agencyId) matchSoc.agency_id = new mongoose.Types.ObjectId(agencyId);
+
   const societies = await Society.aggregate([
-    { $match: { agency_id: agencyId, is_active: true } },
+    { $match: matchSoc },
     {
       $lookup: {
         from: 'attendance',

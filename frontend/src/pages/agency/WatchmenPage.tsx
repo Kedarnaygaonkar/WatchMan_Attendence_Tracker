@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Users, X, UserCheck, UserX, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Users, X, UserCheck, UserX, Trash2, Download } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
@@ -97,6 +97,29 @@ export default function WatchmenPage() {
   };
 
 
+  function exportWatchmenCSV() {
+    if (!data?.length) { toast.error('No watchmen to export'); return; }
+    const headers = ['Guard Name', 'Employee ID', 'Mobile Number', 'Status', 'Joining Date', 'Active Assignments', 'Address'];
+    const rows = data.map((w) => [
+      w.full_name,
+      w.employee_id,
+      w.phone,
+      w.status.toUpperCase(),
+      w.joining_date ? new Date(w.joining_date).toLocaleDateString('en-IN') : '',
+      w.active_assignments ?? 0,
+      w.address || '',
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `watchmen-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Watchmen report exported!');
+  }
+
   function openAdd() {
     setForm(defaultForm);
     setEditWatchman(null);
@@ -123,9 +146,14 @@ export default function WatchmenPage() {
           <h1 className="section-title">Watchmen</h1>
           <p className="text-slate-500 text-sm">{data?.length ?? 0} guards registered</p>
         </div>
-        <button onClick={openAdd} className="btn-primary px-4 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> Add Watchman
-        </button>
+        <div className="flex gap-2">
+          <button onClick={exportWatchmenCSV} disabled={!data?.length} className="btn-secondary px-4 py-2.5 text-sm flex items-center gap-2">
+            <Download className="w-4 h-4" /> Export Report
+          </button>
+          <button onClick={openAdd} className="btn-primary px-4 py-2.5 text-sm flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Watchman
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
