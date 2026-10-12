@@ -480,10 +480,12 @@ export default function ScanPage() {
 
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
+  const isCameraStep = step === 'face_verification' || step === 'face_registration' || step === 'take_photo';
+
   return (
-    <div className="flex flex-col font-sans relative min-h-[100dvh] overflow-hidden bg-[#e6f0fa]">
+    <div className="flex flex-col font-sans relative h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#e6f0fa]">
       {/* ── Full Screen Background ── */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         {gateInfo?.agency?.background_url ? (
           <img src={gateInfo.agency.background_url} alt="Background" className="w-full h-full object-cover object-center" />
         ) : (
@@ -492,50 +494,58 @@ export default function ScanPage() {
       </div>
 
       {/* Main Content wrapper */}
-      <div className="relative z-10 flex flex-col h-[100dvh]">
+      <div className="relative z-10 flex flex-col h-full max-h-[100dvh] overflow-hidden">
         {/* ── Brand header: Logo + Society info ── */}
-        <div className="shrink-0 w-full pt-2 pb-2 px-4 flex flex-col relative">
+        <div className="shrink-0 w-full pt-1.5 pb-1 px-4 flex flex-col relative">
           
           {/* Language + Time at top */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1">
             <button
               onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-              className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-full shadow border border-white/60 text-[#1a2a5e] font-bold text-xs"
+              className="flex items-center gap-1.5 bg-white/90 px-2.5 py-1 rounded-full shadow-xs border border-white/60 text-[#1a2a5e] font-bold text-[11px]"
             >
-              <Globe className="w-3.5 h-3.5 text-[#3b5bdb]" />
+              <Globe className="w-3 h-3 text-[#3b5bdb]" />
               <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
             </button>
-            <div className="text-white text-xs font-bold flex items-center gap-1 bg-[#1a2a5e]/50 px-2.5 py-1 rounded-full backdrop-blur-sm">
+            <div className="text-white text-[11px] font-bold flex items-center gap-1 bg-[#1a2a5e]/50 px-2.5 py-1 rounded-full backdrop-blur-sm">
               <Clock className="w-3 h-3" /> {currentTime}
             </div>
           </div>
 
           {/* Logo centered */}
-          <div className="flex items-center justify-center pt-8 pb-3">
+          <div className="flex items-center justify-center py-0.5">
             {gateInfo?.agency?.logo_url ? (
               <img
                 src={gateInfo.agency.logo_url}
                 alt="Agency Logo"
-                className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.25)] h-28 max-h-[120px]"
+                className={`object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200 ${
+                  isCameraStep ? 'h-10 sm:h-12 max-h-[44px]' : 'h-14 sm:h-16 max-h-[64px]'
+                }`}
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-xl">
-                <ShieldCheck className="w-12 h-12 text-white" />
+              <div className={`rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-md ${
+                isCameraStep ? 'w-10 h-10' : 'w-14 h-14'
+              }`}>
+                <ShieldCheck className={isCameraStep ? 'w-5 h-5 text-white' : 'w-7 h-7 text-white'} />
               </div>
             )}
           </div>
 
           {/* Text info below the logo */}
-          <div className="text-center pb-2">
+          <div className="text-center pb-0.5">
             {gateInfo?.agency?.name && (
-              <p className="text-[#1a2a5e] text-[20px] font-black tracking-wide mb-0.5">{gateInfo.agency.name}</p>
+              <p className={`text-[#1a2a5e] font-black tracking-wide leading-tight mb-0.5 ${
+                isCameraStep ? 'text-[14px] sm:text-base' : 'text-base sm:text-lg'
+              }`}>{gateInfo.agency.name}</p>
             )}
             {gateInfo && step !== 'error' && (
               <>
-                <p className="text-[#3b5bdb] text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">{gateInfo.gate.name}</p>
-                <h1 className="text-[#1a2a5e] text-2xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
-                <p className="text-[#4a5580] text-[12px] font-semibold leading-snug flex items-center justify-center gap-1 mt-1">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <p className="text-[#3b5bdb] text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] leading-tight mb-0.5">{gateInfo.gate.name}</p>
+                <h1 className={`text-[#1a2a5e] font-black leading-tight mb-0.5 ${
+                  isCameraStep ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'
+                }`}>{gateInfo.society.name}</h1>
+                <p className="text-[#4a5580] text-[10px] sm:text-[11px] font-semibold leading-tight flex items-center justify-center gap-1">
+                  <MapPin className="w-3 h-3 shrink-0" />
                   <span className="line-clamp-1">{gateInfo.society.address}</span>
                 </p>
               </>
@@ -544,41 +554,41 @@ export default function ScanPage() {
         </div>
 
       {/* ── Content area fills remaining height ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-        <div className="w-full max-w-sm mx-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 flex flex-col justify-center">
+        <div className="w-full max-w-sm mx-auto my-auto">
 
           {(step === 'loading' || step === 'submitting' || step === 'delivery_submitting') && (
-            <div className="text-center py-16">
-              <Loader2 className="w-10 h-10 text-brand-500 animate-spin mx-auto" />
-              <p className="text-slate-500 mt-4 font-medium">
+            <div className="text-center py-10">
+              <Loader2 className="w-8 h-8 text-brand-500 animate-spin mx-auto" />
+              <p className="text-slate-500 mt-3 font-medium text-sm">
                 {step === 'delivery_submitting' ? t.recording_visit : step === 'submitting' ? t.recording_attendance : t.loading}
               </p>
             </div>
           )}
 
           {step === 'error' && (
-            <div className="text-center py-16">
-              <AlertTriangle className="w-12 h-12 text-danger-400 mx-auto mb-3" />
-              <h2 className="text-danger-400 text-lg font-bold">{t.error}</h2>
-              <p className="text-slate-500 mt-2">{errorMsg}</p>
+            <div className="text-center py-10">
+              <AlertTriangle className="w-10 h-10 text-danger-400 mx-auto mb-2" />
+              <h2 className="text-danger-400 text-base font-bold">{t.error}</h2>
+              <p className="text-slate-500 text-xs mt-1">{errorMsg}</p>
             </div>
           )}
 
           {step === 'enter_id' && (
-            <div className="pt-3">
-              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[2rem] px-6 pt-6 pb-5 shadow-[0_8px_40px_rgba(0,0,0,0.10)] text-center">
+            <div className="pt-1">
+              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[1.5rem] px-5 pt-4 pb-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.08)] text-center">
                 {/* Person icon */}
-                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                  <User className="w-6 h-6 text-blue-500" />
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                  <User className="w-5 h-5 text-blue-500" />
                 </div>
-                <h2 className="text-[#1a2a5e] text-[20px] font-black tracking-tight mb-1">{t.enter_guard_id}</h2>
-                <p className="text-[#4a5580] text-[12px] font-medium mb-4 leading-snug px-2">Use the Guard ID provided by your supervisor<br />to continue.</p>
-                {errorMsg && <div className="bg-red-50 text-red-500 text-sm p-3 rounded-xl mb-3">{errorMsg}</div>}
+                <h2 className="text-[#1a2a5e] text-[18px] font-black tracking-tight mb-0.5">{t.enter_guard_id}</h2>
+                <p className="text-[#4a5580] text-[11px] font-medium mb-3 leading-snug px-2">Use the Guard ID provided by your supervisor to continue.</p>
+                {errorMsg && <div className="bg-red-50 text-red-500 text-xs p-2.5 rounded-xl mb-2.5">{errorMsg}</div>}
                 
                 {/* Input with ID icon */}
-                <div className="relative mb-4">
+                <div className="relative mb-3">
                   <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2" strokeWidth="1.5"/><path d="M8 10h8M8 14h4" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2" strokeWidth="1.5"/><path d="M8 10h8M8 14h4" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   </div>
                   <input
                     type="text"
@@ -587,7 +597,7 @@ export default function ScanPage() {
                     onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setErrorMsg(''); }}
                     onKeyDown={e => e.key === 'Enter' && handleLookup()}
                     autoFocus
-                    className="w-full py-3.5 pl-11 pr-4 rounded-2xl border border-gray-200 bg-white text-[#1a2a5e] text-[15px] font-bold tracking-[0.15em] focus:border-blue-400 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder-gray-400 uppercase shadow-sm"
+                    className="w-full py-3 pl-10 pr-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] text-[14px] font-bold tracking-[0.15em] focus:border-blue-400 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder-gray-400 uppercase shadow-xs"
                   />
                 </div>
                 
@@ -595,36 +605,36 @@ export default function ScanPage() {
                 <button
                   onClick={handleLookup}
                   disabled={!employeeId.trim()}
-                  className={`w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-[16px] mb-5 ${
+                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-[15px] mb-3.5 ${
                     employeeId.trim()
-                      ? 'bg-[#1a3db5] hover:bg-[#1530a0] text-white shadow-lg'
+                      ? 'bg-[#1a3db5] hover:bg-[#1530a0] text-white shadow-md'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {t.continue} <ChevronRight className="w-5 h-5" />
+                  {t.continue} <ChevronRight className="w-4 h-4" />
                 </button>
                 
                 {/* 3 feature icons */}
-                <div className="flex items-center justify-around border-t border-gray-100 pt-4">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                      <ShieldCheck className="w-5 h-5 text-blue-600" />
+                <div className="flex items-center justify-around border-t border-gray-100 pt-2.5">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-blue-600" />
                     </div>
-                    <span className="text-[10px] text-[#4a5580] font-semibold text-center leading-tight">Secure<br />Attendance</span>
+                    <span className="text-[9px] text-[#4a5580] font-semibold text-center leading-tight">Secure<br />Attendance</span>
                   </div>
-                  <div className="w-px h-10 bg-gray-100" />
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>
+                  <div className="w-px h-8 bg-gray-100" />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>
                     </div>
-                    <span className="text-[10px] text-[#4a5580] font-semibold text-center leading-tight">Trained<br />Personnel</span>
+                    <span className="text-[9px] text-[#4a5580] font-semibold text-center leading-tight">Trained<br />Personnel</span>
                   </div>
-                  <div className="w-px h-10 bg-gray-100" />
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                  <div className="w-px h-8 bg-gray-100" />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                     </div>
-                    <span className="text-[10px] text-[#4a5580] font-semibold text-center leading-tight">Trusted<br />Service</span>
+                    <span className="text-[9px] text-[#4a5580] font-semibold text-center leading-tight">Trusted<br />Service</span>
                   </div>
                 </div>
               </div>
@@ -632,65 +642,67 @@ export default function ScanPage() {
           )}
 
           {step === 'get_gps' && (
-            <div className="text-center py-16">
-              <MapPin className="w-12 h-12 text-brand-500 mx-auto mb-4 animate-bounce" />
-              <h2 className="text-slate-100 text-lg font-bold">{t.getting_location}</h2>
-              <p className="text-slate-500 text-sm mt-2">{t.allow_location}</p>
+            <div className="text-center py-10">
+              <MapPin className="w-10 h-10 text-brand-500 mx-auto mb-3 animate-bounce" />
+              <h2 className="text-[#1a2a5e] text-base font-bold">{t.getting_location}</h2>
+              <p className="text-[#4a5580] text-xs mt-1">{t.allow_location}</p>
             </div>
           )}
 
           {step === 'face_registration' && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-brand-400" />
-                <h2 className="text-slate-100 text-base font-bold">{t.first_time_setup}</h2>
+            <div className="space-y-2 pt-1">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                  <ShieldCheck className="w-4 h-4 text-[#1a2a5e]" />
+                  <h2 className="text-[#1a2a5e] text-base font-bold">{t.first_time_setup}</h2>
+                </div>
+                <p className="text-[#4a5580] text-xs">{t.look_camera_register}</p>
               </div>
-              <p className="text-slate-500 text-sm">{t.look_camera_register}</p>
-              <div className={`w-56 mx-auto rounded-xl overflow-hidden aspect-[3/4] relative border-2 ${faceDetected ? 'border-success-500 shadow-lg shadow-success-500/20' : 'border-white/50'}`}>
+              <div className={`h-[27vh] min-h-[170px] max-h-[220px] aspect-[3/4] mx-auto rounded-xl overflow-hidden relative border-2 ${faceDetected ? 'border-success-500 shadow-md shadow-success-500/20' : 'border-white/50'}`}>
                 <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-3 py-1 rounded-full text-sm backdrop-blur-sm">{t.no_face_detected}</p></div>}
+                {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-2.5 py-0.5 rounded-full text-xs backdrop-blur-sm">{t.no_face_detected}</p></div>}
               </div>
-              <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
-                <ScanFace className="w-5 h-5" /> {t.register_face}
+              <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-md transition-all text-sm sm:text-base ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
+                <ScanFace className="w-4 h-4" /> {t.register_face}
               </button>
             </div>
           )}
 
           {step === 'face_verification' && (
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2 pt-0.5">
               <div className="text-center">
-                <div className="bg-brand-50 text-brand-500 mx-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide mb-2">
+                <div className="bg-brand-50 text-brand-500 mx-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide mb-1">
                   <ShieldCheck className="w-3 h-3" />
                   {faceVerified === false ? t.face_mismatch : t.face_verification}
                 </div>
-                <h2 className="text-slate-100 text-xl font-black tracking-tight mb-1">{faceVerified === false ? t.verification_failed : t.verify_identity}</h2>
-                <p className="text-slate-500 text-xs">{faceVerified === false ? t.face_did_not_match : t.look_camera_verify}</p>
+                <h2 className="text-[#1a2a5e] text-base sm:text-lg font-black tracking-tight mb-0.5">{faceVerified === false ? t.verification_failed : t.verify_identity}</h2>
+                <p className="text-[#4a5580] text-[11px] leading-tight">{faceVerified === false ? t.face_did_not_match : t.look_camera_verify}</p>
               </div>
               {faceVerified === false ? (
-                <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-5 flex flex-col items-center gap-3">
-                  <div className="w-14 h-14 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-7 h-7 text-danger-400" /></div>
-                  <p className="text-danger-400 font-bold">{t.face_mismatch} ✕</p>
-                  <p className="text-slate-500 text-sm text-center">{t.attendance_cannot_mark}</p>
-                  <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full p-3.5 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-lg transition-all">{t.try_again}</button>
+                <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-4 flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-danger-400" /></div>
+                  <p className="text-danger-500 font-bold text-sm">{t.face_mismatch} ✕</p>
+                  <p className="text-[#4a5580] text-xs text-center">{t.attendance_cannot_mark}</p>
+                  <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full py-3 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-md transition-all text-sm">{t.try_again}</button>
                 </div>
               ) : (
                 <>
-                  <div className="w-56 mx-auto rounded-[1.5rem] overflow-hidden bg-[#0a1128] aspect-[3/4] relative border-4 border-[#121c3b] shadow-2xl">
+                  <div className="h-[27vh] min-h-[170px] max-h-[220px] aspect-[3/4] mx-auto rounded-[1.25rem] overflow-hidden bg-[#0a1128] relative border-4 border-[#121c3b] shadow-xl">
                     <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                    <div className="absolute inset-0 pointer-events-none p-4">
-                      <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[2rem] relative">
-                        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-brand-500 rounded-tl-[2rem] -mt-0.5 -ml-0.5"></div>
-                        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-brand-500 rounded-tr-[2rem] -mt-0.5 -mr-0.5"></div>
-                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-brand-500 rounded-bl-[2rem] -mb-0.5 -ml-0.5"></div>
-                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-brand-500 rounded-br-[2rem] -mb-0.5 -mr-0.5"></div>
+                    <div className="absolute inset-0 pointer-events-none p-3">
+                      <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[1.5rem] relative">
+                        <div className="absolute top-0 left-0 w-5 h-5 border-t-3 border-l-3 border-brand-500 rounded-tl-[1.5rem] -mt-0.5 -ml-0.5"></div>
+                        <div className="absolute top-0 right-0 w-5 h-5 border-t-3 border-r-3 border-brand-500 rounded-tr-[1.5rem] -mt-0.5 -mr-0.5"></div>
+                        <div className="absolute bottom-0 left-0 w-5 h-5 border-b-3 border-l-3 border-brand-500 rounded-bl-[1.5rem] -mb-0.5 -ml-0.5"></div>
+                        <div className="absolute bottom-0 right-0 w-5 h-5 border-b-3 border-r-3 border-brand-500 rounded-br-[1.5rem] -mb-0.5 -mr-0.5"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`w-32 h-44 rounded-[3rem] border-2 transition-colors duration-300 ${faceDetected ? 'border-brand-400/80' : 'border-white/10'}`} />
+                          <div className={`w-[68%] h-[74%] rounded-[50%] border-2 transition-colors duration-300 ${faceDetected ? 'border-brand-400/80 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'border-white/10'}`} />
                         </div>
                       </div>
                     </div>
                     {faceDetected && (
-                      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                        <span className="bg-success-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg"><CheckCircle className="w-3 h-3" /> {t.face_detected}</span>
+                      <div className="absolute bottom-1.5 left-0 right-0 flex justify-center">
+                        <span className="bg-success-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md"><CheckCircle className="w-3 h-3" /> {t.face_detected}</span>
                       </div>
                     )}
                   </div>
@@ -714,9 +726,9 @@ export default function ScanPage() {
                       } else { toast.error(t.no_face_good_lighting); }
                     }}
                     disabled={!faceDetected}
-                    className={`w-full p-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${faceDetected ? 'bg-[#0a1128] hover:bg-slate-800 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm sm:text-base ${faceDetected ? 'bg-[#0a1128] hover:bg-slate-800 text-white shadow-md' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                   >
-                    <ScanFace className="w-5 h-5" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
+                    <ScanFace className="w-4 h-4 sm:w-5 sm:h-5" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
                   </button>
                 </>
               )}
@@ -724,46 +736,46 @@ export default function ScanPage() {
           )}
 
           {step === 'select_shift' && watchman && (
-            <div className="pt-2 pb-4">
-              <div className="bg-white/95 backdrop-blur-2xl border border-white rounded-[1.5rem] p-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.15)]">
+            <div className="pt-1 pb-1">
+              <div className="bg-white/95 backdrop-blur-2xl border border-white rounded-[1.25rem] p-3 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
                 
                 {/* Watchman identity card */}
-                <div className="bg-white border border-gray-100 rounded-xl p-2 shadow-sm flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-                      <User className="w-4 h-4 text-blue-600" />
+                <div className="bg-white border border-gray-100 rounded-lg p-2 shadow-xs flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
+                      <User className="w-3.5 h-3.5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-[#1a2a5e] font-black text-[14px] leading-tight tracking-tight">{watchman.full_name}</p>
-                      <p className="text-[#4a5580] font-medium text-[10px] leading-tight mt-0.5">ID: {watchman.employee_id}</p>
+                      <p className="text-[#1a2a5e] font-black text-xs leading-tight tracking-tight">{watchman.full_name}</p>
+                      <p className="text-[#4a5580] font-medium text-[9px] leading-tight">ID: {watchman.employee_id}</p>
                     </div>
                   </div>
-                  <div className="bg-green-50 text-green-700 px-2 py-1 rounded-full flex items-center gap-1 border border-green-100">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-bold">Identity Verified</span>
+                  <div className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-100">
+                    <CheckCircle className="w-3 h-3" />
+                    <span className="text-[9px] font-bold">Verified</span>
                   </div>
                 </div>
 
                 {/* Gates Section */}
                 {gateInfo?.society.gates && gateInfo.society.gates.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Building2 className="w-4 h-4 text-[#1a2a5e]" />
-                      <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">
+                  <div className="mb-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Building2 className="w-3.5 h-3.5 text-[#1a2a5e]" />
+                      <label className="text-[#1a2a5e] text-xs font-bold block leading-tight">
                         {t.select_gate}
                       </label>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {gateInfo.society.gates.map(g => {
                         const active = selectedGate === g;
                         return (
                           <button key={g} onClick={() => setSelectedGate(selectedGate === g ? '' : g)}
-                            className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border-[1.5px] transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
-                            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
+                            <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
                               {active && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                             </div>
-                            <Building2 className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600' : 'text-[#1a2a5e]'}`} />
-                            <span className={`text-[12px] font-bold line-clamp-1 ${active ? 'text-blue-900' : 'text-[#1a2a5e]'}`}>{g}</span>
+                            <Building2 className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-blue-600' : 'text-[#1a2a5e]'}`} />
+                            <span className={`text-[11px] font-bold line-clamp-1 ${active ? 'text-blue-900' : 'text-[#1a2a5e]'}`}>{g}</span>
                           </button>
                         );
                       })}
@@ -773,23 +785,23 @@ export default function ScanPage() {
 
                 {/* Wings Section */}
                 {gateInfo?.society.wings && gateInfo.society.wings.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Building className="w-4 h-4 text-[#1a2a5e]" />
-                      <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">
+                  <div className="mb-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Building className="w-3.5 h-3.5 text-[#1a2a5e]" />
+                      <label className="text-[#1a2a5e] text-xs font-bold block leading-tight">
                         {t.select_wing}
                       </label>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {gateInfo.society.wings.map(w => {
                         const active = selectedWing === w;
                         return (
                           <button key={w} onClick={() => setSelectedWing(selectedWing === w ? '' : w)}
-                            className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border-[1.5px] transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
-                            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border transition-all text-left ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
+                            <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? 'border-blue-500' : 'border-gray-300'}`}>
                               {active && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                             </div>
-                            <span className={`text-[12px] font-bold line-clamp-1 ${active ? 'text-blue-900' : 'text-[#1a2a5e]'}`}>{w} Wing</span>
+                            <span className={`text-[11px] font-bold line-clamp-1 ${active ? 'text-blue-900' : 'text-[#1a2a5e]'}`}>{w} Wing</span>
                           </button>
                         );
                       })}
@@ -798,12 +810,12 @@ export default function ScanPage() {
                 )}
 
                 {/* Shifts Section */}
-                <div className="mb-3">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Clock className="w-4 h-4 text-[#1a2a5e]" />
-                    <label className="text-[#1a2a5e] text-[13px] font-bold block leading-tight">{t.select_shift}</label>
+                <div className="mb-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Clock className="w-3.5 h-3.5 text-[#1a2a5e]" />
+                    <label className="text-[#1a2a5e] text-xs font-bold block leading-tight">{t.select_shift}</label>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {gateInfo?.shifts.map(s => {
                       const active = selectedShiftId === s.id;
                       const isDay = s.name.toLowerCase().includes('day') || parseInt(s.start_time.split(':')[0]) >= 6 && parseInt(s.start_time.split(':')[0]) < 18;
@@ -816,14 +828,14 @@ export default function ScanPage() {
                       
                       return (
                         <button key={s.id} onClick={() => setSelectedShiftId(s.id)}
-                          className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border-[1.5px] transition-all text-left ${active ? activeColors : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? radioColor.split(' ')[0] : 'border-gray-300'}`}>
+                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border transition-all text-left ${active ? activeColors : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                          <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? radioColor.split(' ')[0] : 'border-gray-300'}`}>
                             {active && <div className={`w-1.5 h-1.5 rounded-full ${radioColor.split(' ')[1]}`} />}
                           </div>
-                          {isDay ? <Sun className={`w-5 h-5 shrink-0 ${active ? iconColor : 'text-amber-500'}`} /> : <Moon className={`w-5 h-5 shrink-0 ${active ? iconColor : 'text-[#1a2a5e]'}`} />}
+                          {isDay ? <Sun className={`w-4 h-4 shrink-0 ${active ? iconColor : 'text-amber-500'}`} /> : <Moon className={`w-4 h-4 shrink-0 ${active ? iconColor : 'text-[#1a2a5e]'}`} />}
                           <div>
-                            <span className={`block text-[12px] font-bold leading-tight ${active ? textColor : 'text-[#1a2a5e]'}`}>{s.name}</span>
-                            <span className={`block text-[9px] font-medium leading-tight mt-0.5 ${active ? textColor : 'text-[#4a5580]'}`}>{s.start_time} &ndash; {s.end_time}</span>
+                            <span className={`block text-[11px] font-bold leading-tight ${active ? textColor : 'text-[#1a2a5e]'}`}>{s.name}</span>
+                            <span className={`block text-[8px] font-medium leading-tight mt-0.5 ${active ? textColor : 'text-[#4a5580]'}`}>{s.start_time}&ndash;{s.end_time}</span>
                           </div>
                         </button>
                       );
@@ -831,7 +843,7 @@ export default function ScanPage() {
                   </div>
                 </div>
 
-                <div className="pt-1">
+                <div className="pt-0.5">
                   <button
                     onClick={async () => { await startCamera(); setStep('take_photo'); }}
                     disabled={(() => {
@@ -846,7 +858,7 @@ export default function ScanPage() {
                       if (hasGates && hasWings) return !selectedGate && !selectedWing;
                       return false;
                     })()}
-                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-[15px] ${(
+                    className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm ${(
                       (() => {
                         if (!selectedShiftId) return false;
                         const hasGates = !!(gateInfo?.society.gates && gateInfo.society.gates.length > 0);
@@ -856,8 +868,8 @@ export default function ScanPage() {
                         if (hasGates && hasWings) return !!(selectedGate || selectedWing);
                         return true;
                       })()
-                    ) ? 'bg-[#0b5cda] hover:bg-[#094bb8] text-white shadow-lg shadow-blue-600/30' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-                    <Camera className="w-4 h-4" /> {t.take_photo} <ChevronRight className="w-4 h-4" />
+                    ) ? 'bg-[#0b5cda] hover:bg-[#094bb8] text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                    <Camera className="w-3.5 h-3.5" /> {t.take_photo} <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -865,93 +877,93 @@ export default function ScanPage() {
           )}
 
           {step === 'take_photo' && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2">
-                {mode === 'checkin' ? <LogIn className="w-5 h-5 text-success-400" /> : <LogOut className="w-5 h-5 text-warning-400" />}
-                <h2 className="text-slate-100 text-base font-bold">{mode === 'checkin' ? t.checkin_photo_header : t.checkout_photo_header}</h2>
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-center gap-2">
+                {mode === 'checkin' ? <LogIn className="w-4 h-4 text-success-600" /> : <LogOut className="w-4 h-4 text-warning-600" />}
+                <h2 className="text-[#1a2a5e] text-base font-bold">{mode === 'checkin' ? t.checkin_photo_header : t.checkout_photo_header}</h2>
               </div>
               {mode === 'checkout' && existingRecord && (
-                <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-3 text-warning-400 text-sm">
+                <div className="bg-warning-500/10 border border-warning-500/20 rounded-lg p-2 text-warning-700 text-xs text-center">
                   {t.checked_in_at}{new Date(existingRecord.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                 </div>
               )}
-              <div className="w-56 mx-auto rounded-xl overflow-hidden bg-surface-950 aspect-[3/4] relative border border-white/50">
+              <div className="h-[27vh] min-h-[170px] max-h-[220px] aspect-[3/4] mx-auto rounded-xl overflow-hidden bg-surface-950 relative border-2 border-white/70 shadow-lg">
                 <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
               </div>
               <canvas ref={canvasRef} className="hidden" />
-              <button onClick={capturePhoto} className={`w-full p-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-lg transition-all ${mode === 'checkin' ? 'bg-success-600 hover:bg-success-500' : 'bg-warning-600 hover:bg-warning-500'}`}>
-                {mode === 'checkin' ? <><LogIn className="w-5 h-5" /> {t.mark_checkin}</> : <><LogOut className="w-5 h-5" /> {t.mark_checkout}</>}
+              <button onClick={capturePhoto} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-md transition-all text-sm sm:text-base ${mode === 'checkin' ? 'bg-success-600 hover:bg-success-500' : 'bg-warning-600 hover:bg-warning-500'}`}>
+                {mode === 'checkin' ? <><LogIn className="w-4 h-4" /> {t.mark_checkin}</> : <><LogOut className="w-4 h-4" /> {t.mark_checkout}</>}
               </button>
             </div>
           )}
 
           {step === 'success' && (
-            <div className="text-center py-12">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${successMsg.includes('LATE') ? 'bg-warning-500/10 text-warning-400' : 'bg-success-500/10 text-success-400'}`}>
-                <CheckCircle className="w-10 h-10" />
+            <div className="text-center py-10">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${successMsg.includes('LATE') ? 'bg-warning-500/10 text-warning-500' : 'bg-success-500/10 text-success-500'}`}>
+                <CheckCircle className="w-8 h-8" />
               </div>
-              <h2 className="text-slate-100 text-2xl font-bold mb-2">{successMsg.includes('LATE') ? t.late_arrival : mode === 'checkin' ? t.checked_in : t.checked_out}</h2>
-              <p className="text-slate-500 text-sm leading-relaxed">{successMsg}</p>
+              <h2 className="text-[#1a2a5e] text-xl font-bold mb-1">{successMsg.includes('LATE') ? t.late_arrival : mode === 'checkin' ? t.checked_in : t.checked_out}</h2>
+              <p className="text-[#4a5580] text-xs leading-relaxed">{successMsg}</p>
             </div>
           )}
 
           {step === 'delivery_form' && (
-            <div className="pt-3">
-              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[1.5rem] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.10)] space-y-4">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                    <Bike className="w-5 h-5 text-orange-600" />
+            <div className="pt-1">
+              <div className="bg-white/92 backdrop-blur-xl border border-white/70 rounded-[1.25rem] p-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.08)] space-y-2.5">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                    <Bike className="w-4 h-4 text-orange-600" />
                   </div>
-                  <h2 className="text-[#1a2a5e] text-[18px] font-black tracking-tight">{t.delivery_checkin}</h2>
+                  <h2 className="text-[#1a2a5e] text-base font-black tracking-tight">{t.delivery_checkin}</h2>
                 </div>
                 <div>
-                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-2">{t.delivery_company}</label>
-                  <div className="flex flex-wrap gap-1.5">
+                  <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-wider block mb-1">{t.delivery_company}</label>
+                  <div className="flex flex-wrap gap-1">
                     {DELIVERY_COMPANIES.map(c => (
                       <button key={c} onClick={() => setDeliveryForm(f => ({ ...f, delivery_company: c }))}
-                        className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold border-2 transition-all shadow-sm ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 bg-white hover:border-orange-400'}`}
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-all shadow-xs ${deliveryForm.delivery_company === c ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 bg-white hover:border-orange-400'}`}
                         style={deliveryForm.delivery_company === c ? { backgroundColor: COMPANY_COLORS[c] || '#64748b' } : {}}
                       >{c}</button>
                     ))}
                   </div>
                   {deliveryForm.delivery_company === 'Other' && (
-                    <div className="mt-3 animate-fade-in">
-                      <input type="text" placeholder="Specify company name" value={deliveryForm.other_company} onChange={e => setDeliveryForm(f => ({ ...f, other_company: e.target.value }))} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                    <div className="mt-1.5 animate-fade-in">
+                      <input type="text" placeholder="Specify company name" value={deliveryForm.other_company} onChange={e => setDeliveryForm(f => ({ ...f, other_company: e.target.value }))} className="w-full p-2.5 rounded-lg border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-1 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-xs text-xs" />
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.your_name}</label>
-                  <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                  <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-wider block mb-0.5">{t.your_name}</label>
+                  <input type="text" placeholder="Full name" value={deliveryForm.visitor_name} onChange={e => setDeliveryForm(f => ({ ...f, visitor_name: e.target.value }))} className="w-full p-2.5 rounded-lg border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-1 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-xs text-xs" />
                 </div>
                 <div>
-                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.phone_number}</label>
+                  <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-wider block mb-0.5">{t.phone_number}</label>
                   <input type="tel" maxLength={10} placeholder="10-digit mobile number" value={deliveryForm.visitor_phone} onChange={e => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                     setDeliveryForm(f => ({ ...f, visitor_phone: val }));
-                  }} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                  }} className="w-full p-2.5 rounded-lg border border-gray-200 bg-white text-[#1a2a5e] font-medium focus:border-orange-500 focus:ring-1 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-xs text-xs" />
                 </div>
                 <div>
-                  <label className="text-[#4a5580] text-[10px] font-bold uppercase tracking-wider block mb-1">{t.vehicle_number} <span className="font-normal normal-case">{t.optional}</span></label>
-                  <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-[#1a2a5e] font-mono uppercase font-bold tracking-widest focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-sm text-sm" />
+                  <label className="text-[#4a5580] text-[9px] font-bold uppercase tracking-wider block mb-0.5">{t.vehicle_number} <span className="font-normal normal-case">{t.optional}</span></label>
+                  <input type="text" placeholder="e.g. MH01AB1234" value={deliveryForm.vehicle_number} onChange={e => setDeliveryForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} className="w-full p-2.5 rounded-lg border border-gray-200 bg-white text-[#1a2a5e] font-mono uppercase font-bold tracking-wider focus:border-orange-500 focus:ring-1 focus:ring-orange-100 outline-none transition-all placeholder-gray-400 shadow-xs text-xs" />
                 </div>
-                <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-2 ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_4px_14px_0_rgba(234,88,12,0.39)]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-                  <LogIn className="w-5 h-5" /> {t.mark_entry}
+                <button onClick={handleDeliveryCheckin} disabled={!deliveryForm.visitor_name.trim() || deliveryForm.visitor_phone.length !== 10} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-1 text-sm ${deliveryForm.visitor_name.trim() && deliveryForm.visitor_phone.length === 10 ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  <LogIn className="w-4 h-4" /> {t.mark_entry}
                 </button>
               </div>
             </div>
           )}
 
           {step === 'delivery_success' && deliveryResult && (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 rounded-full bg-success-500/10 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-10 h-10 text-success-400" />
+            <div className="text-center py-10">
+              <div className="w-16 h-16 rounded-full bg-success-500/10 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-8 h-8 text-success-500" />
               </div>
-              <h2 className="text-slate-100 text-2xl font-bold mb-2">{t.welcome}</h2>
-              <p className="text-slate-500 mb-4">
+              <h2 className="text-[#1a2a5e] text-xl font-bold mb-1">{t.welcome}</h2>
+              <p className="text-[#4a5580] text-xs mb-3">
                 {`${t.checkin_recorded_at}${new Date(deliveryResult.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`}
               </p>
-              <button onClick={() => window.location.reload()} className="w-full p-3.5 rounded-xl font-bold bg-white/70 hover:bg-slate-800/60 text-slate-600 transition-all">
+              <button onClick={() => window.location.reload()} className="w-full py-2.5 rounded-xl font-bold bg-white/80 hover:bg-white text-slate-700 transition-all text-xs border border-gray-200 shadow-xs">
                 {t.done_btn}
               </button>
             </div>
