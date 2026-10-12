@@ -480,8 +480,6 @@ export default function ScanPage() {
 
   const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  const isCameraStep = step === 'face_verification' || step === 'face_registration' || step === 'take_photo';
-
   return (
     <div className="flex flex-col font-sans relative h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#e6f0fa]">
       {/* ── Full Screen Background ── */}
@@ -494,58 +492,52 @@ export default function ScanPage() {
       </div>
 
       {/* Main Content wrapper */}
-      <div className="relative z-10 flex flex-col h-full max-h-[100dvh] overflow-hidden">
+      <div className="relative z-10 flex flex-col h-full max-h-[100dvh] overflow-hidden justify-between px-4 py-2 sm:py-3">
         {/* ── Brand header: Logo + Society info ── */}
-        <div className="shrink-0 w-full pt-1.5 pb-1 px-4 flex flex-col relative">
+        <div className="shrink-0 w-full flex flex-col relative">
           
           {/* Language + Time at top */}
           <div className="flex items-center justify-between mb-1">
             <button
               onClick={() => setLang(l => l === 'EN' ? 'HI' : l === 'HI' ? 'MR' : 'EN')}
-              className="flex items-center gap-1.5 bg-white/90 px-2.5 py-1 rounded-full shadow-xs border border-white/60 text-[#1a2a5e] font-bold text-[11px]"
+              className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-full shadow-xs border border-white/60 text-[#1a2a5e] font-bold text-xs"
             >
-              <Globe className="w-3 h-3 text-[#3b5bdb]" />
+              <Globe className="w-3.5 h-3.5 text-[#3b5bdb]" />
               <span>{lang === 'EN' ? 'EN' : lang === 'HI' ? 'HI' : 'MR'}</span>
             </button>
-            <div className="text-white text-[11px] font-bold flex items-center gap-1 bg-[#1a2a5e]/50 px-2.5 py-1 rounded-full backdrop-blur-sm">
-              <Clock className="w-3 h-3" /> {currentTime}
+            <div className="text-white text-xs font-bold flex items-center gap-1.5 bg-[#1a2a5e]/60 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-xs border border-white/20">
+              <Clock className="w-3.5 h-3.5 text-white/90" /> {currentTime}
             </div>
           </div>
 
           {/* Logo centered */}
-          <div className="flex items-center justify-center py-0.5">
+          <div className="flex items-center justify-center py-1">
             {gateInfo?.agency?.logo_url ? (
               <img
                 src={gateInfo.agency.logo_url}
                 alt="Agency Logo"
-                className={`object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-200 ${
-                  isCameraStep ? 'h-10 sm:h-12 max-h-[44px]' : 'h-14 sm:h-16 max-h-[64px]'
-                }`}
+                className="object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.2)] h-[9.5vh] max-h-[85px] min-h-[64px]"
               />
             ) : (
-              <div className={`rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-md ${
-                isCameraStep ? 'w-10 h-10' : 'w-14 h-14'
-              }`}>
-                <ShieldCheck className={isCameraStep ? 'w-5 h-5 text-white' : 'w-7 h-7 text-white'} />
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 shadow-lg">
+                <ShieldCheck className="w-8 h-8 text-white" />
               </div>
             )}
           </div>
 
           {/* Text info below the logo */}
-          <div className="text-center pb-0.5">
+          <div className="text-center">
             {gateInfo?.agency?.name && (
-              <p className={`text-[#1a2a5e] font-black tracking-wide leading-tight mb-0.5 ${
-                isCameraStep ? 'text-[14px] sm:text-base' : 'text-base sm:text-lg'
-              }`}>{gateInfo.agency.name}</p>
+              <p className="text-[#1a2a5e] text-[20px] sm:text-[22px] font-black tracking-wide leading-tight mb-0.5">
+                {gateInfo.agency.name}
+              </p>
             )}
             {gateInfo && step !== 'error' && (
               <>
-                <p className="text-[#3b5bdb] text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] leading-tight mb-0.5">{gateInfo.gate.name}</p>
-                <h1 className={`text-[#1a2a5e] font-black leading-tight mb-0.5 ${
-                  isCameraStep ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'
-                }`}>{gateInfo.society.name}</h1>
-                <p className="text-[#4a5580] text-[10px] sm:text-[11px] font-semibold leading-tight flex items-center justify-center gap-1">
-                  <MapPin className="w-3 h-3 shrink-0" />
+                <p className="text-[#3b5bdb] text-[10.5px] font-black uppercase tracking-[0.2em] leading-tight mb-0.5">{gateInfo.gate.name}</p>
+                <h1 className="text-[#1a2a5e] text-2xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
+                <p className="text-[#4a5580] text-xs font-semibold leading-tight flex items-center justify-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
                   <span className="line-clamp-1">{gateInfo.society.address}</span>
                 </p>
               </>
@@ -671,38 +663,38 @@ export default function ScanPage() {
           {step === 'face_verification' && (
             <div className="space-y-2 pt-0.5">
               <div className="text-center">
-                <div className="bg-brand-50 text-brand-500 mx-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide mb-1">
-                  <ShieldCheck className="w-3 h-3" />
+                <div className="bg-[#ede9fe]/90 text-[#4f46e5] border border-[#c7d2fe]/60 mx-auto inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold tracking-wide mb-1 shadow-xs">
+                  <ShieldCheck className="w-3.5 h-3.5" />
                   {faceVerified === false ? t.face_mismatch : t.face_verification}
                 </div>
-                <h2 className="text-[#1a2a5e] text-base sm:text-lg font-black tracking-tight mb-0.5">{faceVerified === false ? t.verification_failed : t.verify_identity}</h2>
-                <p className="text-[#4a5580] text-[11px] leading-tight">{faceVerified === false ? t.face_did_not_match : t.look_camera_verify}</p>
+                <h2 className="text-[#0f172a] text-[22px] sm:text-[24px] font-black tracking-tight leading-tight mb-0.5">{faceVerified === false ? t.verification_failed : t.verify_identity}</h2>
+                <p className="text-[#475569] text-xs sm:text-[13px] font-medium leading-tight">{faceVerified === false ? t.face_did_not_match : t.look_camera_verify}</p>
               </div>
               {faceVerified === false ? (
                 <div className="bg-danger-500/10 border border-danger-500/30 rounded-xl p-4 flex flex-col items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-danger-500/20 border-2 border-danger-500 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-danger-400" /></div>
                   <p className="text-danger-500 font-bold text-sm">{t.face_mismatch} ✕</p>
                   <p className="text-[#4a5580] text-xs text-center">{t.attendance_cannot_mark}</p>
-                  <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full py-3 rounded-xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-md transition-all text-sm">{t.try_again}</button>
+                  <button onClick={() => { const ctx = verifyWatchmanRef.current; if (!ctx) return; setFaceVerified(null); startFaceVerificationFlow(ctx.wm, ctx.detectedMode); }} className="w-full py-3.5 rounded-2xl font-bold bg-danger-600 hover:bg-danger-500 text-white shadow-md transition-all text-sm">{t.try_again}</button>
                 </div>
               ) : (
                 <>
-                  <div className="h-[27vh] min-h-[170px] max-h-[220px] aspect-[3/4] mx-auto rounded-[1.25rem] overflow-hidden bg-[#0a1128] relative border-4 border-[#121c3b] shadow-xl">
+                  <div className="h-[28vh] min-h-[185px] max-h-[235px] aspect-[3/4] mx-auto rounded-[2rem] overflow-hidden bg-[#0a1128] relative border-[3.5px] border-[#121c3b] shadow-2xl">
                     <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                    <div className="absolute inset-0 pointer-events-none p-3">
-                      <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[1.5rem] relative">
-                        <div className="absolute top-0 left-0 w-5 h-5 border-t-3 border-l-3 border-brand-500 rounded-tl-[1.5rem] -mt-0.5 -ml-0.5"></div>
-                        <div className="absolute top-0 right-0 w-5 h-5 border-t-3 border-r-3 border-brand-500 rounded-tr-[1.5rem] -mt-0.5 -mr-0.5"></div>
-                        <div className="absolute bottom-0 left-0 w-5 h-5 border-b-3 border-l-3 border-brand-500 rounded-bl-[1.5rem] -mb-0.5 -ml-0.5"></div>
-                        <div className="absolute bottom-0 right-0 w-5 h-5 border-b-3 border-r-3 border-brand-500 rounded-br-[1.5rem] -mb-0.5 -mr-0.5"></div>
+                    <div className="absolute inset-0 pointer-events-none p-3.5">
+                      <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[1.6rem] relative">
+                        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-brand-500 rounded-tl-[1.6rem] -mt-0.5 -ml-0.5"></div>
+                        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-brand-500 rounded-tr-[1.6rem] -mt-0.5 -mr-0.5"></div>
+                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-brand-500 rounded-bl-[1.6rem] -mb-0.5 -ml-0.5"></div>
+                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-brand-500 rounded-br-[1.6rem] -mb-0.5 -mr-0.5"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`w-[68%] h-[74%] rounded-[50%] border-2 transition-colors duration-300 ${faceDetected ? 'border-brand-400/80 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'border-white/10'}`} />
+                          <div className={`w-[70%] h-[78%] rounded-[50%] border-2 transition-colors duration-300 ${faceDetected ? 'border-brand-400/80 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'border-white/10'}`} />
                         </div>
                       </div>
                     </div>
                     {faceDetected && (
-                      <div className="absolute bottom-1.5 left-0 right-0 flex justify-center">
-                        <span className="bg-success-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md"><CheckCircle className="w-3 h-3" /> {t.face_detected}</span>
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                        <span className="bg-success-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg"><CheckCircle className="w-3.5 h-3.5" /> Face Detected ✓</span>
                       </div>
                     )}
                   </div>
@@ -726,9 +718,9 @@ export default function ScanPage() {
                       } else { toast.error(t.no_face_good_lighting); }
                     }}
                     disabled={!faceDetected}
-                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm sm:text-base ${faceDetected ? 'bg-[#0a1128] hover:bg-slate-800 text-white shadow-md' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                    className={`w-full py-3.5 px-6 rounded-2xl font-black flex items-center justify-center gap-2.5 transition-all text-[15px] sm:text-base shadow-xl ${faceDetected ? 'bg-[#0a1128] hover:bg-[#121c3b] text-white shadow-[#0a1128]/30 active:scale-[0.98]' : 'bg-[#0a1128]/75 text-white/50 cursor-not-allowed'}`}
                   >
-                    <ScanFace className="w-4 h-4 sm:w-5 sm:h-5" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
+                    <ScanFace className="w-5 h-5 text-white" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
                   </button>
                 </>
               )}
