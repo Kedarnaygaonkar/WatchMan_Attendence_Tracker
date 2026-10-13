@@ -650,11 +650,11 @@ export default function ScanPage() {
                 </div>
                 <p className="text-[#4a5580] text-xs">{t.look_camera_register}</p>
               </div>
-              <div className={`h-[27vh] min-h-[170px] max-h-[220px] aspect-[3/4] mx-auto rounded-xl overflow-hidden relative border-2 ${faceDetected ? 'border-success-500 shadow-md shadow-success-500/20' : 'border-white/50'}`}>
+              <div className={`h-[36vh] min-h-[240px] max-h-[320px] aspect-[3/4] mx-auto rounded-xl overflow-hidden relative border-2 ${faceDetected ? 'border-success-500 shadow-md shadow-success-500/20' : 'border-white/50'}`}>
                 <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                 {!faceDetected && <div className="absolute inset-0 flex items-center justify-center bg-black/40"><p className="text-white font-medium bg-black/60 px-2.5 py-0.5 rounded-full text-xs backdrop-blur-sm">{t.no_face_detected}</p></div>}
               </div>
-              <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-md transition-all text-sm sm:text-base ${faceDetected ? 'bg-brand-600 hover:bg-brand-500' : 'bg-white/70 text-slate-500 cursor-not-allowed'}`}>
+              <button onClick={registerFace} disabled={!modelsLoaded || !faceDetected} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-md transition-all text-sm sm:text-base ${faceDetected ? 'bg-[#16a34a] hover:bg-[#15803d]' : 'bg-[#16a34a]/40 text-white/60 cursor-not-allowed border border-green-500/20'}`}>
                 <ScanFace className="w-4 h-4" /> {t.register_face}
               </button>
             </div>
@@ -679,7 +679,7 @@ export default function ScanPage() {
                 </div>
               ) : (
                 <>
-                  <div className="h-[28vh] min-h-[185px] max-h-[235px] aspect-[3/4] mx-auto rounded-[2rem] overflow-hidden bg-[#0a1128] relative border-[3.5px] border-[#121c3b] shadow-2xl">
+                  <div className="h-[38vh] min-h-[260px] max-h-[340px] aspect-[3/4] mx-auto rounded-[2rem] overflow-hidden bg-[#0a1128] relative border-[3.5px] border-[#121c3b] shadow-2xl">
                     <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                     <div className="absolute inset-0 pointer-events-none p-3.5">
                       <div className="w-full h-full border-[2px] border-brand-500/30 rounded-[1.6rem] relative">
@@ -718,7 +718,11 @@ export default function ScanPage() {
                       } else { toast.error(t.no_face_good_lighting); }
                     }}
                     disabled={!faceDetected}
-                    className={`w-full py-3.5 px-6 rounded-2xl font-black flex items-center justify-center gap-2.5 transition-all text-[15px] sm:text-base shadow-xl ${faceDetected ? 'bg-[#0a1128] hover:bg-[#121c3b] text-white shadow-[#0a1128]/30 active:scale-[0.98]' : 'bg-[#0a1128]/75 text-white/50 cursor-not-allowed'}`}
+                    className={`w-full py-3.5 px-6 rounded-2xl font-black flex items-center justify-center gap-2.5 transition-all text-[15px] sm:text-base shadow-xl ${
+                      faceDetected
+                        ? 'bg-[#16a34a] hover:bg-[#15803d] text-white shadow-lg shadow-green-600/30 active:scale-[0.98]'
+                        : 'bg-[#16a34a]/40 text-white/70 cursor-not-allowed border border-green-500/20'
+                    }`}
                   >
                     <ScanFace className="w-5 h-5 text-white" /> {faceDetected ? t.verify_my_face : t.waiting_for_face}
                   </button>
@@ -879,11 +883,11 @@ export default function ScanPage() {
                   {t.checked_in_at}{new Date(existingRecord.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                 </div>
               )}
-              <div className="h-[27vh] min-h-[170px] max-h-[220px] aspect-[3/4] mx-auto rounded-xl overflow-hidden bg-surface-950 relative border-2 border-white/70 shadow-lg">
+              <div className="h-[36vh] min-h-[240px] max-h-[320px] aspect-[3/4] mx-auto rounded-xl overflow-hidden bg-slate-900 relative border-2 border-white/70 shadow-lg">
                 <video ref={videoCallbackRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
               </div>
               <canvas ref={canvasRef} className="hidden" />
-              <button onClick={capturePhoto} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-md transition-all text-sm sm:text-base ${mode === 'checkin' ? 'bg-success-600 hover:bg-success-500' : 'bg-warning-600 hover:bg-warning-500'}`}>
+              <button onClick={capturePhoto} className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-white shadow-md transition-all text-sm sm:text-base ${mode === 'checkin' ? 'bg-[#16a34a] hover:bg-[#15803d]' : 'bg-warning-600 hover:bg-warning-500'}`}>
                 {mode === 'checkin' ? <><LogIn className="w-4 h-4" /> {t.mark_checkin}</> : <><LogOut className="w-4 h-4" /> {t.mark_checkout}</>}
               </button>
             </div>
