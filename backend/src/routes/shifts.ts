@@ -10,8 +10,10 @@ router.use(requireRole(['agency_admin', 'super_admin']));
 
 const shiftSchema = z.object({
   name: z.string().min(2).max(100),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format: HH:MM'),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format: HH:MM'),
+  shiftType: z.enum(['day', 'night', 'overtime']).default('day'),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format: HH:MM').optional().or(z.literal('')),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Format: HH:MM').optional().or(z.literal('')),
+  durationHours: z.number().min(0).max(24).optional(),
   isOvernight: z.boolean().default(false),
   lateThresholdMinutes: z.number().min(0).max(120).default(15),
   allowOvertime: z.boolean().default(false),
@@ -61,8 +63,19 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
 
   const formatted = shifts.map(s => {
     s.id = s._id.toString();
-    s.allow_overtime = Boolean(s.allow_overtime);
-    s.overtime_hours = Number(s.overtime_hours || 0);
+    // Auto-detect shift_type if not explicitly set
+    if (!s.shift_type) {
+      if (s.name?.toLowerCase().includes('overtime') || (!s.start_time && s.duration_hours) || (!s.start_time && !s.end_time)) {
+        s.shift_type = 'overtime';
+      } else if (s.is_overnight || s.name?.toLowerCase().includes('night')) {
+        s.shift_type = 'night';
+      } else {
+        s.shift_type = 'day';
+      }
+    }
+    s.duration_hours = Number(s.duration_hours || s.overtime_hours || 0);
+    s.allow_overtime = Boolean(s.allow_overtime || s.shift_type === 'overtime');
+    s.overtime_hours = Number(s.overtime_hours || s.duration_hours || 0);
     delete s._id;
     delete s.__v;
     return s;
@@ -87,23 +100,27 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   }
 
   const d = parse.data;
+  const isOvertime = d.shiftType === 'overtime' || d.name.toLowerCase().includes('overtime');
 
-  // Auto-detect overnight if endTime < startTime
-  const isOvernight = d.isOvernight ||
-    (d.endTime !== '00:00' && d.endTime < d.startTime);
+  let isOvernight = d.isOvernight;
+  if (!isOvertime && d.startTime && d.endTime) {
+    isOvernight = d.isOvernight || (d.endTime !== '00:00' && d.endTime < d.startTime);
+  }
 
-  const allowOvertime = Boolean(d.allowOvertime || (d.overtimeHours && d.overtimeHours > 0));
-  const overtimeHours = allowOvertime ? Number(d.overtimeHours || 0) : 0;
+  const shiftType = isOvertime ? 'overtime' : (d.shiftType || (isOvernight ? 'night' : 'day'));
+  const durationHours = isOvertime ? Number(d.durationHours || d.overtimeHours || 3) : Number(d.durationHours || 0);
 
   const shift = new Shift({
     agency_id: agencyId,
     name: d.name,
-    start_time: d.startTime,
-    end_time: d.endTime,
-    is_overnight: isOvernight,
-    late_threshold_minutes: d.lateThresholdMinutes,
-    allow_overtime: allowOvertime,
-    overtime_hours: overtimeHours,
+    shift_type: shiftType,
+    start_time: isOvertime ? '' : (d.startTime || ''),
+    end_time: isOvertime ? '' : (d.endTime || ''),
+    duration_hours: durationHours,
+    is_overnight: isOvertime ? false : isOvernight,
+    late_threshold_minutes: isOvertime ? 0 : d.lateThresholdMinutes,
+    allow_overtime: isOvertime ? true : Boolean(d.allowOvertime),
+    overtime_hours: isOvertime ? durationHours : (d.allowOvertime ? Number(d.overtimeHours || 0) : 0),
     is_active: d.isActive,
   });
 
@@ -135,16 +152,24 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   const d = parse.data;
 
   if (d.name !== undefined) shift.name = d.name;
+  if (d.shiftType !== undefined) shift.shift_type = d.shiftType;
   if (d.startTime !== undefined) shift.start_time = d.startTime;
   if (d.endTime !== undefined) shift.end_time = d.endTime;
+  if (d.durationHours !== undefined) shift.duration_hours = d.durationHours;
   if (d.isOvernight !== undefined) shift.is_overnight = d.isOvernight;
   if (d.lateThresholdMinutes !== undefined) shift.late_threshold_minutes = d.lateThresholdMinutes;
   if (d.allowOvertime !== undefined) shift.allow_overtime = d.allowOvertime;
   if (d.overtimeHours !== undefined) {
     shift.overtime_hours = shift.allow_overtime ? Number(d.overtimeHours || 0) : 0;
   }
-  if (d.allowOvertime === false) {
-    shift.overtime_hours = 0;
+  if (shift.shift_type === 'overtime') {
+    shift.start_time = '';
+    shift.end_time = '';
+    shift.is_overnight = false;
+    if (d.durationHours) {
+      shift.duration_hours = d.durationHours;
+      shift.overtime_hours = d.durationHours;
+    }
   }
   if (d.isActive !== undefined) shift.is_active = d.isActive;
   if (req.user!.role === 'super_admin' && d.agencyId) shift.agency_id = d.agencyId as any;
