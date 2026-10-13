@@ -433,9 +433,9 @@ export default function WatchmanHome() {
   // RENDER — all screens use h-[100dvh] flex-col so nothing scrolls
   // ────────────────────────────────────────────────────────────────
 
-  // Wrapper for non-home screens (simple dark bg, centered content)
+  // Wrapper for non-home screens — fixed overlay so WatchmanLayout header is covered
   const FullScreen = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex flex-col h-[100dvh] w-full bg-surface-950 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col w-full bg-surface-950 overflow-hidden">
       {children}
     </div>
   );
@@ -644,7 +644,7 @@ export default function WatchmanHome() {
                   onClick={runFaceVerification}
                   disabled={!faceLiveDetected || !faceModelsLoaded}
                   className={`w-full py-3 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
-                    faceLiveDetected && faceModelsLoaded ? 'btn-primary' : 'bg-surface-700 text-slate-500 cursor-not-allowed'
+                    faceLiveDetected && faceModelsLoaded ? 'btn-success' : 'bg-surface-700 text-slate-500 cursor-not-allowed'
                   }`}
                 >
                   <ScanFace className="w-5 h-5" />
