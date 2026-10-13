@@ -435,7 +435,7 @@ export default function WatchmanHome() {
 
   // Wrapper for non-home screens — fixed overlay so WatchmanLayout header is covered
   const FullScreen = ({ children }: { children: React.ReactNode }) => (
-    <div className="fixed inset-0 z-50 flex flex-col w-full bg-surface-950 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col w-full overflow-hidden" style={{ background: '#0f172a' }}>
       {children}
     </div>
   );
@@ -505,7 +505,7 @@ export default function WatchmanHome() {
           </div>
 
           {/* Camera feed — fills remaining space */}
-          <div className="relative flex-1 rounded-2xl overflow-hidden bg-surface-800 shadow-2xl ring-2 ring-white/10 border border-white/20 min-h-0">
+          <div className="relative flex-1 rounded-2xl overflow-hidden shadow-2xl ring-2 ring-white/10 border border-white/20 min-h-0" style={{ background: '#1e293b' }}>
             {capturedPhoto ? (
               <img src={capturedPhoto} alt="Selfie" className="w-full h-full object-cover" />
             ) : (
@@ -615,7 +615,7 @@ export default function WatchmanHome() {
                 </p>
               </div>
             ) : (
-              <div className="relative h-full rounded-2xl overflow-hidden bg-surface-800 shadow-2xl ring-2 ring-white/10 border border-white/20">
+              <div className="relative h-full rounded-2xl overflow-hidden shadow-2xl ring-2 ring-white/10 border border-white/20" style={{ background: '#1e293b' }}>
                 <video ref={faceVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                 {/* Oval guide */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
