@@ -494,14 +494,14 @@ export default function WatchmanHome() {
   if (step === 'camera' || step === 'submitting') {
     return (
       <FullScreen>
-        <div className="flex flex-col h-full p-4 gap-3 animate-fade-in max-w-sm mx-auto w-full">
-          {/* Header — compact */}
-          <div className="text-center shrink-0 pt-2">
-            <div className="badge-present mx-auto inline-flex mb-1">
+        <div className="flex flex-col h-full px-4 pt-3 pb-3 gap-2 animate-fade-in max-w-sm mx-auto w-full">
+          {/* Header — ultra-compact */}
+          <div className="text-center shrink-0">
+            <div className="badge-present mx-auto inline-flex mb-0.5">
               <ShieldCheck className="w-3.5 h-3.5" /> Location Verified
             </div>
-            <h2 className="text-lg font-bold text-slate-100">Take Your Photo</h2>
-            <p className="text-slate-500 text-xs">This confirms your attendance</p>
+            <h2 className="text-base font-bold text-slate-100 leading-tight">Take Your Photo</h2>
+            <p className="text-slate-500 text-xs leading-none">This confirms your attendance</p>
           </div>
 
           {/* Camera feed — fills remaining space */}
@@ -520,24 +520,24 @@ export default function WatchmanHome() {
           </div>
 
           {/* Buttons — always at bottom */}
-          <div className="shrink-0 space-y-2 pb-2">
+          <div className="shrink-0 space-y-1.5">
             {capturedPhoto ? (
               <>
-                <button onClick={submitAttendance} disabled={step === 'submitting'} className="btn-success w-full py-4 text-base">
+                <button onClick={submitAttendance} disabled={step === 'submitting'} className="btn-success w-full py-3 text-base">
                   {step === 'submitting'
                     ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</>
                     : <><CheckCircle2 className="w-5 h-5" /> Submit Attendance</>}
                 </button>
-                <button onClick={retakePhoto} className="btn-ghost w-full py-2 text-sm">
+                <button onClick={retakePhoto} className="btn-ghost w-full py-1.5 text-sm">
                   <RefreshCw className="w-4 h-4" /> Retake Photo
                 </button>
               </>
             ) : (
-              <button onClick={capturePhoto} className="btn-primary w-full py-4 text-base">
+              <button onClick={capturePhoto} className="btn-primary w-full py-3 text-base">
                 <Camera className="w-6 h-6" /> Capture Photo
               </button>
             )}
-            <button onClick={resetToHome} className="btn-ghost w-full py-2 text-xs text-slate-500">Cancel</button>
+            <button onClick={resetToHome} className="btn-ghost w-full py-1 text-xs text-slate-500">Cancel</button>
           </div>
         </div>
       </FullScreen>
@@ -587,17 +587,17 @@ export default function WatchmanHome() {
     const isMismatch = faceVerified === false;
     return (
       <FullScreen>
-        <div className="flex flex-col h-full p-4 gap-3 animate-fade-in max-w-sm mx-auto w-full">
-          {/* Header — compact */}
-          <div className="text-center shrink-0 pt-2">
-            <div className={`badge-present mx-auto inline-flex mb-1 ${isMismatch ? 'badge-absent' : ''}`}>
+        <div className="flex flex-col h-full px-4 pt-3 pb-3 gap-2 animate-fade-in max-w-sm mx-auto w-full">
+          {/* Header — ultra-compact */}
+          <div className="text-center shrink-0">
+            <div className={`badge-present mx-auto inline-flex mb-0.5 ${isMismatch ? 'badge-absent' : ''}`}>
               <ShieldCheck className="w-3.5 h-3.5" />
               {isMismatch ? 'Face Mismatch' : 'Face Verification'}
             </div>
-            <h2 className="text-lg font-bold text-slate-100">
+            <h2 className="text-base font-bold text-slate-100 leading-tight">
               {isMismatch ? 'Attendance Blocked' : 'Verify Your Identity'}
             </h2>
-            <p className="text-slate-500 text-xs">
+            <p className="text-slate-500 text-xs leading-none">
               {isMismatch ? 'Your face did not match your registered photo.' : 'Look straight at the camera. Press verify when ready.'}
             </p>
           </div>
@@ -635,22 +635,22 @@ export default function WatchmanHome() {
           </div>
 
           {/* Buttons — always visible at bottom */}
-          <div className="shrink-0 space-y-2 pb-2">
+          <div className="shrink-0 space-y-1.5">
             {isMismatch ? (
-              <button onClick={resetToHome} className="btn-primary w-full py-4">Go Back</button>
+              <button onClick={resetToHome} className="btn-primary w-full py-3">Go Back</button>
             ) : (
               <>
                 <button
                   onClick={runFaceVerification}
                   disabled={!faceLiveDetected || !faceModelsLoaded}
-                  className={`w-full py-4 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
+                  className={`w-full py-3 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
                     faceLiveDetected && faceModelsLoaded ? 'btn-primary' : 'bg-surface-700 text-slate-500 cursor-not-allowed'
                   }`}
                 >
                   <ScanFace className="w-5 h-5" />
                   {!faceModelsLoaded ? 'Loading AI...' : faceLiveDetected ? 'Verify My Face' : 'Waiting for face...'}
                 </button>
-                <button onClick={resetToHome} className="btn-ghost w-full py-2 text-xs text-slate-500">Cancel</button>
+                <button onClick={resetToHome} className="btn-ghost w-full py-1 text-xs text-slate-500">Cancel</button>
               </>
             )}
           </div>
