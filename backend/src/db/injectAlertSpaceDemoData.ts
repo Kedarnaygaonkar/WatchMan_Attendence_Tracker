@@ -66,10 +66,10 @@ async function inject() {
 
   // 3. Create or fetch Shifts for Alert Space
   const shiftDefs = [
-    { name: 'Morning Shift', start_time: '07:00', end_time: '15:00', is_overnight: false },
-    { name: 'Evening Shift', start_time: '15:00', end_time: '23:00', is_overnight: false },
-    { name: 'Night Shift', start_time: '23:00', end_time: '07:00', is_overnight: true },
-    { name: 'Day General', start_time: '08:00', end_time: '20:00', is_overnight: false },
+    { name: 'Morning Shift', start_time: '07:00', end_time: '15:00', is_overnight: false, allow_overtime: true, overtime_hours: 2 },
+    { name: 'Evening Shift', start_time: '15:00', end_time: '23:00', is_overnight: false, allow_overtime: true, overtime_hours: 2 },
+    { name: 'Night Shift', start_time: '23:00', end_time: '07:00', is_overnight: true, allow_overtime: false, overtime_hours: 0 },
+    { name: 'Day General', start_time: '08:00', end_time: '20:00', is_overnight: false, allow_overtime: true, overtime_hours: 4 },
   ];
 
   const shifts: any[] = [];
@@ -83,8 +83,14 @@ async function inject() {
         end_time: sDef.end_time,
         is_overnight: sDef.is_overnight,
         late_threshold_minutes: 15,
+        allow_overtime: sDef.allow_overtime,
+        overtime_hours: sDef.overtime_hours,
         is_active: true,
       });
+    } else {
+      s.allow_overtime = sDef.allow_overtime;
+      s.overtime_hours = sDef.overtime_hours;
+      await s.save();
     }
     shifts.push(s);
   }

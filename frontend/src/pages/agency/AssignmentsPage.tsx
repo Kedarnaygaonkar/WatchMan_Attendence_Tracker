@@ -22,7 +22,7 @@ interface Assignment {
 
 interface Watchman { id: string; full_name: string; employee_id: string; }
 interface Society { id: string; name: string; }
-interface Shift { id: string; name: string; start_time: string; end_time: string; is_overnight: boolean; }
+interface Shift { id: string; name: string; start_time: string; end_time: string; is_overnight: boolean; allow_overtime?: boolean; overtime_hours?: number; }
 
 const defaultForm = {
   watchmanId: '', societyId: '', shiftId: '',
@@ -191,7 +191,11 @@ export default function AssignmentsPage() {
                 <label className="label">Shift *</label>
                 <select className="input" value={form.shiftId} onChange={e => setForm(f=>({...f,shiftId:e.target.value}))}>
                   <option value="">Select shift...</option>
-                  {shifts?.map(s => <option key={s.id} value={s.id}>{s.name} ({formatTime(s.start_time)}–{formatTime(s.end_time)})</option>)}
+                  {shifts?.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({formatTime(s.start_time)}–{formatTime(s.end_time)}{s.allow_overtime && s.overtime_hours ? ` • +${s.overtime_hours}h OT` : ''})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -240,7 +244,14 @@ export default function AssignmentsPage() {
                       editShiftId === s.id ? 'border-brand-500 bg-brand-500/10 text-slate-100' : 'border-surface-700 bg-surface-800/50 text-slate-300 hover:border-surface-600'
                     }`}>
                     <span className="font-semibold text-sm">{s.name}</span>
-                    <span className="text-slate-400 text-xs">{formatTime(s.start_time)} — {formatTime(s.end_time)}</span>
+                    <div className="flex items-center gap-2">
+                      {s.allow_overtime && s.overtime_hours ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                          +{s.overtime_hours}h OT
+                        </span>
+                      ) : null}
+                      <span className="text-slate-400 text-xs">{formatTime(s.start_time)} — {formatTime(s.end_time)}</span>
+                    </div>
                   </button>
                 ))}
               </div>
