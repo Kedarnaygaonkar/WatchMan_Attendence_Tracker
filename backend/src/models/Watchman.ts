@@ -6,7 +6,7 @@ export interface IWatchman extends Document {
   user_id: mongoose.Types.ObjectId;
   employee_id: string;
   full_name: string;
-  phone: string;
+  phone?: string;
   emergency_contact?: string;
   address?: string;
   joining_date?: Date;
@@ -27,7 +27,7 @@ const watchmanSchema = new Schema<IWatchman>(
     user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     employee_id: { type: String, required: true },
     full_name: { type: String, required: true },
-    phone: { type: String, required: true },
+    phone: { type: String, default: '' },
     emergency_contact: { type: String },
     address: { type: String },
     joining_date: { type: Date },

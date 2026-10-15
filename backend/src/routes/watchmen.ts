@@ -7,12 +7,19 @@ import multer from 'multer';
 import path from 'path';
 import { config } from '../config';
 import { v4 as uuidv4 } from 'uuid';
-import { Watchman, User, Assignment } from '../models';
+import * as xlsx from 'xlsx';
+import { Watchman, User, Assignment, Agency } from '../models';
 
 const router = Router();
 router.use(authenticate);
 // NOTE: role restriction is applied per-route, not globally,
 // because face registration endpoints are accessible to watchmen too.
+
+// Memory storage for file imports
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 // Photo upload config
 const storage = multer.diskStorage({
@@ -33,7 +40,7 @@ const upload = multer({
 const watchmanSchema = z.object({
   employeeId: z.string().min(1).max(50),
   fullName: z.string().min(2).max(200),
-  phone: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
+  phone: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits').optional().or(z.literal('')),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
   emergencyContact: z.string().optional(),
@@ -179,6 +186,182 @@ router.get('/:id', requireRole(['agency_admin', 'super_admin']), asyncHandler(as
   res.json({ success: true, data });
 }));
 
+/** POST /api/watchmen/import — bulk import from Excel / CSV or JSON */
+router.post('/import', requireRole(['agency_admin', 'super_admin']), memoryUpload.single('file'), asyncHandler(async (req: Request, res: Response) => {
+  let agencyId = getAgencyId(req);
+
+  if (!agencyId && req.body.agencyId) {
+    agencyId = req.body.agencyId;
+  }
+
+  if (!agencyId) {
+    res.status(400).json({ success: false, message: 'Agency is required for importing watchmen. Please select an agency.' });
+    return;
+  }
+
+  const agency = await Agency.findById(agencyId);
+  if (!agency) {
+    res.status(404).json({ success: false, message: 'Target agency not found' });
+    return;
+  }
+
+  let rowsToProcess: { employeeId: string; fullName: string }[] = [];
+
+  if (req.file) {
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      res.status(400).json({ success: false, message: 'Uploaded file contains no sheets' });
+      return;
+    }
+    const sheet = workbook.Sheets[sheetName];
+
+    // Try parsing as JSON objects
+    const objRows: any[] = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+    if (objRows.length > 0) {
+      for (const row of objRows) {
+        let empId = '';
+        let name = '';
+
+        for (const [k, v] of Object.entries(row)) {
+          const cleanK = k.toLowerCase().trim().replace(/[\s_-]+/g, '');
+          const strV = String(v ?? '').trim();
+          if (!strV) continue;
+
+          if (['employeeid', 'empid', 'guardid', 'id', 'empcode', 'code'].includes(cleanK)) {
+            empId = strV;
+          } else if (['name', 'fullname', 'guardname', 'watchmanname', 'employeename', 'guard'].includes(cleanK)) {
+            name = strV;
+          }
+        }
+
+        // Fallback: take first 2 values if header names didn't match
+        if (!empId || !name) {
+          const vals = Object.values(row).map(v => String(v ?? '').trim()).filter(Boolean);
+          if (vals.length >= 2) {
+            if (!empId) empId = vals[0];
+            if (!name) name = vals[1];
+          }
+        }
+
+        if (empId && name) {
+          rowsToProcess.push({ employeeId: empId, fullName: name });
+        }
+      }
+    }
+
+    // Fallback: if no rows parsed via headers, try 2D array
+    if (rowsToProcess.length === 0) {
+      const rawRows: any[][] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+      for (let i = 0; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        if (!Array.isArray(row) || row.length < 2) continue;
+        const col0 = String(row[0] ?? '').trim();
+        const col1 = String(row[1] ?? '').trim();
+        if (!col0 || !col1) continue;
+
+        // Skip potential header row
+        if (i === 0 && (col0.toLowerCase().includes('id') || col1.toLowerCase().includes('name'))) {
+          continue;
+        }
+        rowsToProcess.push({ employeeId: col0, fullName: col1 });
+      }
+    }
+  } else if (req.body.watchmen) {
+    let watchmenList: any[] = [];
+    if (typeof req.body.watchmen === 'string') {
+      try {
+        watchmenList = JSON.parse(req.body.watchmen);
+      } catch {
+        watchmenList = [];
+      }
+    } else if (Array.isArray(req.body.watchmen)) {
+      watchmenList = req.body.watchmen;
+    }
+
+    for (const item of watchmenList) {
+      const empId = String(item.employeeId || item.employee_id || '').trim();
+      const name = String(item.fullName || item.full_name || item.name || '').trim();
+      if (empId && name) {
+        rowsToProcess.push({ employeeId: empId, fullName: name });
+      }
+    }
+  } else {
+    res.status(400).json({ success: false, message: 'No file or watchmen data provided' });
+    return;
+  }
+
+  if (rowsToProcess.length === 0) {
+    res.status(400).json({
+      success: false,
+      message: 'No valid watchmen rows found. Please ensure the file has two columns: Employee ID and Name.'
+    });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash('Guard@123', 10);
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  for (const item of rowsToProcess) {
+    const existing = await Watchman.findOne({ agency_id: agencyId, employee_id: item.employeeId });
+    if (existing) {
+      existing.full_name = item.fullName;
+      await existing.save();
+      await User.updateOne({ _id: existing.user_id }, { name: item.fullName });
+      updatedCount++;
+    } else {
+      const cleanId = item.employeeId.toLowerCase().replace(/[^a-z0-9]/g, '');
+      let emailStr = `${cleanId}@watchtrack.local`;
+      const emailCheck = await User.findOne({ email: emailStr });
+      if (emailCheck) {
+        emailStr = `${cleanId}.${Date.now().toString(36).slice(-4)}@watchtrack.local`;
+      }
+
+      const user = new User({
+        agency_id: agencyId,
+        email: emailStr,
+        password_hash: passwordHash,
+        role: 'watchman',
+        name: item.fullName,
+        phone: '',
+        is_active: true,
+      });
+      await user.save();
+
+      const watchman = new Watchman({
+        agency_id: agencyId,
+        user_id: user._id,
+        employee_id: item.employeeId,
+        full_name: item.fullName,
+        phone: '',
+        status: 'active',
+      });
+      await watchman.save();
+      createdCount++;
+    }
+  }
+
+  await logAudit(null as any, {
+    agencyId,
+    userId: req.user!.userId,
+    action: 'import_watchmen',
+    entityType: 'watchman',
+    newValues: { created: createdCount, updated: updatedCount, total: rowsToProcess.length },
+    req
+  });
+
+  res.json({
+    success: true,
+    message: `Successfully imported ${createdCount} watchmen${updatedCount > 0 ? ` (${updatedCount} updated)` : ''}.`,
+    data: {
+      created: createdCount,
+      updated: updatedCount,
+      total: rowsToProcess.length
+    }
+  });
+}));
+
 /** POST /api/watchmen — create watchman + user account */
 router.post('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
@@ -213,7 +396,7 @@ router.post('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(asyn
     password_hash: passwordHash,
     role: 'watchman',
     name: d.fullName,
-    phone: d.phone,
+    phone: d.phone || '',
     is_active: true,
   });
   await user.save();
@@ -223,7 +406,7 @@ router.post('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(asyn
     user_id: user._id,
     employee_id: d.employeeId,
     full_name: d.fullName,
-    phone: d.phone,
+    phone: d.phone || '',
     emergency_contact: d.emergencyContact,
     address: d.address,
     joining_date: d.joiningDate,
