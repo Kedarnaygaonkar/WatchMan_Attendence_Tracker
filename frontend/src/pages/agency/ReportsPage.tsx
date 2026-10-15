@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users, Printer, ShieldCheck, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
@@ -338,7 +339,7 @@ export default function ReportsPage() {
   }
 
   const tabs: { id: ReportTab; label: string; icon: React.ElementType }[] = [
-    { id: 'daily', label: 'Daily Attendance', icon: Calendar },
+    { id: 'daily', label: 'Daily Roster Summary', icon: Calendar },
     { id: 'monthly', label: 'Monthly & Society Reports', icon: BarChart3 },
     { id: 'watchmen', label: 'Watchmen Report', icon: Users },
     { id: 'journey', label: 'Watchman Journey', icon: Route },
@@ -425,9 +426,22 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Daily */}
+      {/* Daily Roster */}
       {tab === 'daily' && (
         <div className="space-y-4">
+          <div className="bg-surface-800/80 border border-surface-700 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-slate-300">
+              <span className="font-semibold text-brand-300">📋 Daily Roster Overview:</span>
+              <span>Full roster view of all assigned guards for the selected date, highlighting present vs absent guards.</span>
+            </div>
+            <Link
+              to={`${isSuperAdmin ? '/agency' : '/admin'}/attendance`}
+              className="text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 shrink-0"
+            >
+              <span>Need live punch selfies, GPS & overrides? Go to Attendance Logs &rarr;</span>
+            </Link>
+          </div>
+
           <div className="table-wrapper">
             <table className="table">
               <thead><tr><th>Guard</th><th>Society</th><th>Shift</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>

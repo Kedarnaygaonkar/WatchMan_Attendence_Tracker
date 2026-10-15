@@ -94,6 +94,9 @@ attendanceSchema.plugin(toJSON);
 
 // Indexes
 attendanceSchema.index({ agency_id: 1, attendance_date: -1 }); // Optimized for dashboard/reports
+attendanceSchema.index({ agency_id: 1, check_in_time: -1 }); // Fast live feed
+attendanceSchema.index({ check_in_time: -1 }); // Global recency
+attendanceSchema.index({ attendance_date: -1 }); // Date queries
 attendanceSchema.index({ watchman_id: 1, shift_id: 1, attendance_date: -1 }); // Optimized for watchman history
 attendanceSchema.index({ society_id: 1, attendance_date: -1 }); // Optimized for society history
 // Unique attendance per watchman, date, shift (prevents offline sync race conditions)

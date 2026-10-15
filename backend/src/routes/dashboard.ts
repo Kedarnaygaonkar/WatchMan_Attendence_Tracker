@@ -29,13 +29,22 @@ router.get('/summary', asyncHandler(async (req: Request, res: Response) => {
   const agencyFilter: any = {};
   if (agencyId) agencyFilter.agency_id = new mongoose.Types.ObjectId(agencyId);
 
+  const wideStart = new Date(today.getTime() - 14 * 3600000);
+  const wideEnd = new Date(today.getTime() + 24 * 3600000 + 14 * 3600000);
+
   const [
     attendanceList,
     societiesCount,
     assignmentsCount,
     watchmenCount,
   ] = await Promise.all([
-    Attendance.find({ ...agencyFilter, attendance_date: today }),
+    Attendance.find({
+      ...agencyFilter,
+      $or: [
+        { attendance_date: today },
+        { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+      ],
+    }).select('status verification_status').lean(),
     Society.countDocuments({ ...agencyFilter, is_active: true }),
     Assignment.countDocuments({
       ...agencyFilter,
@@ -80,11 +89,22 @@ router.get('/summary', asyncHandler(async (req: Request, res: Response) => {
 router.get('/live-attendance', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
   const today = new Date(new Date().toISOString().split('T')[0]);
+  const wideStart = new Date(today.getTime() - 14 * 3600000);
+  const wideEnd = new Date(today.getTime() + 24 * 3600000 + 14 * 3600000);
   const { societyId, status } = req.query;
 
-  const matchStage: any = { attendance_date: today };
-  if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
-  if (societyId) matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
+  const matchStage: any = {
+    $or: [
+      { attendance_date: today },
+      { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+    ],
+  };
+  if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+  }
+  if (societyId && mongoose.Types.ObjectId.isValid(societyId as string)) {
+    matchStage.society_id = new mongoose.Types.ObjectId(societyId as string);
+  }
   if (status) matchStage.status = status;
 
   const list = await Attendance.aggregate([
@@ -247,16 +267,21 @@ router.get('/missing-attendance', asyncHandler(async (req: Request, res: Respons
  */
 router.get('/society-coverage', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
-  const today = new Date(new Date().toISOString().split('T')[0]);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date(todayStr);
+  const wideStart = new Date(today.getTime() - 14 * 3600000);
+  const wideEnd = new Date(today.getTime() + 24 * 3600000 + 14 * 3600000);
 
   const matchSoc: any = { is_active: true };
-  if (agencyId) matchSoc.agency_id = new mongoose.Types.ObjectId(agencyId);
+  if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    matchSoc.agency_id = new mongoose.Types.ObjectId(agencyId);
+  }
 
   const societies = await Society.aggregate([
     { $match: matchSoc },
     {
       $lookup: {
-        from: 'attendance',
+        from: 'attendances',
         let: { sId: '$_id' },
         pipeline: [
           {
@@ -264,10 +289,13 @@ router.get('/society-coverage', asyncHandler(async (req: Request, res: Response)
               $expr: {
                 $and: [
                   { $eq: ['$society_id', '$$sId'] },
-                  { $eq: ['$attendance_date', today] },
                   { $in: ['$status', ['present', 'late']] },
                 ],
               },
+              $or: [
+                { attendance_date: today },
+                { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+              ],
             },
           },
         ],

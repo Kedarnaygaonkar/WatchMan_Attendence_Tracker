@@ -107,7 +107,7 @@ router.get('/', requireRole(['agency_admin', 'super_admin']), asyncHandler(async
         active_assignments: { $size: '$assignments' },
       },
     },
-    { $project: { user: 0, assignments: 0 } },
+    { $project: { user: 0, assignments: 0, face_descriptor: 0 } },
     { $sort: { full_name: 1 } },
   ]);
 

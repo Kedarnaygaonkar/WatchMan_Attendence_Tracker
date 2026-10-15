@@ -320,34 +320,49 @@ router.get(
 
     if (!isSuperAdmin && !agencyId) throw new AppError('agency_id required', 400);
 
-    const { date, societyId, society_id, watchmanId, watchman_id, status, page = '1', limit = '100' } = req.query;
+    const { date, societyId, society_id, watchmanId, watchman_id, status, search, page = '1', limit = '100' } = req.query;
     const socId = (societyId || society_id) as string;
     const wmId = (watchmanId || watchman_id) as string;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     const matchStage: any = {};
-    if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
-    if (socId) matchStage.society_id = new mongoose.Types.ObjectId(socId);
-    if (wmId) matchStage.watchman_id = new mongoose.Types.ObjectId(wmId);
+    if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+      matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+    }
+    if (socId && mongoose.Types.ObjectId.isValid(socId)) {
+      matchStage.society_id = new mongoose.Types.ObjectId(socId);
+    }
+    if (wmId && mongoose.Types.ObjectId.isValid(wmId)) {
+      matchStage.watchman_id = new mongoose.Types.ObjectId(wmId);
+    }
     if (status) matchStage.status = status;
 
-    if (date) {
-      const d = new Date(date as string);
-      const start = new Date(d);
-      start.setUTCHours(0, 0, 0, 0);
-      const end = new Date(d);
-      end.setUTCHours(23, 59, 59, 999);
-      // Accommodate timezone offsets (e.g. IST UTC+5:30)
-      const wideStart = new Date(start.getTime() - 14 * 3600000);
-      const wideEnd = new Date(end.getTime() + 14 * 3600000);
+    if (date && typeof date === 'string' && date.trim() && date.trim() !== 'all') {
+      const parts = date.trim().split('-').map(Number);
+      let start: Date, end: Date;
+      if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+        start = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0));
+        end = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999));
+      } else {
+        const d = new Date(date);
+        start = new Date(d);
+        start.setUTCHours(0, 0, 0, 0);
+        end = new Date(d);
+        end.setUTCHours(23, 59, 59, 999);
+      }
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        // Accommodate timezone offsets (e.g. IST UTC+5:30)
+        const wideStart = new Date(start.getTime() - 14 * 3600000);
+        const wideEnd = new Date(end.getTime() + 14 * 3600000);
 
-      matchStage.$or = [
-        { attendance_date: { $gte: start, $lte: end } },
-        { check_in_time: { $gte: wideStart, $lte: wideEnd } },
-      ];
+        matchStage.$or = [
+          { attendance_date: { $gte: wideStart, $lte: wideEnd } },
+          { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+        ];
+      }
     }
 
-    const list = await Attendance.aggregate([
+    const pipeline: any[] = [
       { $match: matchStage },
       {
         $lookup: {
@@ -386,11 +401,28 @@ router.get(
           end_time: { $ifNull: ['$shift.end_time', ''] },
         },
       },
+    ];
+
+    if (search && typeof search === 'string' && search.trim()) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { watchman_name: { $regex: search.trim(), $options: 'i' } },
+            { employee_id: { $regex: search.trim(), $options: 'i' } },
+            { society_name: { $regex: search.trim(), $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
       { $project: { watchman: 0, society: 0, shift: 0 } },
       { $sort: { check_in_time: -1 } },
       { $skip: skip },
-      { $limit: parseInt(limit as string) },
-    ]);
+      { $limit: parseInt(limit as string) }
+    );
+
+    const list = await Attendance.aggregate(pipeline);
 
     const formatted = list.map(a => {
       a.id = a._id.toString();

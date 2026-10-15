@@ -26,7 +26,9 @@ import DeliveryPage from './pages/agency/DeliveryPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Fetch fresh data on filter change
+      staleTime: 30 * 1000, // 30 seconds fresh cache - page navigation is INSTANT!
+      gcTime: 5 * 60 * 1000, // keep cached data in memory for 5 minutes
+      refetchOnWindowFocus: false, // avoid background refetch freezes
       retry: 1,
     },
   },

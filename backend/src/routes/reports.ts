@@ -36,7 +36,9 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
   const wideEnd = new Date(end.getTime() + 14 * 3600000);
 
   const matchObj: any = { status: 'active' };
-  if (agencyId) matchObj.agency_id = new mongoose.Types.ObjectId(agencyId);
+  if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    matchObj.agency_id = new mongoose.Types.ObjectId(agencyId);
+  }
 
   const pipeline: any[] = [
     { $match: matchObj },
@@ -47,32 +49,51 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
         pipeline: [
           {
             $match: {
-              $expr: {
-                $and: [
-                  { $eq: [{ $toString: '$watchman_id' }, { $toString: '$$wId' }] },
-                  {
-                    $or: [
-                      { $and: [{ $gte: ['$attendance_date', start] }, { $lte: ['$attendance_date', end] }] },
-                      { $and: [{ $gte: ['$check_in_time', wideStart] }, { $lte: ['$check_in_time', wideEnd] }] },
-                    ],
-                  },
-                ],
-              },
+              $expr: { $eq: ['$watchman_id', '$$wId'] },
+              $or: [
+                { attendance_date: { $gte: wideStart, $lte: wideEnd } },
+                { check_in_time: { $gte: wideStart, $lte: wideEnd } },
+              ],
             },
           },
-          { $sort: { check_in_time: -1 } }
+          { $sort: { check_in_time: -1 } },
+          { $limit: 1 },
         ],
         as: 'attendances',
       },
     },
-    { $unwind: { path: '$attendances', preserveNullAndEmptyArrays: true } }
+    { $unwind: { path: '$attendances', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'assignments',
+        let: { wId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$watchman_id', '$$wId'] },
+              is_active: true,
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 1 },
+        ],
+        as: 'assignment',
+      },
+    },
+    { $unwind: { path: '$assignment', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        resolved_society_id: { $ifNull: ['$attendances.society_id', '$assignment.society_id'] },
+        resolved_shift_id: { $ifNull: ['$attendances.shift_id', '$assignment.shift_id'] },
+      },
+    },
   ];
 
-  if (societyId) {
+  if (societyId && mongoose.Types.ObjectId.isValid(societyId)) {
     pipeline.push({
       $match: {
-        'attendances.society_id': new mongoose.Types.ObjectId(societyId)
-      }
+        resolved_society_id: new mongoose.Types.ObjectId(societyId),
+      },
     });
   }
 
@@ -80,21 +101,30 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
     {
       $lookup: {
         from: 'societies',
-        localField: 'attendances.society_id',
+        localField: 'resolved_society_id',
         foreignField: '_id',
         as: 'society',
       },
     },
     { $unwind: { path: '$society', preserveNullAndEmptyArrays: true } },
     {
+      $lookup: {
+        from: 'shifts',
+        localField: 'resolved_shift_id',
+        foreignField: '_id',
+        as: 'shift',
+      },
+    },
+    { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
+    {
       $addFields: {
         watchman_id: '$_id',
         full_name: '$full_name',
         employee_id: '$employee_id',
         society_name: { $ifNull: ['$society.name', '—'] },
-        shift_name: '—',
-        start_time: '',
-        end_time: '',
+        shift_name: { $ifNull: ['$shift.name', '—'] },
+        start_time: { $ifNull: ['$shift.start_time', ''] },
+        end_time: { $ifNull: ['$shift.end_time', ''] },
         attendance_id: '$attendances._id',
         check_in_time: { $ifNull: ['$attendances.check_in_time', null] },
         check_out_time: { $ifNull: ['$attendances.check_out_time', null] },
@@ -104,7 +134,7 @@ router.get('/daily', asyncHandler(async (req: Request, res: Response) => {
         final_status: { $ifNull: ['$attendances.status', 'absent'] },
       },
     },
-    { $project: { society: 0, attendances: 0 } },
+    { $project: { society: 0, shift: 0, attendances: 0, assignment: 0, face_descriptor: 0 } },
     { $sort: { society_name: 1, full_name: 1 } }
   );
 

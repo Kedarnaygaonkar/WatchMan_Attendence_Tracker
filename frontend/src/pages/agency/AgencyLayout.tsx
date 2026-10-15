@@ -21,9 +21,9 @@ export default function AgencyLayout() {
     { to: `${basePath}/watchmen`, label: 'Watchmen', icon: Users },
     { to: `${basePath}/shifts`, label: 'Shifts', icon: Clock },
     { to: `${basePath}/gates`, label: 'QR Codes', icon: QrCode, roles: ['super_admin'] },
-    { to: `${basePath}/attendance`, label: 'Attendance', icon: ClipboardList },
+    { to: `${basePath}/attendance`, label: 'Attendance Logs', icon: ClipboardList },
     { to: `${basePath}/replacements`, label: 'Replacements', icon: ArrowLeftRight },
-    { to: `${basePath}/reports`, label: 'Reports', icon: BarChart3 },
+    { to: `${basePath}/reports`, label: 'Reports & Analytics', icon: BarChart3 },
     { to: `${basePath}/delivery`, label: 'Delivery Tracking', icon: Bike },
   ];
 
