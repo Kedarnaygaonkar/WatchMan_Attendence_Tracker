@@ -534,7 +534,6 @@ export default function ScanPage() {
             )}
             {gateInfo && step !== 'error' && (
               <>
-                <p className="text-[#3b5bdb] text-[10.5px] font-black uppercase tracking-[0.2em] leading-tight mb-0.5">{gateInfo.gate.name}</p>
                 <h1 className="text-[#1a2a5e] text-2xl font-black leading-tight mb-0.5">{gateInfo.society.name}</h1>
                 <p className="text-[#4a5580] text-xs font-semibold leading-tight flex items-center justify-center gap-1">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
