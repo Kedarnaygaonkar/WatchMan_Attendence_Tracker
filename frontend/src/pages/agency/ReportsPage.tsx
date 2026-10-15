@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users, Printer, ShieldCheck, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users, Printer, ShieldCheck, CheckCircle2, Clock, Sparkles, ArrowLeft, Search } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
-type ReportTab = 'daily' | 'monthly' | 'watchmen' | 'suspicious' | 'journey' | 'society_calendar';
+type ReportTab = 'daily' | 'monthly' | 'watchmen' | 'suspicious';
 
 interface Society { id: string; name: string; }
 interface Agency { id: string; name: string; }
@@ -84,6 +84,7 @@ export default function ReportsPage() {
     const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
   });
   const [journeyEndDate, setJourneyEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [watchmenSearch, setWatchmenSearch] = useState('');
 
   const { data: societies } = useQuery({
     queryKey: ['societies-filter', agencyId],
@@ -109,7 +110,7 @@ export default function ReportsPage() {
       const { data } = await api.get('/watchmen', { params });
       return (data.data || data) as WatchmanOption[];
     },
-    enabled: tab === 'journey',
+    enabled: tab === 'watchmen',
   });
 
   const { data: dailyData, isLoading: dailyLoading } = useQuery({
@@ -156,7 +157,7 @@ export default function ReportsPage() {
       const { data } = await api.get('/reports/watchman-journey', { params });
       return { records: data.data as JourneyDay[], stats: data.stats as JourneyStats, watchman: data.watchman };
     },
-    enabled: tab === 'journey' && !!journeyWatchmanId,
+    enabled: tab === 'watchmen' && !!journeyWatchmanId,
   });
 
   const [calendarSocietyId, setCalendarSocietyId] = useState('');
@@ -217,13 +218,25 @@ export default function ReportsPage() {
       const { data } = await api.get('/watchmen', { params });
       return (data.data || data) as any[];
     },
-    enabled: tab === 'watchmen',
+    enabled: tab === 'watchmen' && !journeyWatchmanId,
+  });
+
+  const filteredWatchmenList = watchmenReportList.filter((w: any) => {
+    if (!watchmenSearch.trim()) return true;
+    const q = watchmenSearch.toLowerCase();
+    return (
+      w.full_name?.toLowerCase().includes(q) ||
+      w.employee_id?.toLowerCase().includes(q) ||
+      w.phone?.toLowerCase().includes(q) ||
+      w.address?.toLowerCase().includes(q)
+    );
   });
 
   function exportWatchmenReportCSV() {
-    if (!watchmenReportList?.length) { toast.error('No watchmen data to export'); return; }
+    const listToExport = filteredWatchmenList.length ? filteredWatchmenList : watchmenReportList;
+    if (!listToExport?.length) { toast.error('No watchmen data to export'); return; }
     const headers = ['Guard Name', 'Employee ID', 'Mobile Number', 'Status', 'Joining Date', 'Active Assignments', 'Address'];
-    const rows = watchmenReportList.map((w: any) => [
+    const rows = listToExport.map((w: any) => [
       w.full_name,
       w.employee_id,
       w.phone,
@@ -232,7 +245,7 @@ export default function ReportsPage() {
       w.active_assignments ?? 0,
       w.address || '',
     ]);
-    downloadCSV([headers, ...rows], `watchmen-report-${new Date().toISOString().split('T')[0]}.csv`);
+    downloadCSV([headers, ...rows], `watchmen-report-${journeyStartDate}-to-${journeyEndDate}.csv`);
   }
 
   function exportJourneyCSV() {
@@ -341,8 +354,7 @@ export default function ReportsPage() {
   const tabs: { id: ReportTab; label: string; icon: React.ElementType }[] = [
     { id: 'daily', label: 'Daily Roster Summary', icon: Calendar },
     { id: 'monthly', label: 'Monthly & Society Reports', icon: BarChart3 },
-    { id: 'watchmen', label: 'Watchmen Report', icon: Users },
-    { id: 'journey', label: 'Watchman Journey', icon: Route },
+    { id: 'watchmen', label: 'Watchmen Report & Journey', icon: Users },
     { id: 'suspicious', label: 'Suspicious Records', icon: AlertTriangle },
   ];
 
@@ -367,8 +379,8 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* Common Filters — hidden for journey */}
-      {tab !== 'journey' && (
+      {/* Common Filters — for daily, monthly, suspicious */}
+      {tab !== 'watchmen' && (
         <div className="card p-4 print:hidden">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="w-4 h-4 text-brand-400" />
@@ -394,13 +406,11 @@ export default function ReportsPage() {
                 {agencies?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             )}
-            {tab !== 'watchmen' && (
-              <select value={societyId} onChange={(e) => setSocietyId(e.target.value)} className="input w-52">
-                <option value="">All Societies</option>
-                {societies?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            )}
-            {((tab !== 'watchmen' && societyId) || agencyId) && (
+            <select value={societyId} onChange={(e) => setSocietyId(e.target.value)} className="input w-52">
+              <option value="">All Societies</option>
+              {societies?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {(societyId || agencyId) && (
               <button onClick={() => { setSocietyId(''); setAgencyId(''); }}
                 className="flex items-center gap-1.5 text-xs text-danger-400 hover:text-danger-300 px-3 py-1.5 rounded-lg hover:bg-danger-500/10 transition-colors border border-danger-500/20">
                 <X className="w-3.5 h-3.5" /> Clear Filters
@@ -419,7 +429,6 @@ export default function ReportsPage() {
                   <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>
                 </>
               )}
-              {tab === 'watchmen' && <button onClick={exportWatchmenReportCSV} disabled={!watchmenReportList?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export Watchmen Report</button>}
               {tab === 'suspicious' && <button onClick={exportSuspiciousCSV} disabled={!suspiciousData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
             </div>
           </div>
@@ -1027,226 +1036,342 @@ export default function ReportsPage() {
         </>
       )}
 
-      {/* Watchman Journey */}
-      {tab === 'journey' && (
+      {/* Merged: Watchmen Report & Journey */}
+      {tab === 'watchmen' && (
         <div className="space-y-5">
-          <div className="card p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Route className="w-4 h-4 text-brand-400" />
-              <span className="text-sm font-semibold text-slate-300">Select Watchman & Date Range</span>
+          {/* Controls Bar */}
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Route className="w-4 h-4 text-brand-400" />
+                <span className="text-sm font-semibold text-slate-200">
+                  {journeyWatchmanId ? 'Watchman Journey & Attendance Details' : 'Watchmen Report & Journey Filter'}
+                </span>
+              </div>
+              {journeyWatchmanId && (
+                <button
+                  onClick={() => setJourneyWatchmanId('')}
+                  className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 font-medium px-2.5 py-1 rounded-lg hover:bg-brand-500/10 transition-colors border border-brand-500/20"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to All Watchmen
+                </button>
+              )}
             </div>
+
             <div className="flex gap-3 flex-wrap items-end">
+              {/* Agency (super_admin only) */}
               {isSuperAdmin && (
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-slate-500 font-medium">Agency</label>
-                  <select value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="input w-48">
+                  <label className="text-xs text-slate-400 font-medium">Agency</label>
+                  <select
+                    value={agencyId}
+                    onChange={(e) => { setAgencyId(e.target.value); setJourneyWatchmanId(''); }}
+                    className="input w-48"
+                  >
                     <option value="">All Agencies</option>
                     {agencies?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
               )}
+
+              {/* Watchman Filter (Select single or all) */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-500 font-medium">Watchman *</label>
-                <select value={journeyWatchmanId} onChange={(e) => setJourneyWatchmanId(e.target.value)} className="input w-60">
-                  <option value="">— Select a Guard —</option>
+                <label className="text-xs text-slate-400 font-medium">Watchman</label>
+                <select
+                  value={journeyWatchmanId}
+                  onChange={(e) => setJourneyWatchmanId(e.target.value)}
+                  className="input w-64"
+                >
+                  <option value="">All Watchmen (Overview)</option>
                   {watchmenOptions?.map((w) => (
-                    <option key={w._id || w.id} value={w._id || w.id}>{w.full_name} ({w.employee_id})</option>
+                    <option key={w._id || w.id} value={w._id || w.id}>
+                      {w.full_name} ({w.employee_id})
+                    </option>
                   ))}
                 </select>
               </div>
+
+              {/* From Date */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-500 font-medium">From</label>
-                <input type="date" value={journeyStartDate} onChange={(e) => setJourneyStartDate(e.target.value)} className="input w-40" />
+                <label className="text-xs text-slate-400 font-medium">From</label>
+                <input
+                  type="date"
+                  value={journeyStartDate}
+                  onChange={(e) => setJourneyStartDate(e.target.value)}
+                  className="input w-40"
+                />
               </div>
+
+              {/* To Date */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-500 font-medium">To</label>
-                <input type="date" value={journeyEndDate} onChange={(e) => setJourneyEndDate(e.target.value)} className="input w-40" />
+                <label className="text-xs text-slate-400 font-medium">To</label>
+                <input
+                  type="date"
+                  value={journeyEndDate}
+                  onChange={(e) => setJourneyEndDate(e.target.value)}
+                  className="input w-40"
+                />
               </div>
-              {journeyData?.records?.length ? (
-                <button onClick={exportJourneyCSV} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm self-end">
-                  <Download className="w-4 h-4" /> Export CSV
-                </button>
-              ) : null}
+
+              {/* Export Button */}
+              <div className="ml-auto">
+                {journeyWatchmanId ? (
+                  <button
+                    onClick={exportJourneyCSV}
+                    disabled={!journeyData?.records?.length}
+                    className="btn-primary flex items-center gap-2 px-4 py-2 text-sm shadow-sm"
+                  >
+                    <Download className="w-4 h-4" /> Export Watchman Journey
+                  </button>
+                ) : (
+                  <button
+                    onClick={exportWatchmenReportCSV}
+                    disabled={!filteredWatchmenList?.length}
+                    className="btn-primary flex items-center gap-2 px-4 py-2 text-sm shadow-sm"
+                  >
+                    <Download className="w-4 h-4" /> Export Watchmen Report
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {journeyData?.watchman && (
-            <div className="card p-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
-                    <User className="w-5 h-5 text-brand-400" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-100 text-lg">{journeyData.watchman.full_name}</p>
-                    <p className="text-slate-500 text-sm">ID: {journeyData.watchman.employee_id}</p>
-                  </div>
-                </div>
-                <div className="flex gap-3 flex-wrap">
-                  {[
-                    { label: 'Present', val: journeyData.stats.presentDays, cls: 'text-success-400', bg: 'bg-success-500/10 border-success-500/20' },
-                    { label: 'Late', val: journeyData.stats.lateDays, cls: 'text-warning-400', bg: 'bg-warning-500/10 border-warning-500/20' },
-                    { label: 'Absent', val: journeyData.stats.absentDays, cls: 'text-danger-400', bg: 'bg-danger-500/10 border-danger-500/20' },
-                    { label: 'Total', val: journeyData.stats.totalDays, cls: 'text-slate-300', bg: 'bg-surface-700 border-surface-600' },
-                  ].map((s) => (
-                    <div key={s.label} className={`${s.bg} border px-4 py-2 rounded-xl text-center min-w-[68px]`}>
-                      <p className={`text-2xl font-black ${s.cls}`}>{s.val}</p>
-                      <p className="text-slate-500 text-xs">{s.label}</p>
+          {/* VIEW 1: Individual Watchman Journey (when watchman is selected) */}
+          {journeyWatchmanId ? (
+            <div className="space-y-4">
+              {journeyData?.watchman && (
+                <div className="card p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-lg">
+                        {journeyData.watchman.full_name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-slate-100 text-lg">{journeyData.watchman.full_name}</p>
+                          <span className="text-xs font-mono text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2 py-0.5 rounded-md">
+                            {journeyData.watchman.employee_id}
+                          </span>
+                        </div>
+                        <p className="text-slate-400 text-xs mt-0.5">
+                          Attendance Journey from <span className="text-slate-200 font-medium">{journeyStartDate}</span> to <span className="text-slate-200 font-medium">{journeyEndDate}</span>
+                        </p>
+                      </div>
                     </div>
+
+                    <div className="flex gap-2.5 flex-wrap">
+                      {[
+                        { label: 'Present', val: journeyData.stats.presentDays, cls: 'text-success-400', bg: 'bg-success-500/10 border-success-500/20' },
+                        { label: 'Late', val: journeyData.stats.lateDays, cls: 'text-warning-400', bg: 'bg-warning-500/10 border-warning-500/20' },
+                        { label: 'Absent', val: journeyData.stats.absentDays, cls: 'text-danger-400', bg: 'bg-danger-500/10 border-danger-500/20' },
+                        { label: 'Total Days', val: journeyData.stats.totalDays, cls: 'text-slate-200', bg: 'bg-surface-800 border-surface-700' },
+                      ].map((s) => (
+                        <div key={s.label} className={`${s.bg} border px-4 py-2 rounded-xl text-center min-w-[70px]`}>
+                          <p className={`text-2xl font-black ${s.cls}`}>{s.val}</p>
+                          <p className="text-slate-400 text-xs">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {journeyData.stats.totalDays > 0 && (
+                    <div className="mt-4 pt-4 border-t border-surface-700">
+                      <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                        <span className="font-medium">Period Attendance Compliance</span>
+                        <span className="font-bold text-slate-200">
+                          {Math.round(((journeyData.stats.presentDays + journeyData.stats.lateDays) / journeyData.stats.totalDays) * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-surface-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-brand-600 to-emerald-400 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.round(((journeyData.stats.presentDays + journeyData.stats.lateDays) / journeyData.stats.totalDays) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {journeyLoading && (
+                <div className="space-y-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-16 bg-surface-800 animate-pulse rounded-xl" />
                   ))}
                 </div>
-              </div>
-              {journeyData.stats.totalDays > 0 && (
-                <div className="mt-4">
-                  <div className="flex justify-between text-xs text-slate-500 mb-1">
-                    <span>Attendance Rate</span>
-                    <span className="font-semibold text-slate-300">
-                      {Math.round(((journeyData.stats.presentDays + journeyData.stats.lateDays) / journeyData.stats.totalDays) * 100)}%
-                    </span>
-                  </div>
-                  <div className="h-2.5 bg-surface-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all"
-                      style={{ width: `${Math.round(((journeyData.stats.presentDays + journeyData.stats.lateDays) / journeyData.stats.totalDays) * 100)}%` }} />
-                  </div>
+              )}
+
+              {!journeyLoading && journeyData && (
+                <div className="space-y-2.5">
+                  {journeyData.records.length === 0 ? (
+                    <div className="card p-12 text-center text-slate-500">
+                      <Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">No records found for this date range</p>
+                    </div>
+                  ) : (
+                    journeyData.records.map((day, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all ${
+                          day.status === 'absent'
+                            ? 'bg-danger-500/5 border-danger-500/20'
+                            : day.status === 'late'
+                            ? 'bg-warning-500/5 border-warning-500/20'
+                            : 'bg-success-500/5 border-success-500/20'
+                        }`}
+                      >
+                        <div className="w-16 shrink-0 text-center">
+                          <p className="text-xs font-bold text-slate-400 uppercase">
+                            {new Date(day.date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
+                          </p>
+                          <p className="text-xl font-black text-slate-100 leading-tight">
+                            {new Date(day.date + 'T12:00:00').getDate()}
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            {new Date(day.date + 'T12:00:00').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+                          </p>
+                        </div>
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                            day.status === 'absent' ? 'bg-danger-500' : day.status === 'late' ? 'bg-warning-500' : 'bg-success-500'
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          {day.status === 'absent' ? (
+                            <p className="text-danger-400 font-bold text-sm">Absent — did not attend any society</p>
+                          ) : (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5">
+                                <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="text-slate-100 font-semibold text-sm">{day.society_name}</span>
+                              </div>
+                              {day.shift_name && (
+                                <span className="text-xs text-slate-400 bg-surface-700 px-2 py-0.5 rounded-full border border-surface-600">
+                                  {day.shift_name}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {day.check_in_time && (
+                            <div className="flex gap-3 mt-1 text-xs text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-brand-400" />
+                                In: {new Date(day.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                              </span>
+                              {day.check_out_time && (
+                                <span>Out: {new Date(day.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                              )}
+                              {day.duration_minutes && (
+                                <span className="text-slate-300 font-medium">({Math.floor(day.duration_minutes / 60)}h {day.duration_minutes % 60}m)</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <StatusBadge status={day.status} />
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
-          )}
-
-          {!journeyWatchmanId && (
-            <div className="card p-12 text-center text-slate-600">
-              <Route className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium text-slate-400">Select a watchman to view their journey</p>
-              <p className="text-sm mt-1">Day-by-day breakdown showing which society they attended and absent days</p>
-            </div>
-          )}
-
-          {journeyLoading && journeyWatchmanId && (
-            <div className="space-y-2">
-              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-16 bg-surface-800 animate-pulse rounded-xl" />)}
-            </div>
-          )}
-
-          {!journeyLoading && journeyWatchmanId && journeyData && (
-            <div className="space-y-2">
-              {journeyData.records.length === 0 ? (
-                <div className="card p-12 text-center text-slate-600">
-                  <Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">No records found for this date range</p>
+          ) : (
+            /* VIEW 2: All Watchmen Table (when no watchman filter is applied) */
+            <div className="space-y-4">
+              {/* Search bar and count */}
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="relative flex-1 min-w-[220px] max-w-sm">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by guard name, ID, mobile..."
+                    value={watchmenSearch}
+                    onChange={(e) => setWatchmenSearch(e.target.value)}
+                    className="input pl-9 w-full text-xs"
+                  />
+                  {watchmenSearch && (
+                    <button
+                      onClick={() => setWatchmenSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-              ) : journeyData.records.map((day, i) => (
-                <div key={i} className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all ${
-                  day.status === 'absent' ? 'bg-danger-500/5 border-danger-500/20'
-                  : day.status === 'late' ? 'bg-warning-500/5 border-warning-500/20'
-                  : 'bg-success-500/5 border-success-500/20'
-                }`}>
-                  <div className="w-16 shrink-0 text-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase">
-                      {new Date(day.date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
-                    </p>
-                    <p className="text-xl font-black text-slate-200 leading-tight">
-                      {new Date(day.date + 'T12:00:00').getDate()}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      {new Date(day.date + 'T12:00:00').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                    day.status === 'absent' ? 'bg-danger-500' : day.status === 'late' ? 'bg-warning-500' : 'bg-success-500'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    {day.status === 'absent' ? (
-                      <p className="text-danger-400 font-bold text-sm">Absent — did not attend any society</p>
-                    ) : (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          <span className="text-slate-100 font-semibold text-sm">{day.society_name}</span>
-                        </div>
-                        {day.shift_name && (
-                          <span className="text-xs text-slate-500 bg-surface-700 px-2 py-0.5 rounded-full">{day.shift_name}</span>
-                        )}
-                      </div>
-                    )}
-                    {day.check_in_time && (
-                      <div className="flex gap-3 mt-0.5 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          In: {new Date(day.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </span>
-                        {day.check_out_time && (
-                          <span>Out: {new Date(day.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                        )}
-                        {day.duration_minutes && (
-                          <span>{Math.floor(day.duration_minutes / 60)}h {day.duration_minutes % 60}m</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <StatusBadge status={day.status} />
+                <div className="text-xs text-slate-400">
+                  Showing <strong className="text-slate-200">{filteredWatchmenList.length}</strong> watchmen
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Watchmen Roster Report */}
-      {tab === 'watchmen' && (
-        <div className="space-y-4">
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Guard Name</th>
-                  <th>Employee ID</th>
-                  <th>Mobile Number</th>
-                  <th>Status</th>
-                  <th>Joining Date</th>
-                  <th>Active Assignments</th>
-                  <th>Address</th>
-                </tr>
-              </thead>
-              <tbody>
-                {watchmenReportLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}><td colSpan={7}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
-                  ))
-                ) : watchmenReportList?.map((w: any) => (
-                  <tr key={w.id || w._id}>
-                    <td>
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-xs">
-                          {w.full_name?.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-medium text-slate-100">{w.full_name}</span>
-                      </div>
-                    </td>
-                    <td className="text-slate-300 font-mono text-xs">{w.employee_id}</td>
-                    <td className="text-slate-300 text-sm">{w.phone}</td>
-                    <td>
-                      <span className={`badge text-xs ${
-                        w.status === 'active' ? 'badge-present' : w.status === 'suspended' ? 'badge-late' : 'badge-absent'
-                      }`}>
-                        {w.status?.toUpperCase() || 'ACTIVE'}
-                      </span>
-                    </td>
-                    <td className="text-slate-400 text-sm">
-                      {w.joining_date ? new Date(w.joining_date).toLocaleDateString('en-IN') : '—'}
-                    </td>
-                    <td className="text-slate-300 font-semibold">{w.active_assignments ?? 0}</td>
-                    <td className="text-slate-400 text-xs max-w-xs truncate">{w.address || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!watchmenReportLoading && (!watchmenReportList || watchmenReportList.length === 0) && (
-              <div className="text-center py-12 text-slate-600">
-                <Users className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No watchmen records found</p>
               </div>
-            )}
-          </div>
+
+              {/* Table */}
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Guard Name</th>
+                      <th>Employee ID</th>
+                      <th>Mobile Number</th>
+                      <th>Status</th>
+                      <th>Joining Date</th>
+                      <th>Active Assignments</th>
+                      <th>Address</th>
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {watchmenReportLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i}><td colSpan={8}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                      ))
+                    ) : filteredWatchmenList.map((w: any) => (
+                      <tr
+                        key={w.id || w._id}
+                        className="hover:bg-surface-800/60 cursor-pointer transition-colors"
+                        onClick={() => setJourneyWatchmanId(w.id || w._id)}
+                      >
+                        <td>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center text-xs">
+                              {w.full_name?.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-medium text-slate-100">{w.full_name}</span>
+                          </div>
+                        </td>
+                        <td className="text-slate-300 font-mono text-xs">{w.employee_id}</td>
+                        <td className="text-slate-300 text-sm">{w.phone || '—'}</td>
+                        <td>
+                          <span className={`badge text-xs ${
+                            w.status === 'active' ? 'badge-present' : w.status === 'suspended' ? 'badge-late' : 'badge-absent'
+                          }`}>
+                            {w.status?.toUpperCase() || 'ACTIVE'}
+                          </span>
+                        </td>
+                        <td className="text-slate-400 text-sm">
+                          {w.joining_date ? new Date(w.joining_date).toLocaleDateString('en-IN') : '—'}
+                        </td>
+                        <td className="text-slate-300 font-semibold">{w.active_assignments ?? 0}</td>
+                        <td className="text-slate-400 text-xs max-w-xs truncate">{w.address || '—'}</td>
+                        <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => setJourneyWatchmanId(w.id || w._id)}
+                            className="btn-primary text-xs py-1.5 px-3 inline-flex items-center gap-1.5 shadow-sm"
+                          >
+                            <Route className="w-3.5 h-3.5" /> View Journey
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!watchmenReportLoading && filteredWatchmenList.length === 0 && (
+                  <div className="text-center py-12 text-slate-500">
+                    <Users className="w-10 h-10 mx-auto mb-2 opacity-30 text-slate-400" />
+                    <p className="text-sm font-medium text-slate-300">No watchmen records found</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Try adjusting your search query or agency filter.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

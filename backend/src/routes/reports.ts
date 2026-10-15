@@ -558,8 +558,8 @@ router.get('/watchman-journey', asyncHandler(async (req: Request, res: Response)
   const startDateStr = (req.query.startDate || req.query.start_date) as string;
   const endDateStr = (req.query.endDate || req.query.end_date) as string;
 
-  if (!watchmanId) {
-    res.status(400).json({ success: false, message: 'watchman_id is required' });
+  if (!watchmanId || !mongoose.Types.ObjectId.isValid(watchmanId)) {
+    res.status(400).json({ success: false, message: 'valid watchman_id is required' });
     return;
   }
 
@@ -576,7 +576,9 @@ router.get('/watchman-journey', asyncHandler(async (req: Request, res: Response)
       { check_in_time: { $gte: startDate, $lte: endDate } },
     ],
   };
-  if (agencyId) matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+  if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+  }
 
   const attRecords = await Attendance.aggregate([
     { $match: matchStage },
@@ -672,8 +674,10 @@ router.get('/watchman-journey', asyncHandler(async (req: Request, res: Response)
 
   // Fetch watchman info
   const findQuery: any = { _id: new mongoose.Types.ObjectId(watchmanId) };
-  if (agencyId) findQuery.agency_id = agencyId;
-  const watchman = await Watchman.findOne(findQuery).select('full_name employee_id');
+  if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    findQuery.agency_id = new mongoose.Types.ObjectId(agencyId);
+  }
+  const watchman = await Watchman.findOne(findQuery).select('full_name employee_id phone status joining_date address');
 
   // Stats
   const totalDays = journey.length;
