@@ -35,7 +35,14 @@ export default function WatchmanLayout() {
       {/* Simple top bar */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-surface-800">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="Watchman Tracker Logo" className="w-8 h-8 object-contain" />
+          <img
+            src="/logo.png"
+            alt="Watchman Tracker Logo"
+            width={32}
+            height={32}
+            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+            className="w-8 h-8 object-contain"
+          />
           <span className="text-sm font-semibold text-slate-300">WatchTrack</span>
         </div>
         <button

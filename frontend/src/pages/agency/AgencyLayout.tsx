@@ -57,7 +57,14 @@ export default function AgencyLayout() {
               ? 'bg-gradient-to-br from-purple-500 to-indigo-700'
               : 'bg-gradient-to-br from-brand-500 to-brand-700'
           }`}>
-            <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              width={24}
+              height={24}
+              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+              className="w-6 h-6 object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -136,7 +143,14 @@ export default function AgencyLayout() {
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              width={24}
+              height={24}
+              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+              className="w-6 h-6 object-contain"
+            />
             <span className="font-bold text-slate-100 text-sm">WatchTrack</span>
           </div>
           <div className="ml-auto">

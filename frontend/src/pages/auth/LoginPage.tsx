@@ -92,7 +92,14 @@ export default function LoginPage({ defaultPortal }: LoginPageProps) {
               ? 'bg-gradient-to-br from-purple-500 to-indigo-700'
               : 'bg-gradient-to-br from-brand-500 to-brand-700'
           }`}>
-            <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              width={48}
+              height={48}
+              style={{ width: '48px', height: '48px', objectFit: 'contain' }}
+              className="w-12 h-12 object-contain"
+            />
           </div>
           <h1 className="text-3xl font-black text-slate-100 tracking-tight">
             Watchman Tracker
