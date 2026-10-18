@@ -245,8 +245,58 @@ export default function LoginPage({ defaultPortal }: LoginPageProps) {
             </button>
           </form>
 
+          {/* Quick Demo Credentials Helper */}
+          <div className="mt-5 pt-4 border-t border-surface-700/60 space-y-2">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">
+              Quick Demo Logins (Click to Auto-fill)
+            </p>
+            {isSuper ? (
+              <div className="grid grid-cols-1 gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('superadmin@watchtrack.com');
+                    setPassword('Admin@123');
+                    toast.success('Auto-filled Super Admin credentials');
+                  }}
+                  className="px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-left transition-colors flex items-center justify-between"
+                >
+                  <span className="font-semibold">👑 Super Admin</span>
+                  <span className="font-mono text-[11px] text-purple-200">superadmin@watchtrack.com</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('alertspace@gmail.com');
+                    setPassword('Admin@123');
+                    toast.success('Auto-filled Alert Space Admin credentials');
+                  }}
+                  className="px-3 py-2 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/30 text-left transition-colors flex items-center justify-between"
+                >
+                  <span className="font-semibold">🏢 Alert Space Admin (30 Guards)</span>
+                  <span className="font-mono text-[11px] text-brand-200">alertspace@gmail.com</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('admin@punesecure.com');
+                    setPassword('Admin@123');
+                    toast.success('Auto-filled Pune Secure Admin credentials');
+                  }}
+                  className="px-3 py-2 rounded-xl bg-surface-700/60 hover:bg-surface-700 text-slate-300 border border-surface-600 text-left transition-colors flex items-center justify-between"
+                >
+                  <span className="font-semibold">🏢 Pune Secure Admin</span>
+                  <span className="font-mono text-[11px] text-slate-300">admin@punesecure.com</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Quick Switch helper */}
-          <div className="mt-5 pt-4 border-t border-surface-700/60 text-center">
+          <div className="mt-4 pt-3 border-t border-surface-700/60 text-center">
             <button
               type="button"
               onClick={() => {
