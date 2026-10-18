@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   Shield, LayoutDashboard, Building2, Users, Clock, GitBranch,
-  ClipboardList, ArrowLeftRight, BarChart3, LogOut, Menu, X, Bell, QrCode, Bike
+  ClipboardList, ArrowLeftRight, BarChart3, LogOut, Menu, X, Bell, QrCode, Bike, WalletCards
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
@@ -23,6 +23,7 @@ export default function AgencyLayout() {
     { to: `${basePath}/gates`, label: 'QR Codes', icon: QrCode, roles: ['super_admin'] },
     { to: `${basePath}/attendance`, label: 'Attendance Logs', icon: ClipboardList },
     { to: `${basePath}/replacements`, label: 'Replacements', icon: ArrowLeftRight },
+    { to: `${basePath}/expenses`, label: 'Expense & Salary', icon: WalletCards },
     { to: `${basePath}/reports`, label: 'Reports & Analytics', icon: BarChart3 },
     { to: `${basePath}/delivery`, label: 'Delivery Tracking', icon: Bike },
   ];

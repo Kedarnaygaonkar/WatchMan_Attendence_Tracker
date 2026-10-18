@@ -22,6 +22,7 @@ import ReplacementsPage from './pages/agency/ReplacementsPage';
 import ReportsPage from './pages/agency/ReportsPage';
 import GatesPage from './pages/agency/GatesPage';
 import DeliveryPage from './pages/agency/DeliveryPage';
+import ExpensesPage from './pages/agency/ExpensesPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +101,7 @@ export default function App() {
             <Route path="replacements" element={<ReplacementsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="delivery" element={<DeliveryPage />} />
+            <Route path="expenses" element={<ExpensesPage />} />
             {/* Block Agency Admin from gates / QR code generation or agencies list */}
             <Route path="gates" element={<Navigate to="/admin" replace />} />
             <Route path="agencies" element={<Navigate to="/admin" replace />} />
@@ -125,6 +127,7 @@ export default function App() {
             <Route path="replacements" element={<ReplacementsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="delivery" element={<DeliveryPage />} />
+            <Route path="expenses" element={<ExpensesPage />} />
           </Route>
 
           {/* Alias for super-admin */}
