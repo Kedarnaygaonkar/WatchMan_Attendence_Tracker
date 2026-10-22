@@ -8,7 +8,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, Circle } from 'react-lea
 import L from 'leaflet';
 import {
   Plus, Search, Edit2, Building2, MapPin, Phone, Users,
-  Map, X
+  Map, X, Trash2
 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
@@ -109,6 +109,27 @@ export default function SocietiesPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['societies'] }); toast.success('Society deactivated'); },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/societies/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['societies'] });
+      queryClient.invalidateQueries({ queryKey: ['societies-list'] });
+      queryClient.invalidateQueries({ queryKey: ['soc-all'] });
+      toast.success('Society permanently deleted');
+      closeModal();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Cannot delete society';
+      toast.error(msg);
+    },
+  });
+
+  function handleDelete(society: Society) {
+    if (window.confirm(`Permanently delete "${society.name}"?\n\nThis cannot be undone. Make sure there are no active assignments first.`)) {
+      deleteMutation.mutate(society.id);
+    }
+  }
+
   function openAdd() {
     setForm(defaultForm);
     setEditSociety(null);
@@ -189,9 +210,19 @@ export default function SocietiesPage() {
                     </span>
                   </div>
                 </div>
-                <button onClick={() => openEdit(s)} className="p-2 rounded-lg hover:bg-surface-700 text-slate-500 hover:text-slate-300">
-                  <Edit2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => openEdit(s)} className="p-2 rounded-lg hover:bg-surface-700 text-slate-500 hover:text-slate-300" title="Edit society">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(s)}
+                    className="p-2 rounded-lg hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+                    title="Delete society"
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5 text-sm">
@@ -324,12 +355,16 @@ export default function SocietiesPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 p-5 border-t border-surface-700">
+            <div className="flex gap-3 p-5 border-t border-surface-700 flex-wrap">
               <button onClick={closeModal} className="btn-ghost px-5 py-2.5">Cancel</button>
               {editSociety && (
-                <button onClick={() => { if(confirm('Deactivate this society?')) deactivateMutation.mutate(editSociety.id); closeModal(); }}
-                  className="btn-danger px-5 py-2.5 text-sm ml-auto">
-                  Deactivate
+                <button
+                  onClick={() => handleDelete(editSociety)}
+                  disabled={deleteMutation.isPending}
+                  className="px-5 py-2.5 text-sm rounded-xl font-semibold bg-red-500/15 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-all flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete Society'}
                 </button>
               )}
               <button

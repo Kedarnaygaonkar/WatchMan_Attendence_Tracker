@@ -196,24 +196,36 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: society });
 }));
 
-/** DELETE /api/societies/:id — delete society (only if no active assignments) */
+/** DELETE /api/societies/:id — permanently delete society (only if no active assignments) */
 router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
+  const mongoose = require('mongoose');
 
-  const activeAssignments = await Assignment.countDocuments({
-    society_id: req.params.id,
-    agency_id: agencyId,
+  // Build assignment match — don't require agency_id for super_admin
+  const assignmentMatch: any = {
+    society_id: new mongoose.Types.ObjectId(req.params.id),
     is_active: true,
-  });
+  };
+  if (agencyId) assignmentMatch.agency_id = new mongoose.Types.ObjectId(agencyId);
+
+  const activeAssignments = await Assignment.countDocuments(assignmentMatch);
 
   if (activeAssignments > 0) {
-    throw new AppError('Cannot delete society with active assignments. Reassign or end them first.', 400);
+    throw new AppError('Cannot delete society with active assignments. End or reassign them first.', 400);
   }
 
-  const result = await Society.findOneAndDelete({ _id: req.params.id, agency_id: agencyId });
+  // Build find query — super_admin can delete any society
+  const findQuery: any = { _id: req.params.id };
+  if (agencyId) findQuery.agency_id = agencyId;
+
+  const result = await Society.findOneAndDelete(findQuery);
   if (!result) throw new AppError('Society not found', 404);
 
-  await logAudit(null as any, { agencyId, userId: req.user!.userId, action: 'delete_society',
+  // Cascade: remove gates associated with the society
+  const Gate = require('mongoose').model('Gate');
+  await Gate.deleteMany({ society_id: req.params.id }).catch(() => {});
+
+  await logAudit(null as any, { agencyId: agencyId || result.agency_id?.toString(), userId: req.user!.userId, action: 'delete_society',
     entityType: 'society', entityId: req.params.id, req });
 
   res.json({ success: true, message: 'Society deleted successfully' });
