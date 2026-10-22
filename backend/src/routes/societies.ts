@@ -15,7 +15,7 @@ const societySchema = z.object({
   contactPhone: z.string().optional(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-  geofenceRadius: z.number().min(20).max(5000).default(100),
+  geofenceRadius: z.number().min(1).max(200000).default(100),
   requiredGuards: z.number().min(1).default(1),
   isActive: z.boolean().default(true),
   notes: z.string().optional(),

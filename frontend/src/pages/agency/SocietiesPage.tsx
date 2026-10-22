@@ -350,7 +350,7 @@ export default function SocietiesPage() {
                 </div>
                 <div className="form-group">
                   <label className="label">Geofence Radius (m)</label>
-                  <input className="input" type="number" min={20} max={5000} value={form.geofenceRadius} onChange={e => setForm(f => ({...f, geofenceRadius: parseInt(e.target.value)}))} />
+                  <input className="input" type="number" min={1} max={200000} value={form.geofenceRadius} onChange={e => setForm(f => ({...f, geofenceRadius: parseInt(e.target.value) || 0}))} />
                 </div>
               </div>
             </div>
