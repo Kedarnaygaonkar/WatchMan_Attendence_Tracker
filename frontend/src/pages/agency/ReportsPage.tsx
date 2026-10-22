@@ -872,20 +872,14 @@ export default function ReportsPage() {
 
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {calendarData.wings.map((w: any) => {
-                                      const primaryWM = calendarData.watchmen.find(wm => wm.wings.includes(w.name));
                                       const attendedCount = w.days.filter((d: any) => d === 'present' || d === 'late' || d === true).length;
                                       const totalDaysEvaluated = isCurrentMonth ? currentDay : calendarData.daysInMonth;
                                       const coveragePct = totalDaysEvaluated > 0 ? Math.round((attendedCount / totalDaysEvaluated) * 100) : 0;
 
                                       return (
                                         <div key={w.name} className="bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
-                                          <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#f1f5f9]">
-                                            <div>
-                                              <h4 className="font-black text-[#0f172a] text-sm">{w.name}</h4>
-                                              <p className="text-[11px] text-[#64748b] font-medium truncate mt-0.5">
-                                                Guard: <span className="font-bold text-[#1e293b]">{primaryWM?.watchman_name || 'Assigned Guard'}</span>
-                                              </p>
-                                            </div>
+                                          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#f1f5f9]">
+                                            <h4 className="font-black text-[#0f172a] text-sm">{w.name}</h4>
                                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe] shrink-0">
                                               {coveragePct}%
                                             </span>
@@ -915,20 +909,14 @@ export default function ReportsPage() {
 
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {calendarData.gates.map((g: any) => {
-                                      const primaryWM = calendarData.watchmen.find(wm => wm.gates.includes(g.name));
                                       const attendedCount = g.days.filter((d: any) => d === 'present' || d === 'late' || d === true).length;
                                       const totalDaysEvaluated = isCurrentMonth ? currentDay : calendarData.daysInMonth;
                                       const coveragePct = totalDaysEvaluated > 0 ? Math.round((attendedCount / totalDaysEvaluated) * 100) : 0;
 
                                       return (
                                         <div key={g.name} className="bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-sm hover:shadow transition-shadow print-avoid-break">
-                                          <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#f1f5f9]">
-                                            <div>
-                                              <h4 className="font-black text-[#0f172a] text-sm">{g.name}</h4>
-                                              <p className="text-[11px] text-[#64748b] font-medium truncate mt-0.5">
-                                                Guard: <span className="font-bold text-[#1e293b]">{primaryWM?.watchman_name || 'Gate Sentry'}</span>
-                                              </p>
-                                            </div>
+                                          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#f1f5f9]">
+                                            <h4 className="font-black text-[#0f172a] text-sm">{g.name}</h4>
                                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff] shrink-0">
                                               {coveragePct}%
                                             </span>
