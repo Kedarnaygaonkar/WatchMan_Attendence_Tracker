@@ -194,14 +194,8 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const shift = await Shift.findOne(query);
   if (!shift) throw new AppError('Shift not found', 404);
 
-  const activeAssignments = await Assignment.countDocuments({
-    shift_id: req.params.id,
-    agency_id: agencyId,
-    is_active: true,
-  });
-  if (activeAssignments > 0) {
-    throw new AppError(`Cannot delete shift with ${activeAssignments} active assignment(s). End them first.`, 400);
-  }
+  // Cascade: clean up assignments associated with this shift
+  await Assignment.deleteMany({ shift_id: req.params.id }).catch(() => {});
 
   await Shift.findByIdAndDelete(req.params.id);
 

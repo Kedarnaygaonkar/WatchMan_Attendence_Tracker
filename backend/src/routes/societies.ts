@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole } from '../middleware/auth';
 import { asyncHandler, AppError, logAudit } from '../middleware/errorHandler';
-import { Society, Assignment } from '../models';
+import { Society, Assignment, Gate, Attendance, DeliveryVisit } from '../models';
 
 const router = Router();
 router.use(authenticate);
@@ -196,23 +196,9 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: society });
 }));
 
-/** DELETE /api/societies/:id — permanently delete society (only if no active assignments) */
+/** DELETE /api/societies/:id — permanently delete society (cascade remove assignments, gates, etc.) */
 router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const agencyId = getAgencyId(req);
-  const mongoose = require('mongoose');
-
-  // Build assignment match — don't require agency_id for super_admin
-  const assignmentMatch: any = {
-    society_id: new mongoose.Types.ObjectId(req.params.id),
-    is_active: true,
-  };
-  if (agencyId) assignmentMatch.agency_id = new mongoose.Types.ObjectId(agencyId);
-
-  const activeAssignments = await Assignment.countDocuments(assignmentMatch);
-
-  if (activeAssignments > 0) {
-    throw new AppError('Cannot delete society with active assignments. End or reassign them first.', 400);
-  }
 
   // Build find query — super_admin can delete any society
   const findQuery: any = { _id: req.params.id };
@@ -221,9 +207,17 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
   const result = await Society.findOneAndDelete(findQuery);
   if (!result) throw new AppError('Society not found', 404);
 
+  // Cascade: remove assignments associated with the society
+  await Assignment.deleteMany({ society_id: req.params.id }).catch(() => {});
+
   // Cascade: remove gates associated with the society
-  const Gate = require('mongoose').model('Gate');
   await Gate.deleteMany({ society_id: req.params.id }).catch(() => {});
+
+  // Cascade: remove delivery visits associated with the society
+  await DeliveryVisit.deleteMany({ society_id: req.params.id }).catch(() => {});
+
+  // Cascade: remove attendances associated with the society
+  await Attendance.deleteMany({ society_id: req.params.id }).catch(() => {});
 
   await logAudit(null as any, { agencyId: agencyId || result.agency_id?.toString(), userId: req.user!.userId, action: 'delete_society',
     entityType: 'society', entityId: req.params.id, req });

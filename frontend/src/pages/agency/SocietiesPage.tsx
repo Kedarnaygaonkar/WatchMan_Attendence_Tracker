@@ -125,7 +125,7 @@ export default function SocietiesPage() {
   });
 
   function handleDelete(society: Society) {
-    if (window.confirm(`Permanently delete "${society.name}"?\n\nThis cannot be undone. Make sure there are no active assignments first.`)) {
+    if (window.confirm(`Permanently delete "${society.name}"?\n\nThis cannot be undone. All associated assignments and gates will also be removed.`)) {
       deleteMutation.mutate(society.id);
     }
   }
