@@ -39,6 +39,7 @@ interface WatchmanOption {
   full_name: string;
   employee_id: string;
   phone?: string;
+  monthly_wage?: number;
   daily_wage?: number;
   agency_id?: any;
 }
@@ -58,14 +59,24 @@ interface ExpenseItem {
     full_name: string;
     employee_id: string;
     phone?: string;
+    monthly_wage?: number;
     daily_wage?: number;
   };
-  category: 'daily_wage' | 'clothes' | 'food' | 'travel' | 'advance' | 'medical' | 'equipment' | 'bonus' | 'other';
+  category: 'monthly_wage' | 'daily_wage' | 'clothes' | 'food' | 'travel' | 'advance' | 'medical' | 'equipment' | 'bonus' | 'other';
   type: 'deduction' | 'earning';
   title: string;
   amount: number;
   date: string;
   notes?: string;
+}
+
+function getWatchmanMonthlyWage(w?: { monthly_wage?: number; daily_wage?: number } | null): number {
+  if (!w) return 15000;
+  if (w.monthly_wage && w.monthly_wage > 0) return w.monthly_wage;
+  if (w.daily_wage && w.daily_wage > 0) {
+    return w.daily_wage > 2000 ? w.daily_wage : w.daily_wage * 30;
+  }
+  return 15000;
 }
 
 export default function ExpensesPage() {
@@ -98,15 +109,15 @@ export default function ExpensesPage() {
 
   // Add Expense Form State
   const [formWatchmanId, setFormWatchmanId] = useState('');
-  const [formCategory, setFormCategory] = useState<'clothes' | 'food' | 'advance' | 'travel' | 'daily_wage' | 'medical' | 'equipment' | 'bonus' | 'other'>('clothes');
+  const [formCategory, setFormCategory] = useState<'clothes' | 'food' | 'advance' | 'travel' | 'monthly_wage' | 'daily_wage' | 'medical' | 'equipment' | 'bonus' | 'other'>('clothes');
   const [formType, setFormType] = useState<'deduction' | 'earning'>('deduction');
   const [formTitle, setFormTitle] = useState('');
   const [formAmount, setFormAmount] = useState('');
   const [formDate, setFormDate] = useState(todayStr);
   const [formNotes, setFormNotes] = useState('');
-  const [formUpdateDailyWage, setFormUpdateDailyWage] = useState(false);
+  const [formUpdateMonthlyWage, setFormUpdateMonthlyWage] = useState(false);
 
-  // Salary Slip State
+  // Salary Slip State (Monthly Wage Override)
   const [slipWageOverride, setSlipWageOverride] = useState<string>('');
 
   // ── Fetch Agencies (for Super Admin) ──────────────────────────────────
@@ -134,6 +145,7 @@ export default function ExpensesPage() {
         full_name: w.full_name,
         employee_id: w.employee_id,
         phone: w.phone,
+        monthly_wage: w.monthly_wage || (w.daily_wage ? (w.daily_wage > 2000 ? w.daily_wage : w.daily_wage * 30) : 15000),
         daily_wage: w.daily_wage || 500,
         agency_id: w.agency_id,
       }));
@@ -180,7 +192,7 @@ export default function ExpensesPage() {
         startDate,
         endDate,
       };
-      if (slipWageOverride) params.dailyWageOverride = slipWageOverride;
+      if (slipWageOverride) params.monthlyWageOverride = slipWageOverride;
 
       const res = await api.get('/expenses/salary-slip', { params });
       return res.data?.data || null;
@@ -222,20 +234,20 @@ export default function ExpensesPage() {
     },
   });
 
-  // ── Update Daily Wage Mutation ────────────────────────────────────────
+  // ── Update Monthly Wage Mutation ──────────────────────────────────────
   const updateWageMutation = useMutation({
-    mutationFn: async ({ watchmanId, daily_wage }: { watchmanId: string; daily_wage: number }) => {
-      const res = await api.patch(`/expenses/watchman/${watchmanId}/wage`, { daily_wage });
+    mutationFn: async ({ watchmanId, monthly_wage }: { watchmanId: string; monthly_wage: number }) => {
+      const res = await api.patch(`/expenses/watchman/${watchmanId}/wage`, { monthly_wage });
       return res.data;
     },
     onSuccess: () => {
-      toast.success('Daily wage updated successfully');
+      toast.success('Monthly wage updated successfully');
       setShowEditWageModal(false);
       queryClient.invalidateQueries({ queryKey: ['watchmen-list'] });
       queryClient.invalidateQueries({ queryKey: ['salary-slip'] });
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to update daily wage');
+      toast.error(err.response?.data?.message || 'Failed to update monthly wage');
     },
   });
 
@@ -247,20 +259,20 @@ export default function ExpensesPage() {
     setFormAmount('');
     setFormDate(todayStr);
     setFormNotes('');
-    setFormUpdateDailyWage(false);
+    setFormUpdateMonthlyWage(false);
   }
 
-  function handleOpenAddModal(categoryPreset?: 'clothes' | 'food' | 'advance' | 'daily_wage') {
+  function handleOpenAddModal(categoryPreset?: 'clothes' | 'food' | 'advance' | 'monthly_wage' | 'daily_wage') {
     resetAddForm();
     if (categoryPreset) {
       setFormCategory(categoryPreset);
       if (categoryPreset === 'clothes') setFormTitle('Uniform & Clothing Expense');
       else if (categoryPreset === 'food') setFormTitle('Food / Mess Charges');
       else if (categoryPreset === 'advance') setFormTitle('Salary Advance');
-      else if (categoryPreset === 'daily_wage') {
-        setFormTitle('Daily Wage Base Rate');
+      else if (categoryPreset === 'monthly_wage' || categoryPreset === 'daily_wage') {
+        setFormTitle('Monthly Wage Base Rate');
         setFormType('earning');
-        setFormUpdateDailyWage(true);
+        setFormUpdateMonthlyWage(true);
       }
     }
     if (selectedWatchmanId) {
@@ -293,7 +305,7 @@ export default function ExpensesPage() {
       amount: amt,
       date: formDate,
       notes: formNotes,
-      updateWatchmanDailyWage: formUpdateDailyWage,
+      updateWatchmanMonthlyWage: formUpdateMonthlyWage,
     });
   }
 
@@ -319,8 +331,10 @@ export default function ExpensesPage() {
         return { label: 'Food & Mess', icon: Utensils, color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' };
       case 'advance':
         return { label: 'Salary Advance', icon: CreditCard, color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' };
+      case 'monthly_wage':
+        return { label: 'Monthly Wage Rate', icon: DollarSign, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
       case 'daily_wage':
-        return { label: 'Daily Wage Rate', icon: DollarSign, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
+        return { label: 'Wage Rate Adjustment', icon: DollarSign, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
       case 'travel':
         return { label: 'Travel / Transport', icon: ArrowUpRight, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30' };
       case 'bonus':
@@ -347,7 +361,7 @@ export default function ExpensesPage() {
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Track guard daily wages, clothes, food expenses, and generate attendance-verified salary slips.
+                Track guard monthly wages, clothes, food expenses, and generate attendance-verified salary slips.
               </p>
             </div>
           </div>
@@ -456,7 +470,7 @@ export default function ExpensesPage() {
                 <option value="">-- All Watchmen --</option>
                 {watchmen.map((w) => (
                   <option key={w._id} value={w._id}>
-                    {w.full_name} ({w.employee_id}) — Base ₹{w.daily_wage || 500}/day
+                    {w.full_name} ({w.employee_id}) — Base ₹{getWatchmanMonthlyWage(w).toLocaleString('en-IN')}/month
                   </option>
                 ))}
               </select>
@@ -541,7 +555,8 @@ export default function ExpensesPage() {
                 <option value="clothes">Uniform & Clothes</option>
                 <option value="food">Food & Mess</option>
                 <option value="advance">Salary Advance</option>
-                <option value="daily_wage">Daily Wage Adjustments</option>
+                <option value="monthly_wage">Monthly Wage Adjustments</option>
+                <option value="daily_wage">Wage Adjustments</option>
                 <option value="travel">Travel / Transport</option>
                 <option value="bonus">Bonus / Incentive</option>
                 <option value="other">Other</option>
@@ -574,17 +589,17 @@ export default function ExpensesPage() {
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
                 <span className="flex items-center gap-1.5 font-medium text-emerald-400">
                   <BadgeIndianRupee className="w-3.5 h-3.5" />
-                  Base Daily Wage: ₹{selectedWatchman.daily_wage || 500} / day
+                  Base Monthly Wage: ₹{getWatchmanMonthlyWage(selectedWatchman).toLocaleString('en-IN')} / month
                 </span>
                 <button
                   onClick={() => {
-                    setNewWageInput(String(selectedWatchman.daily_wage || 500));
+                    setNewWageInput(String(getWatchmanMonthlyWage(selectedWatchman)));
                     setShowEditWageModal(true);
                   }}
                   className="text-xs text-brand-400 hover:text-brand-300 underline flex items-center gap-1"
                 >
                   <Edit2 className="w-3 h-3" />
-                  Edit Wage Rate
+                  Edit Monthly Wage
                 </button>
               </div>
             </div>
@@ -847,7 +862,7 @@ export default function ExpensesPage() {
               <h3 className="text-lg font-bold text-slate-100">Select a Watchman to Generate Salary Slip</h3>
               <p className="text-sm text-slate-400 max-w-md">
                 Choose a guard from the dropdown above and specify the date range. The system will retrieve all
-                verified attendance dates, calculate earned daily wages, subtract recorded expenses, and generate
+                verified attendance dates, calculate prorated monthly wages, subtract recorded expenses, and generate
                 an official salary slip.
               </p>
               <div className="mt-2 w-full max-w-sm">
@@ -859,7 +874,7 @@ export default function ExpensesPage() {
                   <option value="">-- Choose Watchman --</option>
                   {watchmen.map((w) => (
                     <option key={w._id} value={w._id}>
-                      {w.full_name} ({w.employee_id}) — Base ₹{w.daily_wage || 500}/day
+                      {w.full_name} ({w.employee_id}) — Base ₹{getWatchmanMonthlyWage(w).toLocaleString('en-IN')}/month
                     </option>
                   ))}
                 </select>
@@ -895,13 +910,13 @@ export default function ExpensesPage() {
 
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-400">Daily Wage (₹):</span>
+                    <span className="text-xs text-slate-400">Monthly Wage (₹):</span>
                     <input
                       type="number"
-                      placeholder={String(salarySlipData.watchman?.daily_wage || 500)}
+                      placeholder={String(salarySlipData.financials?.monthlyWageRate || salarySlipData.watchman?.monthly_wage || 15000)}
                       value={slipWageOverride}
                       onChange={(e) => setSlipWageOverride(e.target.value)}
-                      className="w-24 px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-xl text-slate-100 text-xs font-mono font-bold focus:outline-none focus:border-brand-500"
+                      className="w-28 px-2.5 py-1.5 bg-surface-900 border border-surface-700 rounded-xl text-slate-100 text-xs font-mono font-bold focus:outline-none focus:border-brand-500"
                     />
                   </div>
 
@@ -994,10 +1009,10 @@ export default function ExpensesPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-slate-200">
-                            Earned Daily Wages
+                            Earned Monthly Wage
                           </p>
                           <p className="text-xs text-slate-400">
-                            {salarySlipData.attendanceSummary?.presentDaysCount} Present Days × ₹{salarySlipData.financials?.dailyWageRate}/day
+                            {salarySlipData.attendanceSummary?.presentDaysCount} Present Days of {salarySlipData.attendanceSummary?.totalDays} Days (Base ₹{salarySlipData.financials?.monthlyWageRate?.toLocaleString('en-IN')}/mo)
                           </p>
                         </div>
                         <span className="font-mono font-bold text-slate-100">
@@ -1157,7 +1172,7 @@ export default function ExpensesPage() {
                   <option value="">-- Choose Watchman --</option>
                   {watchmen.map((w) => (
                     <option key={w._id} value={w._id}>
-                      {w.full_name} ({w.employee_id}) — Base ₹{w.daily_wage || 500}/day
+                      {w.full_name} ({w.employee_id}) — Base ₹{getWatchmanMonthlyWage(w).toLocaleString('en-IN')}/month
                     </option>
                   ))}
                 </select>
@@ -1177,9 +1192,9 @@ export default function ExpensesPage() {
                       if (cat === 'clothes' && !formTitle) setFormTitle('Uniform & Clothing');
                       if (cat === 'food' && !formTitle) setFormTitle('Mess / Food Charge');
                       if (cat === 'advance' && !formTitle) setFormTitle('Salary Advance');
-                      if (cat === 'daily_wage') {
+                      if (cat === 'monthly_wage' || cat === 'daily_wage') {
                         setFormType('earning');
-                        setFormUpdateDailyWage(true);
+                        setFormUpdateMonthlyWage(true);
                       }
                     }}
                     className="w-full px-3 py-2 bg-surface-800 border border-surface-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500"
@@ -1187,7 +1202,7 @@ export default function ExpensesPage() {
                     <option value="clothes">👕 Clothes & Uniform</option>
                     <option value="food">🍲 Food & Mess</option>
                     <option value="advance">💳 Salary Advance</option>
-                    <option value="daily_wage">💰 Daily Wage Rate</option>
+                    <option value="monthly_wage">💰 Monthly Wage Rate</option>
                     <option value="travel">🚌 Travel / Transport</option>
                     <option value="medical">💊 Medical</option>
                     <option value="equipment">🔦 Safety Equipment</option>
@@ -1272,17 +1287,17 @@ export default function ExpensesPage() {
                 />
               </div>
 
-              {/* Checkbox to update watchman default daily wage */}
-              {formCategory === 'daily_wage' && (
+              {/* Checkbox to update watchman default monthly wage */}
+              {(formCategory === 'monthly_wage' || formCategory === 'daily_wage') && (
                 <label className="flex items-center gap-2 cursor-pointer pt-1">
                   <input
                     type="checkbox"
-                    checked={formUpdateDailyWage}
-                    onChange={(e) => setFormUpdateDailyWage(e.target.checked)}
+                    checked={formUpdateMonthlyWage}
+                    onChange={(e) => setFormUpdateMonthlyWage(e.target.checked)}
                     className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 bg-surface-800 border-surface-700"
                   />
                   <span className="text-xs text-slate-300">
-                    Set this as the guard's permanent base daily wage rate
+                    Set this as the guard's permanent base monthly wage rate
                   </span>
                 </label>
               )}
@@ -1310,13 +1325,13 @@ export default function ExpensesPage() {
       )}
 
       {/* ──────────────────────────────────────────────────────── */}
-      {/* MODAL: EDIT DAILY WAGE RATE                              */}
+      {/* MODAL: EDIT MONTHLY WAGE RATE                            */}
       {/* ──────────────────────────────────────────────────────── */}
       {showEditWageModal && selectedWatchman && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-surface-900 border border-surface-700 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-surface-800 pb-3">
-              <h3 className="font-bold text-slate-100 text-sm">Update Daily Wage Rate</h3>
+              <h3 className="font-bold text-slate-100 text-sm">Update Monthly Wage Rate</h3>
               <button
                 onClick={() => setShowEditWageModal(false)}
                 className="text-slate-400 hover:text-slate-200"
@@ -1326,7 +1341,7 @@ export default function ExpensesPage() {
             </div>
             <div>
               <p className="text-xs text-slate-400 mb-2">
-                Set base daily rate for <strong>{selectedWatchman.full_name}</strong> ({selectedWatchman.employee_id}):
+                Set base monthly wage for <strong>{selectedWatchman.full_name}</strong> ({selectedWatchman.employee_id}):
               </p>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</span>
@@ -1334,7 +1349,7 @@ export default function ExpensesPage() {
                   type="number"
                   value={newWageInput}
                   onChange={(e) => setNewWageInput(e.target.value)}
-                  placeholder="500"
+                  placeholder="15000"
                   className="w-full pl-8 pr-3 py-2 bg-surface-800 border border-surface-700 rounded-xl text-slate-100 font-mono font-bold text-sm focus:outline-none focus:border-brand-500"
                 />
               </div>
@@ -1352,18 +1367,18 @@ export default function ExpensesPage() {
                 onClick={() => {
                   const wage = parseFloat(newWageInput);
                   if (isNaN(wage) || wage < 0) {
-                    toast.error('Please enter a valid wage amount');
+                    toast.error('Please enter a valid monthly wage amount');
                     return;
                   }
                   updateWageMutation.mutate({
                     watchmanId: selectedWatchman._id,
-                    daily_wage: wage,
+                    monthly_wage: wage,
                   });
                 }}
                 disabled={updateWageMutation.isPending}
                 className="px-4 py-1.5 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow disabled:opacity-50"
               >
-                {updateWageMutation.isPending ? 'Updating...' : 'Update Wage'}
+                {updateWageMutation.isPending ? 'Updating...' : 'Update Monthly Wage'}
               </button>
             </div>
           </div>
@@ -1401,213 +1416,232 @@ export default function ExpensesPage() {
               </div>
             </div>
 
-            {/* Official Payslip Content (Clean Printable Layout) */}
-            <div className="p-6 sm:p-8 space-y-6 print:p-4">
-              {/* Slip Top Header */}
-              <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl">
-                    🛡️
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                      {salarySlipData.agency?.name || 'Security Agency'}
-                    </h2>
-                    <p className="text-xs text-slate-600">
-                      Workforce Payroll & Attendance Management System
-                    </p>
-                    {salarySlipData.agency?.phone && (
-                      <p className="text-[11px] text-slate-500">Contact: {salarySlipData.agency.phone}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="inline-block px-3 py-1 rounded bg-slate-900 text-white font-bold text-xs uppercase tracking-wider">
-                    Payslip
-                  </span>
-                  <p className="text-xs font-semibold text-slate-700 mt-1">
-                    Period: {salarySlipData.period?.startDate} to {salarySlipData.period?.endDate}
+            {/* Official Payslip Content (Clean Simplistic Printable Layout matching reference) */}
+            <div className="p-6 sm:p-10 space-y-6 print:p-2 bg-white text-black">
+              {/* Slip Centered Title */}
+              <div className="text-center border-b border-slate-300 pb-3">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-black font-sans uppercase">
+                  Salary Slip
+                </h2>
+                {salarySlipData.agency?.name && (
+                  <p className="text-xs font-semibold text-slate-700 tracking-wider uppercase mt-0.5">
+                    {salarySlipData.agency.name}
                   </p>
-                  <p className="text-[10px] text-slate-500">
-                    Generated: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
+                )}
               </div>
 
-              {/* Guard & Deployment Details */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase font-semibold">Guard Name</span>
-                  <p className="font-bold text-slate-900 text-sm mt-0.5">{salarySlipData.watchman?.full_name}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase font-semibold">Employee ID</span>
-                  <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
-                    {salarySlipData.watchman?.employee_id}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase font-semibold">Designated Society</span>
-                  <p className="font-semibold text-slate-900 mt-0.5">
-                    {salarySlipData.society?.name || 'General Deployment'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase font-semibold">Base Daily Wage</span>
-                  <p className="font-mono font-bold text-slate-900 mt-0.5">
-                    ₹{salarySlipData.financials?.dailyWageRate} / day
-                  </p>
-                </div>
-              </div>
-
-              {/* Attendance Summary */}
-              <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/50">
-                <div className="flex items-center justify-between text-xs font-semibold pb-2 border-b border-slate-200">
-                  <span className="text-slate-800">
-                    Attendance Log: <strong>{salarySlipData.attendanceSummary?.presentDaysCount} Days Present</strong> out of{' '}
-                    {salarySlipData.attendanceSummary?.totalDays} Calendar Days
-                  </span>
-                  <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-mono font-bold">
-                    {salarySlipData.attendanceSummary?.attendanceRate}% Attendance
-                  </span>
+              {/* Guard & Period Meta Details (2 Columns) */}
+              <div className="flex flex-col sm:flex-row justify-between gap-4 text-xs">
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-[120px_1fr] items-baseline">
+                    <span className="font-semibold text-slate-800">Employee Name:</span>
+                    <span className="font-bold text-black">{salarySlipData.watchman?.full_name}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] items-baseline">
+                    <span className="font-semibold text-slate-800">Designation :</span>
+                    <span className="text-black">Security Guard ({salarySlipData.watchman?.employee_id})</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] items-baseline">
+                    <span className="font-semibold text-slate-800">Agency Name:</span>
+                    <span className="text-black">{salarySlipData.agency?.name || 'Security Agency'}</span>
+                  </div>
+                  <div className="grid grid-cols-[120px_1fr] items-baseline">
+                    <span className="font-semibold text-slate-800">Agency Address:</span>
+                    <span className="text-slate-700">
+                      {salarySlipData.agency?.address || salarySlipData.agency?.phone || 'Main Operations Center'}
+                    </span>
+                  </div>
+                  {salarySlipData.society?.name && (
+                    <div className="grid grid-cols-[120px_1fr] items-baseline">
+                      <span className="font-semibold text-slate-800">Deployment:</span>
+                      <span className="text-black font-medium">{salarySlipData.society?.name}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Present Dates explicitly enumerated */}
-                <div className="mt-2.5">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    Dates Verified Present on Duty:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {salarySlipData.presentDates?.map((d: any, idx: number) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800"
-                      >
-                        {d.date.split('-')[2]} {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(d.date.split('-')[1])-1]} ({d.dayOfWeek})
-                      </span>
-                    ))}
+                <div className="space-y-1.5 sm:text-right">
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
+                    <span className="font-semibold text-slate-800">Month:</span>
+                    <span className="font-bold text-black">
+                      {new Date(salarySlipData.period?.startDate || '').toLocaleString('en-IN', { month: 'long' })}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
+                    <span className="font-semibold text-slate-800">Date Range:</span>
+                    <span className="text-black">{salarySlipData.period?.startDate} to {salarySlipData.period?.endDate}</span>
+                  </div>
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
+                    <span className="font-semibold text-slate-800">Year:</span>
+                    <span className="text-black">{new Date(salarySlipData.period?.startDate || '').getFullYear()}</span>
+                  </div>
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
+                    <span className="font-semibold text-slate-800">Attendance:</span>
+                    <span className="font-bold text-emerald-800">
+                      {salarySlipData.attendanceSummary?.presentDaysCount} / {salarySlipData.attendanceSummary?.totalDays} Days ({salarySlipData.attendanceSummary?.attendanceRate}%)
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Earnings & Deductions Comparison Table */}
-              <div className="border border-slate-300 rounded-xl overflow-hidden">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-100 border-b border-slate-300 font-bold text-slate-700 uppercase">
-                    <tr>
-                      <th className="p-3 border-r border-slate-300 w-1/2">Earnings & Allowances</th>
-                      <th className="p-3 w-1/2">Agency Expenses & Deductions</th>
+              {/* Simplistic Boxed Table */}
+              <div className="border-2 border-black">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-black font-bold uppercase tracking-wider text-black bg-slate-50">
+                      <th className="p-2.5 border-r border-black w-[35%] text-left">EMOLUMENTS</th>
+                      <th className="p-2.5 border-r-2 border-black w-[15%] text-right">AMOUNT Rs.</th>
+                      <th className="p-2.5 border-r border-black w-[35%] text-left">DEDUCTIONS</th>
+                      <th className="p-2.5 w-[15%] text-right">AMOUNT Rs.</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody>
                     <tr>
-                      <td className="p-3 border-r border-slate-200 align-top space-y-2">
-                        <div className="flex items-center justify-between font-semibold">
-                          <span>
-                            Basic Daily Wages ({salarySlipData.attendanceSummary?.presentDaysCount} Days × ₹
-                            {salarySlipData.financials?.dailyWageRate})
-                          </span>
-                          <span className="font-mono font-bold">
-                            ₹{salarySlipData.financials?.earnedBasicWage.toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        {salarySlipData.financials?.earnings?.items?.map((item: any) => (
-                          <div key={item.id} className="flex items-center justify-between text-slate-600">
-                            <span>{item.title}</span>
-                            <span className="font-mono">₹{Number(item.amount).toLocaleString('en-IN')}</span>
+                      {/* Left: Emoluments items */}
+                      <td colSpan={2} className="border-r-2 border-black align-top p-0">
+                        <div className="flex flex-col justify-between min-h-[220px]">
+                          <div className="p-2.5 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold">Basic Monthly Wage Rate</span>
+                              <span className="font-mono font-bold">
+                                ₹{salarySlipData.financials?.monthlyWageRate?.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>
+                                Earned Wage ({salarySlipData.attendanceSummary?.presentDaysCount}/{salarySlipData.attendanceSummary?.totalDays} Days)
+                              </span>
+                              <span className="font-mono font-bold">
+                                ₹{salarySlipData.financials?.earnedBasicWage?.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-slate-600">
+                              <span>Effective Daily Rate</span>
+                              <span className="font-mono">
+                                ₹{salarySlipData.financials?.effectiveDailyRate || salarySlipData.financials?.dailyWageRate}
+                              </span>
+                            </div>
+                            {salarySlipData.financials?.earnings?.items?.map((item: any) => (
+                              <div key={item.id} className="flex items-center justify-between">
+                                <span>{item.title}</span>
+                                <span className="font-mono font-semibold">
+                                  ₹{Number(item.amount).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
                       </td>
 
-                      <td className="p-3 align-top space-y-2">
-                        {salarySlipData.financials?.deductions?.clothesTotal > 0 && (
-                          <div className="flex items-center justify-between text-slate-700">
-                            <span>Uniform / Clothes Expense</span>
-                            <span className="font-mono text-rose-700 font-semibold">
-                              -₹{salarySlipData.financials?.deductions?.clothesTotal.toLocaleString('en-IN')}
+                      {/* Right: Deductions items */}
+                      <td colSpan={2} className="align-top p-0">
+                        <div className="flex flex-col justify-between min-h-[220px]">
+                          <div className="p-2.5 space-y-2">
+                            {salarySlipData.financials?.deductions?.clothesTotal > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span>Uniform & Clothes</span>
+                                <span className="font-mono">
+                                  ₹{salarySlipData.financials?.deductions?.clothesTotal.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            )}
+                            {salarySlipData.financials?.deductions?.foodTotal > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span>Food & Mess Charges</span>
+                                <span className="font-mono">
+                                  ₹{salarySlipData.financials?.deductions?.foodTotal.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            )}
+                            {salarySlipData.financials?.deductions?.advanceTotal > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span>Salary Advance</span>
+                                <span className="font-mono">
+                                  ₹{salarySlipData.financials?.deductions?.advanceTotal.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            )}
+                            {salarySlipData.financials?.deductions?.otherDeductionsTotal > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span>Other Deductions</span>
+                                <span className="font-mono">
+                                  ₹{salarySlipData.financials?.deductions?.otherDeductionsTotal.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            )}
+                            {salarySlipData.financials?.deductions?.totalDeductions === 0 && (
+                              <div className="text-slate-400 italic">No deductions recorded</div>
+                            )}
+                          </div>
+
+                          {/* Total Deductions row inside the deductions column */}
+                          <div className="border-t border-black p-2.5 flex items-center justify-between font-bold bg-slate-50/50">
+                            <span>Total Deductions</span>
+                            <span className="font-mono">
+                              ₹{salarySlipData.financials?.deductions?.totalDeductions?.toLocaleString('en-IN')}
                             </span>
                           </div>
-                        )}
-                        {salarySlipData.financials?.deductions?.foodTotal > 0 && (
-                          <div className="flex items-center justify-between text-slate-700">
-                            <span>Food / Mess Expenses</span>
-                            <span className="font-mono text-rose-700 font-semibold">
-                              -₹{salarySlipData.financials?.deductions?.foodTotal.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        )}
-                        {salarySlipData.financials?.deductions?.advanceTotal > 0 && (
-                          <div className="flex items-center justify-between text-slate-700">
-                            <span>Salary Advance</span>
-                            <span className="font-mono text-rose-700 font-semibold">
-                              -₹{salarySlipData.financials?.deductions?.advanceTotal.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        )}
-                        {salarySlipData.financials?.deductions?.otherDeductionsTotal > 0 && (
-                          <div className="flex items-center justify-between text-slate-700">
-                            <span>Other Miscellaneous</span>
-                            <span className="font-mono text-rose-700 font-semibold">
-                              -₹{salarySlipData.financials?.deductions?.otherDeductionsTotal.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        )}
-                        {salarySlipData.financials?.deductions?.totalDeductions === 0 && (
-                          <span className="text-slate-400 italic">No deductions recorded</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
-                    <tr className="bg-slate-50 font-bold">
-                      <td className="p-3 border-r border-slate-300">
-                        <div className="flex items-center justify-between">
-                          <span>Total Gross Earnings:</span>
-                          <span className="font-mono text-emerald-800">
-                            ₹{salarySlipData.financials?.grossSalary.toLocaleString('en-IN')}
-                          </span>
-                        </div>
+
+                    {/* Bottom Summary Row: Gross Pay & Net Pay */}
+                    <tr className="border-t-2 border-black font-bold text-black bg-slate-100">
+                      <td className="p-2.5 border-r border-black font-bold uppercase">Gross Pay</td>
+                      <td className="p-2.5 border-r-2 border-black font-mono font-black text-right text-sm">
+                        ₹{salarySlipData.financials?.grossSalary?.toLocaleString('en-IN')}
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-between">
-                          <span>Total Deductions:</span>
-                          <span className="font-mono text-rose-800">
-                            -₹{salarySlipData.financials?.deductions?.totalDeductions.toLocaleString('en-IN')}
-                          </span>
-                        </div>
+                      <td className="p-2.5 border-r border-black font-bold uppercase">Net Pay</td>
+                      <td className="p-2.5 font-mono font-black text-right text-sm">
+                        ₹{salarySlipData.financials?.netSalary?.toLocaleString('en-IN')}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* Net Disbursable Box */}
-              <div className="p-4 bg-slate-900 text-white rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
-                    Net Salary Payable
+              {/* Verified Duty Dates Annexure */}
+              {salarySlipData.presentDates?.length > 0 && (
+                <div className="pt-2">
+                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                    Dates Verified on Duty ({salarySlipData.attendanceSummary?.presentDaysCount} Days):
                   </span>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Calculated for {salarySlipData.attendanceSummary?.presentDaysCount} present days minus expenses
-                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {salarySlipData.presentDates?.map((d: any, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] font-mono text-slate-800"
+                      >
+                        {d.date.split('-')[2]} {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(d.date.split('-')[1])-1]} ({d.dayOfWeek})
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-2xl font-black font-mono text-emerald-400">
-                    ₹{salarySlipData.financials?.netSalary.toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
+              )}
 
-              {/* Signatures */}
-              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-200">
+              {/* Footer Signatures: 3 Columns matching reference image */}
+              <div className="grid grid-cols-3 gap-6 pt-10 text-xs text-center sm:text-left">
                 <div>
-                  <div className="border-b border-slate-400 pb-8"></div>
-                  <p className="text-xs font-bold text-slate-800 mt-1.5">Authorized Signatory / HR</p>
-                  <p className="text-[10px] text-slate-500">{salarySlipData.agency?.name || 'Security Agency'}</p>
+                  <p className="font-bold text-black mb-10">Checked By</p>
+                  <p className="border-t border-black pt-1 font-semibold text-slate-900">
+                    Operations In-Charge
+                  </p>
+                  <p className="text-[11px] text-slate-600">Detachment commander</p>
                 </div>
+
                 <div>
-                  <div className="border-b border-slate-400 pb-8"></div>
-                  <p className="text-xs font-bold text-slate-800 mt-1.5">Employee / Guard Signature</p>
-                  <p className="text-[10px] text-slate-500">I acknowledge receipt of the payment & deductions</p>
+                  <p className="font-bold text-black mb-10">Authorized by</p>
+                  <p className="border-t border-black pt-1 font-semibold text-slate-900">
+                    Agency HR / Supervisor
+                  </p>
+                  <p className="text-[11px] text-slate-600">{salarySlipData.agency?.name || 'Security Agency'}</p>
+                </div>
+
+                <div>
+                  <p className="font-bold text-black mb-10">Received by</p>
+                  <p className="border-t border-black pt-1 font-semibold text-slate-900">
+                    {salarySlipData.watchman?.full_name}
+                  </p>
+                  <p className="text-[11px] text-slate-600">Security Guard</p>
                 </div>
               </div>
             </div>

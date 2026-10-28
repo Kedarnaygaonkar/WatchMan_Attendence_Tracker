@@ -53,7 +53,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     }
 
     const expenses = await Expense.find(filter)
-      .populate('watchman_id', 'full_name employee_id phone daily_wage')
+      .populate('watchman_id', 'full_name employee_id phone monthly_wage daily_wage')
       .populate('agency_id', 'name')
       .sort({ date: -1, createdAt: -1 })
       .lean();
@@ -110,6 +110,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       amount,
       date,
       notes,
+      updateWatchmanMonthlyWage,
       updateWatchmanDailyWage,
     } = req.body;
 
@@ -142,14 +143,21 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       created_by: req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : undefined,
     });
 
-    // If marked or category is daily_wage, update watchman base daily wage
-    if (category === 'daily_wage' || updateWatchmanDailyWage) {
-      watchman.daily_wage = Math.abs(Number(amount));
+    // If marked or category is monthly_wage or daily_wage, update watchman base wage
+    if (category === 'monthly_wage' || updateWatchmanMonthlyWage) {
+      const amt = Math.abs(Number(amount));
+      watchman.monthly_wage = amt;
+      watchman.daily_wage = Math.round(amt / 30);
+      await watchman.save();
+    } else if (category === 'daily_wage' || updateWatchmanDailyWage) {
+      const amt = Math.abs(Number(amount));
+      watchman.daily_wage = amt;
+      watchman.monthly_wage = amt * 30;
       await watchman.save();
     }
 
     const populated = await Expense.findById(expense._id)
-      .populate('watchman_id', 'full_name employee_id phone daily_wage')
+      .populate('watchman_id', 'full_name employee_id phone monthly_wage daily_wage')
       .populate('agency_id', 'name')
       .lean();
 
@@ -165,13 +173,17 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
 /**
  * PATCH /api/expenses/watchman/:id/wage
- * Update a watchman's default daily wage rate
+ * Update a watchman's default wage rate (monthly or daily)
  */
 router.patch('/watchman/:id/wage', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { daily_wage } = req.body;
-    if (daily_wage === undefined || daily_wage < 0) {
-      res.status(400).json({ success: false, message: 'Valid daily wage amount is required' });
+    const { monthly_wage, daily_wage, wage } = req.body;
+    if (
+      (monthly_wage === undefined || monthly_wage < 0) &&
+      (daily_wage === undefined || daily_wage < 0) &&
+      (wage === undefined || wage < 0)
+    ) {
+      res.status(400).json({ success: false, message: 'Valid wage amount is required' });
       return;
     }
 
@@ -186,16 +198,35 @@ router.patch('/watchman/:id/wage', async (req: Request, res: Response): Promise<
       return;
     }
 
-    watchman.daily_wage = Number(daily_wage);
+    if (monthly_wage !== undefined && monthly_wage >= 0) {
+      watchman.monthly_wage = Number(monthly_wage);
+      watchman.daily_wage = Math.round(Number(monthly_wage) / 30);
+    } else if (daily_wage !== undefined && daily_wage >= 0) {
+      watchman.daily_wage = Number(daily_wage);
+      watchman.monthly_wage = Number(daily_wage) * 30;
+    } else if (wage !== undefined && wage >= 0) {
+      const val = Number(wage);
+      if (val > 2000) {
+        watchman.monthly_wage = val;
+        watchman.daily_wage = Math.round(val / 30);
+      } else {
+        watchman.daily_wage = val;
+        watchman.monthly_wage = val * 30;
+      }
+    }
     await watchman.save();
 
     res.json({
       success: true,
-      message: 'Daily wage updated successfully',
-      data: { id: watchman._id, daily_wage: watchman.daily_wage },
+      message: 'Wage updated successfully',
+      data: {
+        id: watchman._id,
+        monthly_wage: watchman.monthly_wage,
+        daily_wage: watchman.daily_wage,
+      },
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message || 'Failed to update daily wage' });
+    res.status(500).json({ success: false, message: error.message || 'Failed to update wage' });
   }
 });
 
@@ -232,7 +263,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
  */
 router.get('/salary-slip', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { watchman_id, startDate, endDate, dailyWageOverride } = req.query;
+    const { watchman_id, startDate, endDate, monthlyWageOverride, dailyWageOverride } = req.query;
 
     if (!watchman_id) {
       res.status(400).json({ success: false, message: 'watchman_id is required' });
@@ -376,12 +407,28 @@ router.get('/salary-slip', async (req: Request, res: Response): Promise<void> =>
 
     const totalDeductions = clothesTotal + foodTotal + advanceTotal + travelTotal + medicalTotal + otherDeductionsTotal;
 
-    // 3. Compute Salary Calculations
-    const dailyWageRate = dailyWageOverride !== undefined && dailyWageOverride !== ''
-      ? Math.abs(Number(dailyWageOverride))
-      : (watchman.daily_wage || 500);
+    // 3. Compute Salary Calculations based on Monthly Wage
+    let baseMonthlyWage: number;
+    if (monthlyWageOverride !== undefined && monthlyWageOverride !== '') {
+      baseMonthlyWage = Math.abs(Number(monthlyWageOverride));
+    } else if (dailyWageOverride !== undefined && dailyWageOverride !== '') {
+      baseMonthlyWage = Math.abs(Number(dailyWageOverride)) * 30;
+    } else if (watchman.monthly_wage && watchman.monthly_wage > 0) {
+      baseMonthlyWage = watchman.monthly_wage;
+    } else if (watchman.daily_wage && watchman.daily_wage > 0) {
+      baseMonthlyWage = watchman.daily_wage > 2000 ? watchman.daily_wage : watchman.daily_wage * 30;
+    } else {
+      baseMonthlyWage = 15000;
+    }
 
-    const earnedBasicWage = presentDaysCount * dailyWageRate;
+    const effectiveDailyRate = totalDaysInRange > 0
+      ? Math.round((baseMonthlyWage / totalDaysInRange) * 100) / 100
+      : Math.round((baseMonthlyWage / 30) * 100) / 100;
+
+    const earnedBasicWage = totalDaysInRange > 0
+      ? Math.round((baseMonthlyWage / totalDaysInRange) * presentDaysCount)
+      : Math.round(presentDaysCount * (baseMonthlyWage / 30));
+
     const grossSalary = earnedBasicWage + totalAllowances;
     const netSalary = Math.max(0, grossSalary - totalDeductions);
 
@@ -402,7 +449,8 @@ router.get('/salary-slip', async (req: Request, res: Response): Promise<void> =>
           employee_id: watchman.employee_id,
           full_name: watchman.full_name,
           phone: watchman.phone,
-          daily_wage: dailyWageRate,
+          monthly_wage: baseMonthlyWage,
+          daily_wage: Math.round(effectiveDailyRate),
           joining_date: watchman.joining_date,
         },
         agency: watchman.agency_id,
@@ -421,7 +469,9 @@ router.get('/salary-slip', async (req: Request, res: Response): Promise<void> =>
         },
         presentDates, // Explicitly list all present dates!
         financials: {
-          dailyWageRate,
+          monthlyWageRate: baseMonthlyWage,
+          effectiveDailyRate,
+          dailyWageRate: Math.round(effectiveDailyRate),
           earnedBasicWage,
           totalAllowances,
           grossSalary,

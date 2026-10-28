@@ -16,7 +16,9 @@ export interface IWatchman extends Document {
   face_descriptor?: number[];
   /** Whether the watchman has completed face registration */
   face_registered: boolean;
-  /** Daily wage rate in INR */
+  /** Monthly wage rate in INR */
+  monthly_wage?: number;
+  /** Daily wage rate in INR (calculated or legacy) */
   daily_wage?: number;
   status: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
@@ -37,6 +39,7 @@ const watchmanSchema = new Schema<IWatchman>(
     wing: { type: String },
     face_descriptor: { type: [Number], default: undefined },
     face_registered: { type: Boolean, default: false },
+    monthly_wage: { type: Number, default: 15000, min: 0 },
     daily_wage: { type: Number, default: 500, min: 0 },
     status: {
       type: String,

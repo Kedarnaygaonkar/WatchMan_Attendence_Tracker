@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { toJSON } from './plugins/toJSON';
 
 export type ExpenseCategory =
+  | 'monthly_wage'
   | 'daily_wage'
   | 'clothes'
   | 'food'
@@ -34,7 +35,7 @@ const expenseSchema = new Schema<IExpense>(
     watchman_id: { type: Schema.Types.ObjectId, ref: 'Watchman', required: true },
     category: {
       type: String,
-      enum: ['daily_wage', 'clothes', 'food', 'travel', 'advance', 'medical', 'equipment', 'bonus', 'other'],
+      enum: ['monthly_wage', 'daily_wage', 'clothes', 'food', 'travel', 'advance', 'medical', 'equipment', 'bonus', 'other'],
       required: true,
       default: 'other',
     },
