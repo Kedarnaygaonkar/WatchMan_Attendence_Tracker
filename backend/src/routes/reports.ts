@@ -452,6 +452,7 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
         watchman_name: { $ifNull: ['$watchman.full_name', 'Unknown'] },
         employee_id: { $ifNull: ['$watchman.employee_id', ''] },
         phone: { $ifNull: ['$watchman.phone', ''] },
+        watchman_wing: { $ifNull: ['$watchman.wing', ''] },
         shift_name: { $ifNull: ['$shift.name', ''] },
         day: {
           $dayOfMonth: { $ifNull: ['$attendance_date', '$check_in_time'] },
@@ -462,7 +463,7 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
       $project: {
         watchman_id: 1, watchman_name: 1, employee_id: 1, phone: 1, shift_name: 1,
         day: 1, status: 1,
-        selected_gate: 1, selected_wing: 1,
+        selected_gate: 1, selected_wing: 1, watchman_wing: 1,
       },
     },
     { $sort: { day: 1 } },
@@ -471,8 +472,41 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
   // Fetch society definition to ensure all configured wings & gates are represented
   const targetSociety = await Society.findById(societyId).lean();
 
-  // Build watchmen summary
-  const watchmenMap: Record<string, { watchman_id: string; watchman_name: string; employee_id: string; phone: string; shift_name: string; days_attended: number; wings: string[]; gates: string[] }> = {};
+  function formatPostDisplayName(name: string, type: 'wing' | 'gate' | 'general'): string {
+    if (!name) return 'General Duty';
+    const trimmed = name.trim();
+    if (type === 'wing') {
+      if (/^(wing|tower|block|phase|sector)/i.test(trimmed) || /wing$/i.test(trimmed)) {
+        return trimmed;
+      }
+      return `Wing ${trimmed}`;
+    }
+    if (type === 'gate') {
+      if (/gate/i.test(trimmed)) {
+        return trimmed;
+      }
+      return `Gate ${trimmed}`;
+    }
+    return trimmed;
+  }
+
+  // Build watchmen summary with detailed wing & gate allocations
+  interface WatchmanAggItem {
+    watchman_id: string;
+    watchman_name: string;
+    employee_id: string;
+    phone: string;
+    shift_name: string;
+    days_attended: number;
+    wings: string[];
+    gates: string[];
+    wing_counts: Record<string, number>;
+    gate_counts: Record<string, number>;
+    post_counts: Record<string, { name: string; displayName: string; type: 'wing' | 'gate' | 'general'; days: number }>;
+    seenDays: Set<number>;
+  }
+
+  const watchmenMap: Record<string, WatchmanAggItem> = {};
   const wingsMap: Record<string, Record<number, string | boolean>> = {};
   const gatesMap: Record<string, Record<number, string | boolean>> = {};
 
@@ -489,18 +523,40 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
     const wid = r.watchman_id?.toString() || 'unknown';
 
     if (!watchmenMap[wid]) {
-      watchmenMap[wid] = { watchman_id: wid, watchman_name: r.watchman_name, employee_id: r.employee_id, phone: r.phone, shift_name: r.shift_name, days_attended: 0, wings: [], gates: [] };
+      watchmenMap[wid] = {
+        watchman_id: wid,
+        watchman_name: r.watchman_name,
+        employee_id: r.employee_id,
+        phone: r.phone,
+        shift_name: r.shift_name,
+        days_attended: 0,
+        wings: [],
+        gates: [],
+        wing_counts: {},
+        gate_counts: {},
+        post_counts: {},
+        seenDays: new Set<number>(),
+      };
     }
-    watchmenMap[wid].days_attended++;
+
+    const wm = watchmenMap[wid];
+    const isNewDay = !wm.seenDays.has(r.day);
+    if (isNewDay) {
+      wm.seenDays.add(r.day);
+      wm.days_attended++;
+    }
 
     const statusVal = r.status === 'late' ? 'late' : 'present';
 
     // Wing breakdown
-    if (r.selected_wing) {
-      const w = r.selected_wing.trim();
-      if (!wingsMap[w]) wingsMap[w] = {};
-      wingsMap[w][r.day] = statusVal;
-      if (!watchmenMap[wid].wings.includes(w)) watchmenMap[wid].wings.push(w);
+    const effectiveWing = r.selected_wing?.trim() || (!r.selected_gate && r.watchman_wing?.trim() ? r.watchman_wing.trim() : '');
+    if (effectiveWing) {
+      if (!wingsMap[effectiveWing]) wingsMap[effectiveWing] = {};
+      wingsMap[effectiveWing][r.day] = statusVal;
+      if (!wm.wings.includes(effectiveWing)) wm.wings.push(effectiveWing);
+      if (isNewDay) {
+        wm.wing_counts[effectiveWing] = (wm.wing_counts[effectiveWing] || 0) + 1;
+      }
     }
 
     // Gate breakdown
@@ -508,7 +564,38 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
       const g = r.selected_gate.trim();
       if (!gatesMap[g]) gatesMap[g] = {};
       gatesMap[g][r.day] = statusVal;
-      if (!watchmenMap[wid].gates.includes(g)) watchmenMap[wid].gates.push(g);
+      if (!wm.gates.includes(g)) wm.gates.push(g);
+      if (isNewDay) {
+        wm.gate_counts[g] = (wm.gate_counts[g] || 0) + 1;
+      }
+    }
+
+    // Determine primary post allocation for this day
+    if (isNewDay) {
+      let postName = '';
+      let postType: 'wing' | 'gate' | 'general' = 'general';
+
+      if (effectiveWing) {
+        postName = effectiveWing;
+        postType = 'wing';
+      } else if (r.selected_gate && r.selected_gate.trim()) {
+        postName = r.selected_gate.trim();
+        postType = 'gate';
+      } else {
+        postName = 'General Duty';
+        postType = 'general';
+      }
+
+      const postKey = `${postType}:${postName}`;
+      if (!wm.post_counts[postKey]) {
+        wm.post_counts[postKey] = {
+          name: postName,
+          displayName: formatPostDisplayName(postName, postType),
+          type: postType,
+          days: 0,
+        };
+      }
+      wm.post_counts[postKey].days++;
     }
   }
 
@@ -541,7 +628,22 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
         logo_url: managingAgency.logo_url,
       } : null,
     } : null,
-    watchmen: Object.values(watchmenMap).sort((a, b) => a.watchman_name.localeCompare(b.watchman_name)),
+    watchmen: Object.values(watchmenMap).map((wm) => {
+      const post_breakdown = Object.values(wm.post_counts).sort((a, b) => b.days - a.days || a.displayName.localeCompare(b.displayName));
+      return {
+        watchman_id: wm.watchman_id,
+        watchman_name: wm.watchman_name,
+        employee_id: wm.employee_id,
+        phone: wm.phone,
+        shift_name: wm.shift_name,
+        days_attended: wm.days_attended,
+        wings: wm.wings,
+        gates: wm.gates,
+        wing_counts: wm.wing_counts,
+        gate_counts: wm.gate_counts,
+        post_breakdown,
+      };
+    }).sort((a, b) => a.watchman_name.localeCompare(b.watchman_name)),
     wings: formatCalendar(wingsMap),
     gates: formatCalendar(gatesMap),
   });

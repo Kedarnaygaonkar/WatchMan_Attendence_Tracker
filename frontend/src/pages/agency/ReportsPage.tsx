@@ -122,7 +122,24 @@ interface JourneyDay {
 
 interface JourneyStats { totalDays: number; presentDays: number; lateDays: number; absentDays: number; }
 
-interface CalendarWatchman { watchman_id: string; watchman_name: string; employee_id: string; phone: string; shift_name: string; days_attended: number; wings: string[]; gates: string[]; }
+interface CalendarWatchman {
+  watchman_id: string;
+  watchman_name: string;
+  employee_id: string;
+  phone: string;
+  shift_name: string;
+  days_attended: number;
+  wings: string[];
+  gates: string[];
+  wing_counts?: Record<string, number>;
+  gate_counts?: Record<string, number>;
+  post_breakdown?: {
+    name: string;
+    displayName: string;
+    type: 'wing' | 'gate' | 'general';
+    days: number;
+  }[];
+}
 interface CalendarSection { name: string; days: (string | boolean | null)[]; }
 interface SocietyCalendarData {
   year: number; month: number; daysInMonth: number;
@@ -666,6 +683,30 @@ export default function ReportsPage() {
     downloadCSV([headers, ...rows], `monthly-attendance-${year}-${month}.csv`);
   }
 
+  function exportSocietyRosterCSV() {
+    if (!calendarData?.watchmen?.length) {
+      exportMonthlyCSV();
+      return;
+    }
+    const selSociety = calendarData.society?.name || societies?.find(s => s.id === societyId)?.name || 'Society';
+    const headers = ['#', 'Guard ID', 'Watchman Name', 'Assigned Wings & Gates Breakdown', 'Phone', 'Assigned Shift', 'Present Days'];
+    const rows = calendarData.watchmen.map((w, idx) => {
+      const breakdownStr = w.post_breakdown && w.post_breakdown.length > 0
+        ? w.post_breakdown.map((pb: any) => `${pb.displayName || pb.name}: ${pb.days} days`).join('; ')
+        : (w.wings?.join(', ') || 'General Patrol');
+      return [
+        idx + 1,
+        w.employee_id,
+        w.watchman_name,
+        breakdownStr,
+        w.phone || '',
+        w.shift_name || 'Standard Day',
+        w.days_attended,
+      ];
+    });
+    downloadCSV([headers, ...rows], `society-attendance-roster-${selSociety.replace(/[^a-zA-Z0-9]/g, '_')}-${year}-${month}.csv`);
+  }
+
   function exportSuspiciousCSV() {
     if (!suspiciousData?.length) { toast.error('No suspicious data to export'); return; }
     const headers = ['Guard Name','Employee ID','Society','Date','Flags','Distance (m)'];
@@ -953,8 +994,8 @@ export default function ReportsPage() {
                         <Printer className="w-4 h-4" /> Print PDF Report
                       </button>
                       <button
-                        onClick={exportMonthlyCSV}
-                        disabled={!monthlyData?.length}
+                        onClick={societyId && calendarData?.watchmen?.length ? exportSocietyRosterCSV : exportMonthlyCSV}
+                        disabled={!monthlyData?.length && !calendarData?.watchmen?.length}
                         className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"
                       >
                         <Download className="w-4 h-4" /> Export CSV
@@ -1124,7 +1165,7 @@ export default function ReportsPage() {
                         <Printer className="w-4 h-4" /> Download / Print PDF Report
                       </button>
                       <button
-                        onClick={exportMonthlyCSV}
+                        onClick={exportSocietyRosterCSV}
                         className="btn-outline px-3.5 py-2 text-xs rounded-xl flex items-center gap-1.5"
                       >
                         <Download className="w-4 h-4" /> Export CSV
@@ -1303,7 +1344,7 @@ export default function ReportsPage() {
                                   <th className="px-4 py-3 w-12 text-center">#</th>
                                   <th className="px-4 py-3">Guard ID</th>
                                   <th className="px-4 py-3">Name</th>
-                                  <th className="px-4 py-3">Duty Post</th>
+                                  <th className="px-4 py-3 min-w-[220px]">Assigned Wings & Gates (Days)</th>
                                   <th className="px-4 py-3">Phone</th>
                                   <th className="px-4 py-3">Assigned Shift</th>
                                   <th className="px-4 py-3 text-center">Present Days</th>
@@ -1325,13 +1366,55 @@ export default function ReportsPage() {
                                       {w.watchman_name}
                                     </td>
                                     <td className="px-4 py-2.5">
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                        w.wings.length > 0 
-                                          ? 'bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]' 
-                                          : 'bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]'
-                                      }`}>
-                                        {w.wings.length > 0 ? 'Wing Guard' : w.gates.length > 0 ? 'Gate Guard' : 'General Patrol'}
-                                      </span>
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        {w.post_breakdown && w.post_breakdown.length > 0 ? (
+                                          w.post_breakdown.map((pb: any, idx: number) => {
+                                            const isWing = pb.type === 'wing';
+                                            const isGate = pb.type === 'gate';
+                                            return (
+                                              <span
+                                                key={idx}
+                                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                                                  isWing
+                                                    ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+                                                    : isGate
+                                                    ? 'bg-[#faf5ff] text-[#7e22ce] border-[#e9d5ff]'
+                                                    : 'bg-[#f8fafc] text-[#334155] border-[#e2e8f0]'
+                                                }`}
+                                              >
+                                                <span
+                                                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                                    isWing ? 'bg-[#2563eb]' : isGate ? 'bg-[#9333ea]' : 'bg-[#64748b]'
+                                                  }`}
+                                                />
+                                                <span>{pb.displayName || pb.name}</span>
+                                                <span
+                                                  className={`font-mono font-black text-[10px] px-1 py-0.2 rounded ${
+                                                    isWing
+                                                      ? 'bg-[#dbeafe] text-[#1e40af]'
+                                                      : isGate
+                                                      ? 'bg-[#f3e8ff] text-[#6b21a8]'
+                                                      : 'bg-[#e2e8f0] text-[#1e293b]'
+                                                  }`}
+                                                >
+                                                  {pb.days} {pb.days === 1 ? 'day' : 'days'}
+                                                </span>
+                                              </span>
+                                            );
+                                          })
+                                        ) : w.wings && w.wings.length > 0 ? (
+                                          w.wings.map((wg, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]"
+                                            >
+                                              {wg.includes('Wing') ? wg : `Wing ${wg}`}
+                                            </span>
+                                          ))
+                                        ) : (
+                                          <span className="text-[#94a3b8] italic text-[11px]">General Patrol</span>
+                                        )}
+                                      </div>
                                     </td>
                                     <td className="px-4 py-2.5 text-[#475569] font-mono text-[11px]">{w.phone || '—'}</td>
                                     <td className="px-4 py-2.5 text-[#475569]">{w.shift_name || 'Standard Day'}</td>
