@@ -619,9 +619,13 @@ router.get('/society-wing-bill', asyncHandler(async (req: Request, res: Response
     return;
   }
 
-  const managingAgency = society.agency_id
-    ? await Agency.findById(society.agency_id).lean()
-    : null;
+  let managingAgency: any = null;
+  if (society.agency_id) {
+    managingAgency = await Agency.findById(society.agency_id).lean();
+  }
+  if (!managingAgency && agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    managingAgency = await Agency.findById(agencyId).lean();
+  }
 
   const startDate = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
   startDate.setUTCHours(0, 0, 0, 0);
@@ -709,17 +713,15 @@ router.get('/society-wing-bill', asyncHandler(async (req: Request, res: Response
     success: true,
     data: {
       agency: {
-        id: managingAgency?._id?.toString() || society.agency_id?.toString(),
+        id: managingAgency?._id?.toString() || society.agency_id?.toString() || agencyId || '',
         name: managingAgency?.name || 'ALERT SPACE FACILITIES AND MANAGEMENT SERVICES',
-        subName: 'Alert Space Facilities & Management Services',
-        proprietor: 'YUVRAJ HARI PAWAR',
-        proprietorSubtitle: '(EX. CAPTAIN , ARMY)',
+        subName: managingAgency?.name || 'Alert Space Facilities & Management Services',
         address: managingAgency?.address || 'Sharma Complex, 3rd Floor Near Ram Krushna Mangal Karyalay,Pimple Gurav,Pune-411061',
         state: 'Maharashtra',
         pan: 'EUBPG6574A',
         phone: managingAgency?.phone || '+91 9876541234',
         email: managingAgency?.email || 'alertspace@gmail.com',
-        logo_url: managingAgency?.logo_url,
+        logo_url: managingAgency?.logo_url || null,
       },
       society: {
         id: society._id.toString(),

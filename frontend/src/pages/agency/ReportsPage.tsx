@@ -43,7 +43,7 @@ interface Society {
   wings?: string[];
   gates?: string[];
 }
-interface Agency { id: string; name: string; }
+interface Agency { id: string; name: string; logo_url?: string; }
 interface WatchmanOption { _id: string; id: string; full_name: string; employee_id: string; }
 
 interface SocietyWingBillData {
@@ -51,8 +51,6 @@ interface SocietyWingBillData {
     id: string;
     name: string;
     subName?: string;
-    proprietor?: string;
-    proprietorSubtitle?: string;
     address?: string;
     state?: string;
     pan?: string;
@@ -267,6 +265,7 @@ export default function ReportsPage() {
   const [invoiceParticulars, setInvoiceParticulars] = useState<string>('Security Guard');
   const [invoiceOtHours, setInvoiceOtHours] = useState<string>('0');
   const [siteNameOverride, setSiteNameOverride] = useState<string>('');
+  const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
 
   // ── Fetch Society & Wing Bill Data ─────────────────────────────────────
   const {
@@ -305,6 +304,7 @@ export default function ReportsPage() {
     setInvoiceParticulars('Security Guard');
     setInvoiceOtHours('0');
     setSiteNameOverride('');
+    setLogoLoadFailed(false);
     toast.success('Reset invoice parameters to auto-calculated defaults');
   }
 
@@ -326,6 +326,11 @@ export default function ReportsPage() {
     ? (selectedWing.toUpperCase().includes('WING') ? selectedWing.toUpperCase() : `${selectedWing.toUpperCase()} WING`)
     : (selectedSocietyObj?.name ? `${selectedSocietyObj.name} (ALL WINGS)` : 'ALL WINGS');
   const effectiveSiteName = siteNameOverride.trim() || billDataResponse?.invoice?.siteName || defaultSiteName;
+
+  // Effective agency name & logo
+  const currentAgencyObj = agencies?.find(a => a.id === (billDataResponse?.agency?.id || agencyId || user?.agencyId));
+  const effectiveAgencyName = billDataResponse?.agency?.name || currentAgencyObj?.name || (isSuperAdmin ? agencies?.find(a => a.id === agencyId)?.name : user?.agencyName) || user?.agencyName || 'Security Agency';
+  const effectiveAgencyLogo = billDataResponse?.agency?.logo_url || currentAgencyObj?.logo_url || calendarData?.society?.agency?.logo_url || '';
 
   const effectiveQuantity = invoiceQuantityOverride !== '' && !isNaN(parseInt(invoiceQuantityOverride))
     ? Math.max(1, parseInt(invoiceQuantityOverride))
@@ -517,7 +522,7 @@ export default function ReportsPage() {
       [
         effectiveInvoiceNo,
         effectiveInvoiceDate,
-        billDataResponse.agency?.name || 'Alert Space Facilities & Management Services',
+        effectiveAgencyName,
         billDataResponse.society?.name || 'Society',
         effectiveSiteName,
         serviceMonthText,
@@ -1756,46 +1761,29 @@ export default function ReportsPage() {
                     className="bg-white text-black p-6 sm:p-10 rounded-2xl shadow-2xl max-w-4xl mx-auto border border-neutral-300 font-sans print:shadow-none print:border-none print:p-0 print:max-w-none"
                     style={{ color: '#000000', backgroundColor: '#ffffff' }}
                   >
-                    {/* Top Header Section */}
-                    <div className="flex justify-between items-start pb-4 border-b border-black">
-                      {/* Left: Shield Logo & Brand */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-14 h-16 bg-gradient-to-b from-[#3a3a3a] via-[#1a1a1a] to-[#0a0a0a] rounded-b-[2rem] rounded-t-md flex items-center justify-center text-white font-extrabold shadow-sm border border-black/30 relative select-none">
-                          <span
-                            className="text-2xl font-serif italic tracking-tighter lowercase select-none"
-                            style={{ fontFamily: 'Georgia, serif' }}
-                          >
-                            as
-                          </span>
-                        </div>
+                    {/* Top Header Section: Agency Logo & Name */}
+                    <div className="flex justify-between items-center pb-4 border-b border-black">
+                      {/* Left: Agency Logo & Agency Name */}
+                      <div className="flex items-center gap-4">
+                        {effectiveAgencyLogo && !logoLoadFailed ? (
+                          <img
+                            src={effectiveAgencyLogo}
+                            alt={effectiveAgencyName}
+                            onError={() => setLogoLoadFailed(true)}
+                            className="h-14 sm:h-16 max-h-16 max-w-[180px] object-contain rounded-md"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-black text-2xl shadow-sm border border-black/20 select-none">
+                            {effectiveAgencyName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <h1
-                            className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-none"
+                            className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-none uppercase"
                             style={{ fontFamily: "'Inter', sans-serif" }}
                           >
-                            {billDataResponse?.agency?.name?.includes('Alert') || !billDataResponse?.agency?.name
-                              ? 'Alert Space'
-                              : billDataResponse.agency.name}
+                            {effectiveAgencyName}
                           </h1>
-                          <p className="text-[10px] tracking-[0.25em] font-extrabold text-neutral-800 uppercase mt-1">
-                            ANYTHING YOU DESIRE
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Right: Proprietor Details & Original Recipient */}
-                      <div className="text-right">
-                        <div className="text-sm font-bold tracking-wide uppercase text-black">
-                          {billDataResponse?.agency?.proprietor || 'YUVRAJ HARI PAWAR'}
-                        </div>
-                        <div className="text-xs font-semibold tracking-wider text-black">
-                          {billDataResponse?.agency?.proprietorSubtitle || '(EX. CAPTAIN , ARMY)'}
-                        </div>
-                        <div className="text-xs text-neutral-800 mt-0.5">
-                          {billDataResponse?.agency?.subName || 'Alert Space Facilities & Management Services'}
-                        </div>
-                        <div className="text-[11px] font-semibold text-neutral-700 italic mt-1.5">
-                          Original For Recipient
                         </div>
                       </div>
                     </div>
@@ -1813,7 +1801,7 @@ export default function ReportsPage() {
                       <div className="border-b md:border-b-0 md:border-r border-black flex flex-col justify-between">
                         <div className="p-2 space-y-1">
                           <div className="font-bold text-black uppercase tracking-tight text-[11px]">
-                            {billDataResponse?.agency?.name || 'ALERT SPACE FACILITIES AND MANAGEMENT SERVICES'}
+                            {effectiveAgencyName.toUpperCase()}
                           </div>
                           <div className="grid grid-cols-[70px_1fr] gap-1">
                             <span className="text-neutral-800">Address</span>
@@ -2016,7 +2004,7 @@ export default function ReportsPage() {
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
                           <span className="text-neutral-700 font-medium">Account Name</span>
                           <span className="text-black font-bold">
-                            : {billDataResponse?.agency?.name || 'ALERT SPACE FACILITIES AND MANAGEMENT SERVICES'}
+                            : {effectiveAgencyName}
                           </span>
                         </div>
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
@@ -2037,7 +2025,7 @@ export default function ReportsPage() {
                       <div className="p-3 flex flex-col justify-between text-right">
                         <div>
                           <div className="text-[11px] font-bold text-black">
-                            For {billDataResponse?.agency?.subName || 'Alert Space Facilities & Management Services'}
+                            For {effectiveAgencyName}
                           </div>
                         </div>
 
