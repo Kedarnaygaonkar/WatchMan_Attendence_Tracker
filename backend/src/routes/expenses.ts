@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Expense, ExpenseCategory, ExpenseType } from '../models/Expense';
+import { SalaryHold } from '../models/SalaryHold';
 import { Watchman } from '../models/Watchman';
 import { Attendance } from '../models/Attendance';
 import { Assignment } from '../models/Assignment';
@@ -441,6 +442,29 @@ router.get('/salary-slip', async (req: Request, res: Response): Promise<void> =>
       .populate('shift_id', 'name start_time end_time')
       .lean();
 
+    // Check if current period has a salary hold record
+    const startMonth = start.getMonth() + 1;
+    const startYear = start.getFullYear();
+
+    const currentHold = await SalaryHold.findOne({
+      watchman_id: watchman._id,
+      $or: [
+        { startDate: { $lte: end }, endDate: { $gte: start } },
+        { month: startMonth, year: startYear },
+      ],
+    }).lean();
+
+    // Query any pending held salaries from prior months
+    const priorPendingHolds = await SalaryHold.find({
+      watchman_id: watchman._id,
+      status: 'held',
+      _id: { $ne: currentHold?._id },
+    })
+      .sort({ startDate: 1 })
+      .lean();
+
+    const totalPendingHeldArrears = priorPendingHolds.reduce((sum: number, h: any) => sum + (h.netSalary || 0), 0);
+
     res.json({
       success: true,
       data: {
@@ -492,10 +516,252 @@ router.get('/salary-slip', async (req: Request, res: Response): Promise<void> =>
           },
           netSalary,
         },
+        holdStatus: currentHold
+          ? {
+              id: currentHold._id,
+              status: currentHold.status,
+              holdReason: currentHold.holdReason,
+              heldAt: currentHold.heldAt,
+              releasedAt: currentHold.releasedAt,
+              paymentMode: currentHold.paymentMode,
+              releaseNotes: currentHold.releaseNotes,
+              periodLabel: currentHold.periodLabel,
+            }
+          : null,
+        priorPendingHolds: priorPendingHolds.map((h: any) => ({
+          id: h._id,
+          periodLabel: h.periodLabel,
+          month: h.month,
+          year: h.year,
+          startDate: h.startDate,
+          endDate: h.endDate,
+          dutyDays: h.dutyDays,
+          netSalary: h.netSalary,
+          holdReason: h.holdReason,
+          heldAt: h.heldAt,
+        })),
+        totalPendingHeldArrears,
       },
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message || 'Failed to generate salary slip' });
+  }
+});
+
+/**
+ * GET /api/expenses/salary-holds
+ * List all salary hold records for a watchman or across the agency
+ */
+router.get('/salary-holds', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const filter: any = {};
+
+    if (req.user?.role === 'agency_admin') {
+      filter.agency_id = req.user.agencyId;
+    } else if (req.query.agency_id) {
+      filter.agency_id = req.query.agency_id;
+    }
+
+    if (req.query.watchman_id) {
+      filter.watchman_id = req.query.watchman_id;
+    }
+
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    const holds = await SalaryHold.find(filter)
+      .populate('watchman_id', 'full_name employee_id phone')
+      .populate('heldBy', 'name email')
+      .populate('releasedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    let totalHeldAmount = 0;
+    let heldCount = 0;
+    let releasedCount = 0;
+
+    holds.forEach((h: any) => {
+      if (h.status === 'held') {
+        totalHeldAmount += h.netSalary || 0;
+        heldCount += 1;
+      } else {
+        releasedCount += 1;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        holds,
+        summary: {
+          totalHeldAmount,
+          heldCount,
+          releasedCount,
+          totalCount: holds.length,
+        },
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to fetch salary holds' });
+  }
+});
+
+/**
+ * POST /api/expenses/salary-hold
+ * Place a watchman's monthly salary on hold (e.g. guard out of town without collecting salary)
+ */
+router.post('/salary-hold', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      watchman_id,
+      startDate,
+      endDate,
+      dutyDays,
+      grossSalary,
+      deductions,
+      netSalary,
+      holdReason,
+    } = req.body;
+
+    if (!watchman_id) {
+      res.status(400).json({ success: false, message: 'watchman_id is required' });
+      return;
+    }
+
+    const watchman = await Watchman.findById(watchman_id).lean();
+    if (!watchman) {
+      res.status(404).json({ success: false, message: 'Watchman not found' });
+      return;
+    }
+
+    const agencyId = (watchman.agency_id as any)?._id || watchman.agency_id;
+    if (req.user?.role === 'agency_admin' && agencyId.toString() !== req.user.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+
+    const month = start.getMonth() + 1;
+    const year = start.getFullYear();
+    const monthName = start.toLocaleString('en-IN', { month: 'long' });
+    const periodLabel = `${monthName} ${year}`;
+
+    // Check if hold record already exists for this period
+    let hold = await SalaryHold.findOne({
+      watchman_id: watchman._id,
+      month,
+      year,
+    });
+
+    if (hold) {
+      hold.dutyDays = dutyDays !== undefined ? Number(dutyDays) : hold.dutyDays;
+      hold.grossSalary = grossSalary !== undefined ? Number(grossSalary) : hold.grossSalary;
+      hold.deductions = deductions !== undefined ? Number(deductions) : hold.deductions;
+      hold.netSalary = netSalary !== undefined ? Number(netSalary) : hold.netSalary;
+      hold.status = 'held';
+      hold.holdReason = holdReason?.trim() || hold.holdReason || 'Guard left for other city without collecting salary';
+      hold.heldAt = new Date();
+      hold.heldBy = req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : undefined;
+      hold.releasedAt = undefined;
+      hold.releasedBy = undefined;
+      hold.releaseNotes = undefined;
+      await hold.save();
+    } else {
+      hold = await SalaryHold.create({
+        agency_id: agencyId,
+        watchman_id: watchman._id,
+        month,
+        year,
+        startDate: start,
+        endDate: end,
+        periodLabel,
+        dutyDays: Number(dutyDays) || 0,
+        grossSalary: Number(grossSalary) || 0,
+        deductions: Number(deductions) || 0,
+        netSalary: Number(netSalary) || 0,
+        status: 'held',
+        holdReason: holdReason?.trim() || 'Guard left for other city without collecting salary',
+        heldAt: new Date(),
+        heldBy: req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : undefined,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: hold,
+      message: `Salary for ${periodLabel} placed on hold successfully.`,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to place salary on hold' });
+  }
+});
+
+/**
+ * PUT /api/expenses/salary-hold/:id/release
+ * Release and pay out a held salary to the guard upon return
+ */
+router.put('/salary-hold/:id/release', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { paymentMode, releaseNotes, releaseDate } = req.body;
+
+    const hold = await SalaryHold.findById(id);
+    if (!hold) {
+      res.status(404).json({ success: false, message: 'Salary hold record not found' });
+      return;
+    }
+
+    if (req.user?.role === 'agency_admin' && hold.agency_id.toString() !== req.user.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    hold.status = 'released';
+    hold.releasedAt = releaseDate ? new Date(releaseDate) : new Date();
+    hold.releasedBy = req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : undefined;
+    hold.paymentMode = paymentMode || 'cash';
+    hold.releaseNotes = releaseNotes?.trim() || 'Guard returned and collected pending salary in full';
+    await hold.save();
+
+    res.json({
+      success: true,
+      data: hold,
+      message: `Held salary of ₹${hold.netSalary.toLocaleString('en-IN')} for ${hold.periodLabel} released and disbursed successfully!`,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to release salary hold' });
+  }
+});
+
+/**
+ * DELETE /api/expenses/salary-hold/:id
+ * Remove or cancel a salary hold
+ */
+router.delete('/salary-hold/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const hold = await SalaryHold.findById(id);
+    if (!hold) {
+      res.status(404).json({ success: false, message: 'Salary hold record not found' });
+      return;
+    }
+
+    if (req.user?.role === 'agency_admin' && hold.agency_id.toString() !== req.user.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    await SalaryHold.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: 'Salary hold record removed successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to remove salary hold' });
   }
 });
 

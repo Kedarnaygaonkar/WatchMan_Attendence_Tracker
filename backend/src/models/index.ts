@@ -11,3 +11,4 @@ export { Society } from './Society';
 export { User } from './User';
 export { Watchman } from './Watchman';
 export { Expense } from './Expense';
+export { SalaryHold } from './SalaryHold';

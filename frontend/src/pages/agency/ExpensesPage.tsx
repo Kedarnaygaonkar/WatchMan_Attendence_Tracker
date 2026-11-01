@@ -27,7 +27,15 @@ import {
   Phone,
   ArrowUpRight,
   ShieldCheck,
-  Edit2
+  Edit2,
+  PauseCircle,
+  PlayCircle,
+  Clock,
+  History,
+  AlertTriangle,
+  Lock,
+  Unlock,
+  CheckCircle
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
@@ -70,6 +78,36 @@ interface ExpenseItem {
   notes?: string;
 }
 
+interface SalaryHoldItem {
+  _id: string;
+  id?: string;
+  agency_id: any;
+  watchman_id: {
+    _id: string;
+    id?: string;
+    full_name: string;
+    employee_id: string;
+    phone?: string;
+  };
+  month: number;
+  year: number;
+  startDate: string;
+  endDate: string;
+  periodLabel: string;
+  dutyDays: number;
+  grossSalary: number;
+  deductions: number;
+  netSalary: number;
+  status: 'held' | 'released';
+  holdReason: string;
+  heldAt: string;
+  heldBy?: { name?: string; email?: string };
+  releasedAt?: string;
+  releasedBy?: { name?: string; email?: string };
+  paymentMode?: 'cash' | 'bank_transfer' | 'upi' | 'cheque';
+  releaseNotes?: string;
+}
+
 function getWatchmanMonthlyWage(w?: { monthly_wage?: number; daily_wage?: number } | null): number {
   if (!w) return 15000;
   if (w.monthly_wage && w.monthly_wage > 0) return w.monthly_wage;
@@ -106,6 +144,16 @@ export default function ExpensesPage() {
   const [showSlipModal, setShowSlipModal] = useState(false);
   const [showEditWageModal, setShowEditWageModal] = useState(false);
   const [newWageInput, setNewWageInput] = useState<string>('');
+
+  // Salary Hold & Release State
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [showHoldsLedger, setShowHoldsLedger] = useState(false);
+  const [holdReasonInput, setHoldReasonInput] = useState('Guard left for other city without collecting salary');
+  const [targetHoldToRelease, setTargetHoldToRelease] = useState<any>(null);
+  const [releasePaymentMode, setReleasePaymentMode] = useState<'cash' | 'bank_transfer' | 'upi' | 'cheque'>('cash');
+  const [releaseNotesInput, setReleaseNotesInput] = useState('Guard returned and collected pending salary in full');
+  const [releaseDateInput, setReleaseDateInput] = useState(todayStr);
 
   // Add Expense Form State
   const [formWatchmanId, setFormWatchmanId] = useState('');
@@ -250,6 +298,86 @@ export default function ExpensesPage() {
       toast.error(err.response?.data?.message || 'Failed to update monthly wage');
     },
   });
+
+  // ── Fetch Salary Holds for Watchman ───────────────────────────────────
+  const { data: salaryHoldsData, refetch: refetchSalaryHolds } = useQuery({
+    queryKey: ['salary-holds', selectedWatchmanId],
+    queryFn: async () => {
+      if (!selectedWatchmanId) {
+        return {
+          holds: [],
+          summary: { totalHeldAmount: 0, heldCount: 0, releasedCount: 0, totalCount: 0 },
+        };
+      }
+      const res = await api.get('/expenses/salary-holds', {
+        params: { watchman_id: selectedWatchmanId },
+      });
+      return res.data?.data || { holds: [], summary: { totalHeldAmount: 0, heldCount: 0, releasedCount: 0, totalCount: 0 } };
+    },
+    enabled: Boolean(selectedWatchmanId),
+  });
+
+  const watchmanSalaryHolds: SalaryHoldItem[] = salaryHoldsData?.holds || [];
+  const holdsSummary = salaryHoldsData?.summary || { totalHeldAmount: 0, heldCount: 0, releasedCount: 0, totalCount: 0 };
+
+  // ── Hold Salary Mutation ──────────────────────────────────────────────
+  const holdSalaryMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await api.post('/expenses/salary-hold', payload);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || 'Salary placed on hold');
+      setShowHoldModal(false);
+      queryClient.invalidateQueries({ queryKey: ['salary-slip'] });
+      queryClient.invalidateQueries({ queryKey: ['salary-holds'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to place salary on hold');
+    },
+  });
+
+  // ── Release Salary Hold Mutation ──────────────────────────────────────
+  const releaseHoldMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: any }) => {
+      const res = await api.put(`/expenses/salary-hold/${id}/release`, payload);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || 'Held salary released and disbursed!');
+      setShowReleaseModal(false);
+      setTargetHoldToRelease(null);
+      queryClient.invalidateQueries({ queryKey: ['salary-slip'] });
+      queryClient.invalidateQueries({ queryKey: ['salary-holds'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to release held salary');
+    },
+  });
+
+  // ── Cancel/Delete Salary Hold Mutation ────────────────────────────────
+  const cancelHoldMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/expenses/salary-hold/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success('Salary hold record removed');
+      queryClient.invalidateQueries({ queryKey: ['salary-slip'] });
+      queryClient.invalidateQueries({ queryKey: ['salary-holds'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to remove salary hold');
+    },
+  });
+
+  function openReleaseModal(hold: any) {
+    setTargetHoldToRelease(hold);
+    setReleasePaymentMode('cash');
+    setReleaseNotesInput('Guard returned from other city and collected pending salary in full');
+    setReleaseDateInput(todayStr);
+    setShowReleaseModal(true);
+  }
 
   function resetAddForm() {
     setFormWatchmanId(selectedWatchmanId || '');
@@ -891,6 +1019,116 @@ export default function ExpensesPage() {
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Alert: Returning guard with prior pending held salary arrears */}
+              {salarySlipData.totalPendingHeldArrears > 0 && (
+                <div className="p-4 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-orange-500/15 border-2 border-amber-500/40 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg animate-in fade-in">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-amber-200 text-sm">
+                          Held Salary Backlog Detected for Returned Guard
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold">
+                          {salarySlipData.priorPendingHolds?.length} Month(s) Pending Arrears
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-200/90 mt-1">
+                        This guard has <strong className="text-amber-100 font-mono">₹{salarySlipData.totalPendingHeldArrears.toLocaleString('en-IN')}</strong> in held salary from previous months (e.g. left for hometown without collecting salary). Now that the guard has returned, you can release and disburse their held backlog below.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                    <button
+                      onClick={() => setShowHoldsLedger(true)}
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-surface-950 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow"
+                    >
+                      <History className="w-4 h-4" />
+                      View Backlog ({salarySlipData.priorPendingHolds?.length})
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Banner for Currently Selected Month's Hold Status */}
+              {salarySlipData.holdStatus && (
+                <div className={`p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md ${
+                  salarySlipData.holdStatus.status === 'held'
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-200'
+                    : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                      salarySlipData.holdStatus.status === 'held'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    }`}>
+                      {salarySlipData.holdStatus.status === 'held' ? (
+                        <PauseCircle className="w-5 h-5 text-amber-400 animate-pulse" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black tracking-wide border ${
+                          salarySlipData.holdStatus.status === 'held'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        }`}>
+                          {salarySlipData.holdStatus.status === 'held'
+                            ? '⏸️ SALARY ON HOLD'
+                            : `✅ RELEASED & DISBURSED (${salarySlipData.holdStatus.paymentMode?.toUpperCase() || 'CASH'})`}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {salarySlipData.holdStatus.status === 'held'
+                            ? `Held on ${new Date(salarySlipData.holdStatus.heldAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                            : `Disbursed on ${new Date(salarySlipData.holdStatus.releasedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1">
+                        {salarySlipData.holdStatus.status === 'held' ? (
+                          <>Reason: <span className="text-amber-200 font-medium">"{salarySlipData.holdStatus.holdReason}"</span></>
+                        ) : (
+                          <>Remarks: <span className="text-emerald-200 font-medium">"{salarySlipData.holdStatus.releaseNotes}"</span></>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {salarySlipData.holdStatus.status === 'held' ? (
+                      <>
+                        <button
+                          onClick={() => openReleaseModal(salarySlipData.holdStatus)}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          Release & Pay Salary
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to cancel this salary hold?')) {
+                              cancelHoldMutation.mutate(salarySlipData.holdStatus.id);
+                            }
+                          }}
+                          className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl text-xs transition-colors"
+                          title="Cancel Hold"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-xs text-emerald-400 font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        Payment Disbursed to Guard
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Slip Generation Control & Wage Override */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-800/70 p-4 rounded-2xl border border-surface-700/60">
                 <div className="flex items-center gap-3">
@@ -908,7 +1146,7 @@ export default function ExpensesPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-slate-400">Monthly Wage (₹):</span>
                     <input
@@ -920,6 +1158,42 @@ export default function ExpensesPage() {
                     />
                   </div>
 
+                  {/* Hold / Release Action Buttons */}
+                  {salarySlipData.holdStatus?.status === 'held' ? (
+                    <button
+                      onClick={() => openReleaseModal(salarySlipData.holdStatus)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow transition-all active:scale-95"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      Release & Pay
+                    </button>
+                  ) : salarySlipData.holdStatus?.status !== 'released' ? (
+                    <button
+                      onClick={() => {
+                        setHoldReasonInput('Guard left for other city without collecting salary');
+                        setShowHoldModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
+                      title="Put this month's salary on hold if guard has gone to another city without collecting"
+                    >
+                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      Put Salary on Hold
+                    </button>
+                  ) : null}
+
+                  {/* Toggle Holds Ledger */}
+                  <button
+                    onClick={() => setShowHoldsLedger(!showHoldsLedger)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                      showHoldsLedger
+                        ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
+                        : 'bg-surface-700/60 hover:bg-surface-700 text-slate-300 border-surface-600/40'
+                    }`}
+                  >
+                    <History className="w-4 h-4 text-brand-400" />
+                    Held Backlogs ({watchmanSalaryHolds.length})
+                  </button>
+
                   <button
                     onClick={() => setShowSlipModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
@@ -929,6 +1203,139 @@ export default function ExpensesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Held Salaries & Backlog Ledger Section */}
+              {showHoldsLedger && (
+                <div className="bg-surface-800/80 p-5 rounded-2xl border border-surface-700/70 space-y-4 shadow-lg animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-surface-700/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                        <History className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-100 text-sm">
+                          Held Salaries & Backlog Ledger — {salarySlipData.watchman?.full_name}
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Complete audit trail of salaries held while guard was away, ready to release upon return
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+                        Pending Held: {holdsSummary.heldCount} (₹{holdsSummary.totalHeldAmount?.toLocaleString('en-IN')})
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-semibold">
+                        Released: {holdsSummary.releasedCount}
+                      </span>
+                    </div>
+                  </div>
+
+                  {watchmanSalaryHolds.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400 text-xs">
+                      No held salary records for this watchman yet. Click "Put Salary on Hold" to hold a month's salary.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead className="bg-surface-900/60 text-[11px] uppercase tracking-wider text-slate-400 border-b border-surface-700/60">
+                          <tr>
+                            <th className="px-3 py-2.5">Period</th>
+                            <th className="px-3 py-2.5">Duty Days</th>
+                            <th className="px-3 py-2.5">Held Reason</th>
+                            <th className="px-3 py-2.5 text-right">Net Amount</th>
+                            <th className="px-3 py-2.5 text-center">Status</th>
+                            <th className="px-3 py-2.5">Held Date</th>
+                            <th className="px-3 py-2.5">Disbursement Details</th>
+                            <th className="px-3 py-2.5 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-surface-700/40">
+                          {watchmanSalaryHolds.map((h: any) => (
+                            <tr key={h._id} className="hover:bg-surface-700/20 transition-colors">
+                              <td className="px-3 py-2.5 font-bold text-slate-100 whitespace-nowrap">
+                                {h.periodLabel}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap">
+                                <span className="font-mono">{h.dutyDays}</span> Days
+                              </td>
+                              <td className="px-3 py-2.5 max-w-xs text-slate-300">
+                                {h.holdReason}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap text-right font-mono font-bold text-slate-100">
+                                ₹{Number(h.netSalary).toLocaleString('en-IN')}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap text-center">
+                                {h.status === 'held' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    <PauseCircle className="w-3 h-3 text-amber-400" />
+                                    Held
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                    Disbursed
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap text-slate-400 font-mono text-[11px]">
+                                {new Date(h.heldAt).toLocaleDateString('en-IN')}
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-400 text-[11px]">
+                                {h.status === 'released' ? (
+                                  <div>
+                                    <span className="font-semibold text-emerald-300 uppercase">
+                                      {h.paymentMode || 'Cash'}
+                                    </span>
+                                    <span className="text-slate-500 ml-1.5 font-mono">
+                                      ({new Date(h.releasedAt).toLocaleDateString('en-IN')})
+                                    </span>
+                                    {h.releaseNotes && (
+                                      <p className="text-[10px] text-slate-400 line-clamp-1">{h.releaseNotes}</p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-500 italic">Awaiting guard return</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {h.status === 'held' ? (
+                                    <button
+                                      onClick={() => openReleaseModal(h)}
+                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[11px] shadow transition-all active:scale-95 flex items-center gap-1"
+                                      title="Release and pay salary to guard"
+                                    >
+                                      <PlayCircle className="w-3.5 h-3.5" />
+                                      Release & Pay
+                                    </button>
+                                  ) : (
+                                    <span className="text-[11px] text-emerald-400 font-mono font-semibold">
+                                      Paid ✓
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`Delete hold record for ${h.periodLabel}?`)) {
+                                        cancelHoldMutation.mutate(h._id);
+                                      }
+                                    }}
+                                    className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                                    title="Delete record"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 1. Verified Present Dates Section */}
               <div className="bg-surface-800/60 p-5 rounded-2xl border border-surface-700/60 space-y-4">
@@ -1104,13 +1511,30 @@ export default function ExpensesPage() {
               </div>
 
               {/* 3. Net Payable Banner */}
-              <div className="bg-gradient-to-r from-emerald-950/60 via-surface-800 to-emerald-950/40 p-6 rounded-2xl border-2 border-emerald-500/50 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-glow">
+              <div className={`p-6 rounded-2xl border-2 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-glow ${
+                salarySlipData.holdStatus?.status === 'held'
+                  ? 'bg-gradient-to-r from-amber-950/60 via-surface-800 to-amber-950/40 border-amber-500/60'
+                  : 'bg-gradient-to-r from-emerald-950/60 via-surface-800 to-emerald-950/40 border-emerald-500/50'
+              }`}>
                 <div>
-                  <span className="text-xs uppercase tracking-wider font-bold text-emerald-400">
-                    Net Salary Disbursable
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs uppercase tracking-wider font-bold ${
+                      salarySlipData.holdStatus?.status === 'held' ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      {salarySlipData.holdStatus?.status === 'held'
+                        ? '⏸️ Net Salary on Hold (Backlog Tracked)'
+                        : 'Net Salary Disbursable'}
+                    </span>
+                    {salarySlipData.holdStatus?.status === 'held' && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        Awaiting Guard Return
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <h3 className="text-3xl sm:text-4xl font-black text-emerald-300 font-mono">
+                    <h3 className={`text-3xl sm:text-4xl font-black font-mono ${
+                      salarySlipData.holdStatus?.status === 'held' ? 'text-amber-300' : 'text-emerald-300'
+                    }`}>
                       ₹{salarySlipData.financials?.netSalary.toLocaleString('en-IN')}
                     </h3>
                     <span className="text-xs text-slate-400 font-medium">
@@ -1120,13 +1544,36 @@ export default function ExpensesPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowSlipModal(true)}
-                  className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-surface-950 font-black rounded-xl text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2"
-                >
-                  <Printer className="w-5 h-5" />
-                  View & Print Official Slip
-                </button>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {salarySlipData.holdStatus?.status === 'held' ? (
+                    <button
+                      onClick={() => openReleaseModal(salarySlipData.holdStatus)}
+                      className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-all shadow-md active:scale-95 flex items-center gap-2"
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      Release & Pay Now
+                    </button>
+                  ) : salarySlipData.holdStatus?.status !== 'released' ? (
+                    <button
+                      onClick={() => {
+                        setHoldReasonInput('Guard left for other city without collecting salary');
+                        setShowHoldModal(true);
+                      }}
+                      className="px-4 py-3 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition-all active:scale-95 flex items-center gap-2"
+                    >
+                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      Put Salary on Hold
+                    </button>
+                  ) : null}
+
+                  <button
+                    onClick={() => setShowSlipModal(true)}
+                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-surface-950 font-black rounded-xl text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                  >
+                    <Printer className="w-5 h-5" />
+                    View & Print Official Slip
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1483,6 +1930,54 @@ export default function ExpensesPage() {
                 </div>
               </div>
 
+              {/* Official Status Stamp (if Held or Released) */}
+              {salarySlipData.holdStatus && (
+                <div className={`p-2.5 rounded-lg border-2 text-center text-xs ${
+                  salarySlipData.holdStatus.status === 'held'
+                    ? 'border-dashed border-amber-600 bg-amber-50 text-amber-900'
+                    : 'border-emerald-600 bg-emerald-50 text-emerald-900'
+                }`}>
+                  <div className="font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
+                    {salarySlipData.holdStatus.status === 'held' ? (
+                      <span>⏸️ SALARY ON HOLD — BACKLOG PENDING DISBURSEMENT</span>
+                    ) : (
+                      <span>✅ SALARY RELEASED & DISBURSED ({salarySlipData.holdStatus.paymentMode?.toUpperCase() || 'CASH'})</span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 font-medium text-[11px]">
+                    {salarySlipData.holdStatus.status === 'held' ? (
+                      <>
+                        Reason: <span className="font-bold">{salarySlipData.holdStatus.holdReason}</span> | Held on:{' '}
+                        {new Date(salarySlipData.holdStatus.heldAt).toLocaleDateString('en-IN')}
+                      </>
+                    ) : (
+                      <>
+                        Disbursed on: {new Date(salarySlipData.holdStatus.releasedAt).toLocaleDateString('en-IN')} | Notes:{' '}
+                        <span className="font-bold">{salarySlipData.holdStatus.releaseNotes}</span>
+                      </>
+                    )}
+                  </p>
+                  {salarySlipData.holdStatus.status === 'held' && (
+                    <p className="text-[10px] text-amber-700 italic mt-0.5">
+                      * Official Record: Disbursable upon watchman's return to collect pending wages.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Notice if watchman has prior pending held salary arrears */}
+              {salarySlipData.totalPendingHeldArrears > 0 && (
+                <div className="p-2 border border-amber-400 bg-amber-50 rounded text-[11px] text-amber-900 flex items-center justify-between">
+                  <span>
+                    <strong>Prior Backlog Notice:</strong> Watchman has pending held salary of{' '}
+                    <strong>₹{salarySlipData.totalPendingHeldArrears.toLocaleString('en-IN')}</strong> from previous month(s).
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-mono font-bold">
+                    ({salarySlipData.priorPendingHolds?.length} Month(s) Pending)
+                  </span>
+                </div>
+              )}
+
               {/* Simplistic Boxed Table */}
               <div className="border-2 border-black">
                 <table className="w-full text-xs text-left border-collapse">
@@ -1645,6 +2140,255 @@ export default function ExpensesPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────── */}
+      {/* MODAL: PUT SALARY ON HOLD                                */}
+      {/* ──────────────────────────────────────────────────────── */}
+      {showHoldModal && salarySlipData && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-900 border border-surface-700 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-surface-800 flex items-center justify-between bg-surface-800/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center">
+                  <PauseCircle className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-100 text-base">Put Salary on Hold</h3>
+                  <p className="text-xs text-slate-400">Track unpaid salary for absent or out-of-town guard</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHoldModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                holdSalaryMutation.mutate({
+                  watchman_id: salarySlipData.watchman?.id || selectedWatchmanId,
+                  startDate: salarySlipData.period?.startDate,
+                  endDate: salarySlipData.period?.endDate,
+                  dutyDays: salarySlipData.attendanceSummary?.presentDaysCount || 0,
+                  grossSalary: salarySlipData.financials?.grossSalary || 0,
+                  deductions: salarySlipData.financials?.deductions?.totalDeductions || 0,
+                  netSalary: salarySlipData.financials?.netSalary || 0,
+                  holdReason: holdReasonInput,
+                });
+              }}
+              className="p-5 space-y-4"
+            >
+              {/* Guard & Slip Info */}
+              <div className="p-3.5 bg-surface-800/60 rounded-xl border border-surface-700/60 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Watchman:</span>
+                  <span className="font-bold text-slate-200">
+                    {salarySlipData.watchman?.full_name} ({salarySlipData.watchman?.employee_id})
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Period:</span>
+                  <span className="font-medium text-slate-200">
+                    {salarySlipData.period?.startDate} to {salarySlipData.period?.endDate}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Duty Days Verified:</span>
+                  <span className="font-semibold text-emerald-400">
+                    {salarySlipData.attendanceSummary?.presentDaysCount} Days
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-surface-700/50">
+                  <span className="font-bold text-slate-300">Net Salary to Hold:</span>
+                  <span className="font-mono font-black text-amber-300 text-sm">
+                    ₹{salarySlipData.financials?.netSalary.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Hold Reason Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Reason for Holding Salary <span className="text-rose-400">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={holdReasonInput}
+                  onChange={(e) => setHoldReasonInput(e.target.value)}
+                  placeholder="e.g. Guard left for other city without collecting salary"
+                  required
+                  className="w-full px-3.5 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-amber-500 placeholder-slate-500 resize-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  💡 This record will be safely stored in the guard's backlog ledger. Even if the guard returns after 5 or 6 months, their salary will remain fully preserved and can be disbursed with one click.
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-800">
+                <button
+                  type="button"
+                  onClick={() => setShowHoldModal(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-surface-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={holdSalaryMutation.isPending}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-surface-950 shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                >
+                  <PauseCircle className="w-4 h-4" />
+                  {holdSalaryMutation.isPending ? 'Holding...' : 'Confirm Salary Hold'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────── */}
+      {/* MODAL: RELEASE & DISBURSE HELD SALARY                    */}
+      {/* ──────────────────────────────────────────────────────── */}
+      {showReleaseModal && targetHoldToRelease && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-900 border border-surface-700 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-surface-800 flex items-center justify-between bg-surface-800/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center">
+                  <PlayCircle className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-100 text-base">Release & Pay Held Salary</h3>
+                  <p className="text-xs text-slate-400">Disburse held wages to returning guard</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowReleaseModal(false);
+                  setTargetHoldToRelease(null);
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                releaseHoldMutation.mutate({
+                  id: targetHoldToRelease.id || targetHoldToRelease._id,
+                  payload: {
+                    paymentMode: releasePaymentMode,
+                    releaseNotes: releaseNotesInput,
+                    releaseDate: releaseDateInput,
+                  },
+                });
+              }}
+              className="p-5 space-y-4"
+            >
+              {/* Backlog Summary Card */}
+              <div className="p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Period:</span>
+                  <span className="font-bold text-slate-200 text-sm">
+                    {targetHoldToRelease.periodLabel || 'Held Month'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Duty Days Verified:</span>
+                  <span className="font-semibold text-emerald-400">
+                    {targetHoldToRelease.dutyDays || 0} Days
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Original Hold Reason:</span>
+                  <span className="text-slate-300 italic">
+                    "{targetHoldToRelease.holdReason}"
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-emerald-500/30">
+                  <span className="font-bold text-slate-200 text-sm">Net Amount to Disburse:</span>
+                  <span className="font-mono font-black text-emerald-400 text-xl">
+                    ₹{Number(targetHoldToRelease.netSalary).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Mode */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Payment Mode <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={releasePaymentMode}
+                  onChange={(e: any) => setReleasePaymentMode(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-emerald-500 font-medium"
+                >
+                  <option value="cash">💵 Cash In-Hand</option>
+                  <option value="bank_transfer">🏦 Bank Transfer (NEFT / IMPS / RTGS)</option>
+                  <option value="upi">📱 UPI / GPay / PhonePe</option>
+                  <option value="cheque">📝 Bank Cheque</option>
+                </select>
+              </div>
+
+              {/* Release Date */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Disbursement Date <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={releaseDateInput}
+                  onChange={(e) => setReleaseDateInput(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Release Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Disbursement Remarks / Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={releaseNotesInput}
+                  onChange={(e) => setReleaseNotesInput(e.target.value)}
+                  placeholder="e.g. Guard returned from other city and collected pending salary in full"
+                  className="w-full px-3.5 py-2.5 bg-surface-800 border border-surface-700 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-emerald-500 placeholder-slate-500 resize-none text-xs"
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReleaseModal(false);
+                    setTargetHoldToRelease(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-surface-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={releaseHoldMutation.isPending}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {releaseHoldMutation.isPending ? 'Releasing...' : 'Disburse & Release Salary'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
