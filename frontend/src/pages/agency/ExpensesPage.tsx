@@ -752,21 +752,21 @@ export default function ExpensesPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => handleOpenAddModal('clothes')}
-              className="px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-medium transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-600 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <Shirt className="w-3.5 h-3.5" />
               + Clothes
             </button>
             <button
               onClick={() => handleOpenAddModal('food')}
-              className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-600 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <Utensils className="w-3.5 h-3.5" />
               + Food/Mess
             </button>
             <button
               onClick={() => handleOpenAddModal('advance')}
-              className="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-medium transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-600 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <CreditCard className="w-3.5 h-3.5" />
               + Advance
@@ -776,7 +776,7 @@ export default function ExpensesPage() {
                 setActiveTab('salary_slip');
                 setShowSlipModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow transition-all flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow transition-all flex items-center gap-1.5 active:scale-95"
             >
               <Receipt className="w-3.5 h-3.5" />
               View Salary Slip
@@ -1089,26 +1089,26 @@ export default function ExpensesPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-black tracking-wide border ${
+                        <span className={`px-3 py-1 rounded-full text-xs font-black tracking-wide border shadow-sm ${
                           salarySlipData.holdStatus.status === 'held'
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            ? 'bg-amber-500 text-slate-950 border-amber-600'
+                            : 'bg-emerald-600 text-white border-emerald-700'
                         }`}>
                           {salarySlipData.holdStatus.status === 'held'
                             ? '⏸️ SALARY ON HOLD'
                             : `✅ RELEASED & DISBURSED (${salarySlipData.holdStatus.paymentMode?.toUpperCase() || 'CASH'})`}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-slate-700 dark:text-slate-300 font-medium">
                           {salarySlipData.holdStatus.status === 'held'
                             ? `Held on ${new Date(salarySlipData.holdStatus.heldAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
                             : `Disbursed on ${new Date(salarySlipData.holdStatus.releasedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-300 mt-1">
+                      <p className="text-xs text-slate-800 dark:text-slate-200 mt-1 font-medium">
                         {salarySlipData.holdStatus.status === 'held' ? (
-                          <>Reason: <span className="text-amber-200 font-medium">"{salarySlipData.holdStatus.holdReason}"</span></>
+                          <>Reason: <span className="text-amber-800 dark:text-amber-300 font-bold">"{salarySlipData.holdStatus.holdReason}"</span></>
                         ) : (
-                          <>Remarks: <span className="text-emerald-200 font-medium">"{salarySlipData.holdStatus.releaseNotes}"</span></>
+                          <>Remarks: <span className="text-emerald-800 dark:text-emerald-300 font-bold">"{salarySlipData.holdStatus.releaseNotes}"</span></>
                         )}
                       </p>
                     </div>
@@ -1130,7 +1130,7 @@ export default function ExpensesPage() {
                               cancelHoldMutation.mutate(salarySlipData.holdStatus.id);
                             }
                           }}
-                          className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl text-xs transition-colors"
+                          className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-500/10 rounded-xl text-xs transition-colors"
                           title="Cancel Hold"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1138,7 +1138,7 @@ export default function ExpensesPage() {
                       </>
                     ) : (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-emerald-400 font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <span className="text-xs text-emerald-900 bg-emerald-100 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-600 font-bold px-3 py-1.5 rounded-xl shadow-sm">
                           Payment Disbursed to Guard
                         </span>
                         <button
@@ -1154,10 +1154,10 @@ export default function ExpensesPage() {
                               });
                             }
                           }}
-                          className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
+                          className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-600 rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
                           title="Put this disbursed salary back on hold"
                         >
-                          <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+                          <PauseCircle className="w-3.5 h-3.5 text-slate-950" />
                           Put Back on Hold
                         </button>
                       </div>
@@ -1218,10 +1218,10 @@ export default function ExpensesPage() {
                           });
                         }
                       }}
-                      className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-sm transition-all active:scale-95 border border-amber-600"
                       title="Put this disbursed salary back on hold"
                     >
-                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      <PauseCircle className="w-4 h-4 text-slate-950" />
                       Put Back on Hold
                     </button>
                   ) : (
@@ -1230,10 +1230,10 @@ export default function ExpensesPage() {
                         setHoldReasonInput('Guard left for other city without collecting salary');
                         setShowHoldModal(true);
                       }}
-                      className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-sm transition-all active:scale-95 border border-amber-600"
                       title="Put this month's salary on hold if guard has gone to another city without collecting"
                     >
-                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      <PauseCircle className="w-4 h-4 text-slate-950" />
                       Put Salary on Hold
                     </button>
                   )}
@@ -1241,13 +1241,13 @@ export default function ExpensesPage() {
                   {/* Toggle Holds Ledger */}
                   <button
                     onClick={() => setShowHoldsLedger(!showHoldsLedger)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
                       showHoldsLedger
-                        ? 'bg-brand-500/20 text-brand-300 border-brand-500/40'
-                        : 'bg-surface-700/60 hover:bg-surface-700 text-slate-300 border-surface-600/40'
+                        ? 'bg-indigo-600 text-white border-indigo-700'
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-surface-700 dark:text-indigo-200 dark:border-surface-600'
                     }`}
                   >
-                    <History className="w-4 h-4 text-brand-400" />
+                    <History className={`w-4 h-4 ${showHoldsLedger ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
                     Held Backlogs ({watchmanSalaryHolds.length})
                   </button>
 
@@ -1280,10 +1280,10 @@ export default function ExpensesPage() {
                     </div>
 
                     <div className="flex items-center gap-3 text-xs">
-                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-600 font-bold shadow-sm">
                         Pending Held: {holdsSummary.heldCount} (₹{holdsSummary.totalHeldAmount?.toLocaleString('en-IN')})
                       </span>
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-semibold">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-600 font-bold shadow-sm">
                         Released: {holdsSummary.releasedCount}
                       </span>
                     </div>
@@ -1325,13 +1325,13 @@ export default function ExpensesPage() {
                               </td>
                               <td className="px-3 py-2.5 whitespace-nowrap text-center">
                                 {h.status === 'held' ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                    <PauseCircle className="w-3 h-3 text-amber-400" />
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-500 text-slate-950 border border-amber-600 shadow-sm">
+                                    <PauseCircle className="w-3.5 h-3.5 text-slate-950" />
                                     Held
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-600 text-white border border-emerald-700 shadow-sm">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                                     Disbursed
                                   </span>
                                 )}
@@ -1369,7 +1369,7 @@ export default function ExpensesPage() {
                                     </button>
                                   ) : (
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-[11px] text-emerald-400 font-mono font-semibold">
+                                      <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-mono font-bold bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-600">
                                         Paid ✓
                                       </span>
                                       <button
@@ -1385,10 +1385,10 @@ export default function ExpensesPage() {
                                             });
                                           }
                                         }}
-                                        className="px-2 py-0.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded text-[10px] font-semibold transition-colors flex items-center gap-0.5"
+                                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded text-[11px] shadow-sm transition-all active:scale-95 flex items-center gap-1 border border-amber-600"
                                         title="Put this salary back on hold"
                                       >
-                                        <PauseCircle className="w-3 h-3 text-amber-400" />
+                                        <PauseCircle className="w-3.5 h-3.5 text-slate-950" />
                                         Re-Hold
                                       </button>
                                     </div>
@@ -1425,10 +1425,10 @@ export default function ExpensesPage() {
                     </h4>
                   </div>
                   <div className="flex items-center gap-3 text-xs">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-semibold">
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-600 font-bold shadow-sm">
                       Present: {salarySlipData.attendanceSummary?.presentDaysCount} Days
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/20 font-semibold">
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-950 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-600 font-bold shadow-sm">
                       Absent / Off: {salarySlipData.attendanceSummary?.absentDaysCount} Days
                     </span>
                     <span className="text-slate-400">
@@ -1485,7 +1485,7 @@ export default function ExpensesPage() {
                         <TrendingUp className="w-5 h-5 text-emerald-400" />
                         <h4 className="font-bold text-slate-100 text-sm">Earnings / Wages</h4>
                       </div>
-                      <span className="text-xs text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10">
+                      <span className="text-xs text-emerald-950 bg-emerald-100 border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-600 font-bold px-2.5 py-0.5 rounded-lg shadow-sm">
                         Credit
                       </span>
                     </div>
@@ -1532,7 +1532,7 @@ export default function ExpensesPage() {
                         <TrendingDown className="w-5 h-5 text-rose-400" />
                         <h4 className="font-bold text-slate-100 text-sm">Agency Expenses & Deductions</h4>
                       </div>
-                      <span className="text-xs text-rose-400 font-semibold px-2 py-0.5 rounded bg-rose-500/10">
+                      <span className="text-xs text-rose-950 bg-rose-100 border border-rose-300 dark:bg-rose-900/40 dark:text-rose-200 dark:border-rose-600 font-bold px-2.5 py-0.5 rounded-lg shadow-sm">
                         Debit
                       </span>
                     </div>
@@ -1645,10 +1645,10 @@ export default function ExpensesPage() {
                           });
                         }
                       }}
-                      className="px-4 py-3 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition-all active:scale-95 flex items-center gap-2"
+                      className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all active:scale-95 flex items-center gap-2 border border-amber-600 shadow"
                       title="Put this disbursed salary back on hold"
                     >
-                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      <PauseCircle className="w-4 h-4 text-slate-950" />
                       Put Back on Hold
                     </button>
                   ) : (
@@ -1657,18 +1657,18 @@ export default function ExpensesPage() {
                         setHoldReasonInput('Guard left for other city without collecting salary');
                         setShowHoldModal(true);
                       }}
-                      className="px-4 py-3 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition-all active:scale-95 flex items-center gap-2"
+                      className="px-4 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all active:scale-95 flex items-center gap-2 border border-amber-600 shadow"
                     >
-                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      <PauseCircle className="w-4 h-4 text-slate-950" />
                       Put Salary on Hold
                     </button>
                   )}
 
                   <button
                     onClick={() => setShowSlipModal(true)}
-                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-surface-950 font-black rounded-xl text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2 border border-emerald-700"
                   >
-                    <Printer className="w-5 h-5" />
+                    <Printer className="w-5 h-5 text-white" />
                     View & Print Official Slip
                   </button>
                 </div>
