@@ -395,6 +395,101 @@ export default function ExpensesPage() {
     setShowReleaseModal(true);
   }
 
+  function handlePrintSalarySlip() {
+    const printElement = document.getElementById('printable-salary-slip-content');
+    if (!printElement) {
+      window.print();
+      return;
+    }
+
+    const oldIframe = document.getElementById('salary-slip-print-frame');
+    if (oldIframe) {
+      oldIframe.remove();
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'salary-slip-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const clone = printElement.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('.no-print, button').forEach((el) => el.remove());
+
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Salary Slip - ${salarySlipData?.watchman?.full_name || 'Guard'} - ${salarySlipData?.period?.monthName || ''} ${salarySlipData?.period?.year || ''}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm;
+    }
+    *, *:before, *:after {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+      font-size: 11px;
+      line-height: 1.35;
+      height: auto !important;
+      min-height: auto !important;
+    }
+    .print-avoid-break {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      page-break-after: avoid !important;
+    }
+    .no-print, button {
+      display: none !important;
+    }
+    table, th, td {
+      border-color: #000000 !important;
+    }
+  </style>
+</head>
+<body class="bg-white text-black p-0">
+  <div style="width: 100%; max-width: 100%; page-break-inside: avoid;">
+    ${clone.outerHTML}
+  </div>
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        window.print();
+      }
+    }, 450);
+  }
+
   function resetAddForm() {
     setFormWatchmanId(selectedWatchmanId || '');
     setFormCategory('clothes');
@@ -1935,26 +2030,26 @@ export default function ExpensesPage() {
       {/* ──────────────────────────────────────────────────────── */}
       {showSlipModal && salarySlipData && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-white text-slate-900 rounded-2xl max-w-3xl w-full my-auto overflow-hidden shadow-2xl border border-slate-300 print:border-none print:shadow-none print:m-0 print:p-0">
+          <div className="bg-white text-black rounded-2xl max-w-3xl w-full my-auto overflow-hidden shadow-2xl border-2 border-neutral-300 print:border-none print:shadow-none print:m-0 print:p-0">
             {/* Modal Non-Printable Header */}
-            <div className="bg-slate-100 p-3 sm:p-4 border-b border-slate-300 flex items-center justify-between print:hidden">
+            <div className="bg-neutral-100 p-3 sm:p-4 border-b border-neutral-300 flex items-center justify-between print:hidden">
               <div className="flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-indigo-600" />
-                <span className="font-bold text-sm text-slate-800">
+                <span className="font-bold text-sm text-neutral-900">
                   Official Salary Slip Preview
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow transition-colors"
+                  onClick={handlePrintSalarySlip}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition-all active:scale-95"
                 >
                   <Printer className="w-4 h-4" />
                   Print Salary Slip
                 </button>
                 <button
                   onClick={() => setShowSlipModal(false)}
-                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg"
+                  className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-200 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1962,66 +2057,70 @@ export default function ExpensesPage() {
             </div>
 
             {/* Official Payslip Content (Clean Simplistic Printable Layout matching reference) */}
-            <div className="p-6 sm:p-10 space-y-6 print:p-2 bg-white text-black">
+            <div
+              id="printable-salary-slip-content"
+              className="p-6 sm:p-10 space-y-6 print:p-2 bg-white text-black"
+              style={{ backgroundColor: '#ffffff', color: '#000000' }}
+            >
               {/* Slip Centered Title */}
-              <div className="text-center border-b border-slate-300 pb-3">
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-black font-sans uppercase">
+              <div className="text-center border-b-2 border-black pb-3">
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-black font-sans uppercase" style={{ color: '#000000' }}>
                   Salary Slip
                 </h2>
                 {salarySlipData.agency?.name && (
-                  <p className="text-xs font-semibold text-slate-700 tracking-wider uppercase mt-0.5">
+                  <p className="text-xs font-black tracking-wider uppercase mt-1 text-neutral-800" style={{ color: '#1f2937' }}>
                     {salarySlipData.agency.name}
                   </p>
                 )}
               </div>
 
               {/* Guard & Period Meta Details (2 Columns) */}
-              <div className="flex flex-col sm:flex-row justify-between gap-4 text-xs">
+              <div className="flex flex-col sm:flex-row justify-between gap-4 text-xs font-medium" style={{ color: '#000000' }}>
                 <div className="space-y-1.5">
-                  <div className="grid grid-cols-[120px_1fr] items-baseline">
-                    <span className="font-semibold text-slate-800">Employee Name:</span>
-                    <span className="font-bold text-black">{salarySlipData.watchman?.full_name}</span>
+                  <div className="grid grid-cols-[125px_1fr] items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Employee Name:</span>
+                    <span className="font-black text-black" style={{ color: '#000000' }}>{salarySlipData.watchman?.full_name}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] items-baseline">
-                    <span className="font-semibold text-slate-800">Designation :</span>
-                    <span className="text-black">Security Guard ({salarySlipData.watchman?.employee_id})</span>
+                  <div className="grid grid-cols-[125px_1fr] items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Designation :</span>
+                    <span className="text-black font-semibold" style={{ color: '#000000' }}>Security Guard ({salarySlipData.watchman?.employee_id})</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] items-baseline">
-                    <span className="font-semibold text-slate-800">Agency Name:</span>
-                    <span className="text-black">{salarySlipData.agency?.name || 'Security Agency'}</span>
+                  <div className="grid grid-cols-[125px_1fr] items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Agency Name:</span>
+                    <span className="text-black font-semibold" style={{ color: '#000000' }}>{salarySlipData.agency?.name || 'Security Agency'}</span>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] items-baseline">
-                    <span className="font-semibold text-slate-800">Agency Address:</span>
-                    <span className="text-slate-700">
+                  <div className="grid grid-cols-[125px_1fr] items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Agency Address:</span>
+                    <span className="text-neutral-900 font-medium" style={{ color: '#1f2937' }}>
                       {salarySlipData.agency?.address || salarySlipData.agency?.phone || 'Main Operations Center'}
                     </span>
                   </div>
                   {salarySlipData.society?.name && (
-                    <div className="grid grid-cols-[120px_1fr] items-baseline">
-                      <span className="font-semibold text-slate-800">Deployment:</span>
-                      <span className="text-black font-medium">{salarySlipData.society?.name}</span>
+                    <div className="grid grid-cols-[125px_1fr] items-baseline">
+                      <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Deployment:</span>
+                      <span className="text-black font-bold" style={{ color: '#000000' }}>{salarySlipData.society?.name}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-1.5 sm:text-right">
-                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
-                    <span className="font-semibold text-slate-800">Month:</span>
-                    <span className="font-bold text-black">
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-3 items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Month:</span>
+                    <span className="font-black text-black" style={{ color: '#000000' }}>
                       {new Date(salarySlipData.period?.startDate || '').toLocaleString('en-IN', { month: 'long' })}
                     </span>
                   </div>
-                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
-                    <span className="font-semibold text-slate-800">Date Range:</span>
-                    <span className="text-black">{salarySlipData.period?.startDate} to {salarySlipData.period?.endDate}</span>
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-3 items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Date Range:</span>
+                    <span className="text-black font-semibold" style={{ color: '#000000' }}>{salarySlipData.period?.startDate} to {salarySlipData.period?.endDate}</span>
                   </div>
-                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
-                    <span className="font-semibold text-slate-800">Year:</span>
-                    <span className="text-black">{new Date(salarySlipData.period?.startDate || '').getFullYear()}</span>
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-3 items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Year:</span>
+                    <span className="text-black font-semibold" style={{ color: '#000000' }}>{new Date(salarySlipData.period?.startDate || '').getFullYear()}</span>
                   </div>
-                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-4 items-baseline">
-                    <span className="font-semibold text-slate-800">Attendance:</span>
-                    <span className="font-bold text-emerald-800">
+                  <div className="grid grid-cols-[90px_1fr] sm:flex sm:justify-end sm:gap-3 items-baseline">
+                    <span className="font-bold text-neutral-900" style={{ color: '#111827' }}>Attendance:</span>
+                    <span className="font-black text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-400" style={{ color: '#064e3b' }}>
                       {salarySlipData.attendanceSummary?.presentDaysCount} / {salarySlipData.attendanceSummary?.totalDays} Days ({salarySlipData.attendanceSummary?.attendanceRate}%)
                     </span>
                   </div>
@@ -2030,11 +2129,18 @@ export default function ExpensesPage() {
 
               {/* Official Status Stamp (if Held or Released) */}
               {salarySlipData.holdStatus && (
-                <div className={`p-2.5 rounded-lg border-2 text-center text-xs ${
-                  salarySlipData.holdStatus.status === 'held'
-                    ? 'border-dashed border-amber-600 bg-amber-50 text-amber-900'
-                    : 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                }`}>
+                <div
+                  className={`p-3 rounded-lg border-2 text-center text-xs font-medium ${
+                    salarySlipData.holdStatus.status === 'held'
+                      ? 'border-dashed border-amber-600 bg-amber-50 text-amber-950'
+                      : 'border-emerald-600 bg-emerald-50 text-emerald-950'
+                  }`}
+                  style={{
+                    backgroundColor: salarySlipData.holdStatus.status === 'held' ? '#fffbeb' : '#ecfdf5',
+                    borderColor: salarySlipData.holdStatus.status === 'held' ? '#d97706' : '#059669',
+                    color: salarySlipData.holdStatus.status === 'held' ? '#78350f' : '#064e3b'
+                  }}
+                >
                   <div className="font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5">
                     {salarySlipData.holdStatus.status === 'held' ? (
                       <span>⏸️ SALARY ON HOLD — BACKLOG PENDING DISBURSEMENT</span>
@@ -2042,21 +2148,21 @@ export default function ExpensesPage() {
                       <span>✅ SALARY RELEASED & DISBURSED ({salarySlipData.holdStatus.paymentMode?.toUpperCase() || 'CASH'})</span>
                     )}
                   </div>
-                  <p className="mt-0.5 font-medium text-[11px]">
+                  <p className="mt-1 font-bold text-[11px]">
                     {salarySlipData.holdStatus.status === 'held' ? (
                       <>
-                        Reason: <span className="font-bold">{salarySlipData.holdStatus.holdReason}</span> | Held on:{' '}
+                        Reason: <u>{salarySlipData.holdStatus.holdReason}</u> | Held on:{' '}
                         {new Date(salarySlipData.holdStatus.heldAt).toLocaleDateString('en-IN')}
                       </>
                     ) : (
                       <>
                         Disbursed on: {new Date(salarySlipData.holdStatus.releasedAt).toLocaleDateString('en-IN')} | Notes:{' '}
-                        <span className="font-bold">{salarySlipData.holdStatus.releaseNotes}</span>
+                        <u>{salarySlipData.holdStatus.releaseNotes}</u>
                       </>
                     )}
                   </p>
                   {salarySlipData.holdStatus.status === 'held' && (
-                    <p className="text-[10px] text-amber-700 italic mt-0.5">
+                    <p className="text-[10px] text-amber-800 italic mt-0.5 font-semibold">
                       * Official Record: Disbursable upon watchman's return to collect pending wages.
                     </p>
                   )}
@@ -2065,58 +2171,64 @@ export default function ExpensesPage() {
 
               {/* Notice if watchman has prior pending held salary arrears */}
               {salarySlipData.totalPendingHeldArrears > 0 && (
-                <div className="p-2 border border-amber-400 bg-amber-50 rounded text-[11px] text-amber-900 flex items-center justify-between">
+                <div
+                  className="p-2 border-2 border-amber-500 bg-amber-50 rounded-lg text-xs text-amber-950 flex items-center justify-between font-medium"
+                  style={{ backgroundColor: '#fffbeb', borderColor: '#f59e0b', color: '#78350f' }}
+                >
                   <span>
-                    <strong>Prior Backlog Notice:</strong> Watchman has pending held salary of{' '}
-                    <strong>₹{salarySlipData.totalPendingHeldArrears.toLocaleString('en-IN')}</strong> from previous month(s).
+                    <strong className="font-black text-black">Prior Backlog Notice:</strong> Watchman has pending held salary of{' '}
+                    <strong className="font-black text-black font-mono">₹{salarySlipData.totalPendingHeldArrears.toLocaleString('en-IN')}</strong> from previous month(s).
                   </span>
-                  <span className="text-[10px] text-amber-800 font-mono font-bold">
+                  <span className="text-[10px] text-amber-950 font-mono font-black bg-amber-200 px-2 py-0.5 rounded">
                     ({salarySlipData.priorPendingHolds?.length} Month(s) Pending)
                   </span>
                 </div>
               )}
 
               {/* Simplistic Boxed Table */}
-              <div className="border-2 border-black">
-                <table className="w-full text-xs text-left border-collapse">
+              <div className="border-2 border-black" style={{ borderColor: '#000000' }}>
+                <table className="w-full text-xs text-left border-collapse" style={{ color: '#000000' }}>
                   <thead>
-                    <tr className="border-b-2 border-black font-bold uppercase tracking-wider text-black bg-slate-50">
-                      <th className="p-2.5 border-r border-black w-[35%] text-left">EMOLUMENTS</th>
-                      <th className="p-2.5 border-r-2 border-black w-[15%] text-right">AMOUNT Rs.</th>
-                      <th className="p-2.5 border-r border-black w-[35%] text-left">DEDUCTIONS</th>
-                      <th className="p-2.5 w-[15%] text-right">AMOUNT Rs.</th>
+                    <tr
+                      className="border-b-2 border-black font-black uppercase tracking-wider text-black"
+                      style={{ backgroundColor: '#f1f5f9', color: '#000000', borderBottom: '2px solid black' }}
+                    >
+                      <th className="p-2.5 border-r border-black w-[35%] text-left font-black text-black" style={{ color: '#000000' }}>EMOLUMENTS</th>
+                      <th className="p-2.5 border-r-2 border-black w-[15%] text-right font-black text-black" style={{ color: '#000000' }}>AMOUNT Rs.</th>
+                      <th className="p-2.5 border-r border-black w-[35%] text-left font-black text-black" style={{ color: '#000000' }}>DEDUCTIONS</th>
+                      <th className="p-2.5 w-[15%] text-right font-black text-black" style={{ color: '#000000' }}>AMOUNT Rs.</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       {/* Left: Emoluments items */}
-                      <td colSpan={2} className="border-r-2 border-black align-top p-0">
+                      <td colSpan={2} className="border-r-2 border-black align-top p-0" style={{ borderColor: '#000000' }}>
                         <div className="flex flex-col justify-between min-h-[220px]">
                           <div className="p-2.5 space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold">Basic Monthly Wage Rate</span>
-                              <span className="font-mono font-bold">
+                              <span className="font-bold text-black" style={{ color: '#000000' }}>Basic Monthly Wage Rate</span>
+                              <span className="font-mono font-black text-black" style={{ color: '#000000' }}>
                                 ₹{salarySlipData.financials?.monthlyWageRate?.toLocaleString('en-IN')}
                               </span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span>
+                              <span className="font-semibold text-neutral-900" style={{ color: '#111827' }}>
                                 Earned Wage ({salarySlipData.attendanceSummary?.presentDaysCount}/{salarySlipData.attendanceSummary?.totalDays} Days)
                               </span>
-                              <span className="font-mono font-bold">
+                              <span className="font-mono font-black text-black" style={{ color: '#000000' }}>
                                 ₹{salarySlipData.financials?.earnedBasicWage?.toLocaleString('en-IN')}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between text-slate-600">
-                              <span>Effective Daily Rate</span>
-                              <span className="font-mono">
+                            <div className="flex items-center justify-between text-neutral-800" style={{ color: '#1f2937' }}>
+                              <span className="font-medium">Effective Daily Rate</span>
+                              <span className="font-mono font-bold text-black" style={{ color: '#000000' }}>
                                 ₹{salarySlipData.financials?.effectiveDailyRate || salarySlipData.financials?.dailyWageRate}
                               </span>
                             </div>
                             {salarySlipData.financials?.earnings?.items?.map((item: any) => (
                               <div key={item.id} className="flex items-center justify-between">
-                                <span>{item.title}</span>
-                                <span className="font-mono font-semibold">
+                                <span className="font-semibold text-black" style={{ color: '#000000' }}>{item.title}</span>
+                                <span className="font-mono font-black text-black" style={{ color: '#000000' }}>
                                   ₹{Number(item.amount).toLocaleString('en-IN')}
                                 </span>
                               </div>
@@ -2131,45 +2243,48 @@ export default function ExpensesPage() {
                           <div className="p-2.5 space-y-2">
                             {salarySlipData.financials?.deductions?.clothesTotal > 0 && (
                               <div className="flex items-center justify-between">
-                                <span>Uniform & Clothes</span>
-                                <span className="font-mono">
+                                <span className="font-semibold text-black" style={{ color: '#000000' }}>Uniform & Clothes</span>
+                                <span className="font-mono font-bold text-black" style={{ color: '#000000' }}>
                                   ₹{salarySlipData.financials?.deductions?.clothesTotal.toLocaleString('en-IN')}
                                 </span>
                               </div>
                             )}
                             {salarySlipData.financials?.deductions?.foodTotal > 0 && (
                               <div className="flex items-center justify-between">
-                                <span>Food & Mess Charges</span>
-                                <span className="font-mono">
+                                <span className="font-semibold text-black" style={{ color: '#000000' }}>Food & Mess Charges</span>
+                                <span className="font-mono font-bold text-black" style={{ color: '#000000' }}>
                                   ₹{salarySlipData.financials?.deductions?.foodTotal.toLocaleString('en-IN')}
                                 </span>
                               </div>
                             )}
                             {salarySlipData.financials?.deductions?.advanceTotal > 0 && (
                               <div className="flex items-center justify-between">
-                                <span>Salary Advance</span>
-                                <span className="font-mono">
+                                <span className="font-semibold text-black" style={{ color: '#000000' }}>Salary Advance</span>
+                                <span className="font-mono font-bold text-black" style={{ color: '#000000' }}>
                                   ₹{salarySlipData.financials?.deductions?.advanceTotal.toLocaleString('en-IN')}
                                 </span>
                               </div>
                             )}
                             {salarySlipData.financials?.deductions?.otherDeductionsTotal > 0 && (
                               <div className="flex items-center justify-between">
-                                <span>Other Deductions</span>
-                                <span className="font-mono">
+                                <span className="font-semibold text-black" style={{ color: '#000000' }}>Other Deductions</span>
+                                <span className="font-mono font-bold text-black" style={{ color: '#000000' }}>
                                   ₹{salarySlipData.financials?.deductions?.otherDeductionsTotal.toLocaleString('en-IN')}
                                 </span>
                               </div>
                             )}
                             {salarySlipData.financials?.deductions?.totalDeductions === 0 && (
-                              <div className="text-slate-400 italic">No deductions recorded</div>
+                              <div className="text-neutral-500 italic">No deductions recorded</div>
                             )}
                           </div>
 
                           {/* Total Deductions row inside the deductions column */}
-                          <div className="border-t border-black p-2.5 flex items-center justify-between font-bold bg-slate-50/50">
-                            <span>Total Deductions</span>
-                            <span className="font-mono">
+                          <div
+                            className="p-2.5 flex items-center justify-between font-black text-black"
+                            style={{ backgroundColor: '#f8fafc', color: '#000000', borderTop: '2px solid black' }}
+                          >
+                            <span className="font-black text-black">Total Deductions</span>
+                            <span className="font-mono font-black text-black">
                               ₹{salarySlipData.financials?.deductions?.totalDeductions?.toLocaleString('en-IN')}
                             </span>
                           </div>
@@ -2178,13 +2293,16 @@ export default function ExpensesPage() {
                     </tr>
 
                     {/* Bottom Summary Row: Gross Pay & Net Pay */}
-                    <tr className="border-t-2 border-black font-bold text-black bg-slate-100">
-                      <td className="p-2.5 border-r border-black font-bold uppercase">Gross Pay</td>
-                      <td className="p-2.5 border-r-2 border-black font-mono font-black text-right text-sm">
+                    <tr
+                      className="border-t-2 border-black font-black text-black"
+                      style={{ backgroundColor: '#e2e8f0', color: '#000000', borderTop: '2px solid black' }}
+                    >
+                      <td className="p-2.5 border-r border-black font-black uppercase text-black" style={{ color: '#000000' }}>Gross Pay</td>
+                      <td className="p-2.5 border-r-2 border-black font-mono font-black text-right text-sm text-black" style={{ color: '#000000' }}>
                         ₹{salarySlipData.financials?.grossSalary?.toLocaleString('en-IN')}
                       </td>
-                      <td className="p-2.5 border-r border-black font-bold uppercase">Net Pay</td>
-                      <td className="p-2.5 font-mono font-black text-right text-sm">
+                      <td className="p-2.5 border-r border-black font-black uppercase text-black" style={{ color: '#000000' }}>Net Pay</td>
+                      <td className="p-2.5 font-mono font-black text-right text-sm text-black" style={{ color: '#000000' }}>
                         ₹{salarySlipData.financials?.netSalary?.toLocaleString('en-IN')}
                       </td>
                     </tr>
@@ -2195,14 +2313,15 @@ export default function ExpensesPage() {
               {/* Verified Duty Dates Annexure */}
               {salarySlipData.presentDates?.length > 0 && (
                 <div className="pt-2">
-                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                  <span className="text-xs font-black text-black uppercase tracking-wider block mb-1.5" style={{ color: '#000000' }}>
                     Dates Verified on Duty ({salarySlipData.attendanceSummary?.presentDaysCount} Days):
                   </span>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {salarySlipData.presentDates?.map((d: any, idx: number) => (
                       <span
                         key={idx}
-                        className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] font-mono text-slate-800"
+                        className="px-2 py-0.5 border border-black rounded text-[11px] font-mono font-black text-black bg-white shadow-none"
+                        style={{ color: '#000000', borderColor: '#000000', backgroundColor: '#ffffff' }}
                       >
                         {d.date.split('-')[2]} {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(d.date.split('-')[1])-1]} ({d.dayOfWeek})
                       </span>
@@ -2212,29 +2331,29 @@ export default function ExpensesPage() {
               )}
 
               {/* Footer Signatures: 3 Columns matching reference image */}
-              <div className="grid grid-cols-3 gap-6 pt-10 text-xs text-center sm:text-left">
+              <div className="grid grid-cols-3 gap-6 pt-10 text-xs text-center sm:text-left" style={{ color: '#000000' }}>
                 <div>
-                  <p className="font-bold text-black mb-10">Checked By</p>
-                  <p className="border-t border-black pt-1 font-semibold text-slate-900">
+                  <p className="font-black text-black mb-10 uppercase text-xs" style={{ color: '#000000' }}>Checked By</p>
+                  <p className="border-t-2 border-black pt-1.5 font-black text-black text-xs" style={{ color: '#000000', borderColor: '#000000' }}>
                     Operations In-Charge
                   </p>
-                  <p className="text-[11px] text-slate-600">Detachment commander</p>
+                  <p className="text-[11px] text-neutral-800 font-bold" style={{ color: '#1f2937' }}>Detachment commander</p>
                 </div>
 
                 <div>
-                  <p className="font-bold text-black mb-10">Authorized by</p>
-                  <p className="border-t border-black pt-1 font-semibold text-slate-900">
+                  <p className="font-black text-black mb-10 uppercase text-xs" style={{ color: '#000000' }}>Authorized by</p>
+                  <p className="border-t-2 border-black pt-1.5 font-black text-black text-xs" style={{ color: '#000000', borderColor: '#000000' }}>
                     Agency HR / Supervisor
                   </p>
-                  <p className="text-[11px] text-slate-600">{salarySlipData.agency?.name || 'Security Agency'}</p>
+                  <p className="text-[11px] text-neutral-800 font-bold" style={{ color: '#1f2937' }}>{salarySlipData.agency?.name || 'Security Agency'}</p>
                 </div>
 
                 <div>
-                  <p className="font-bold text-black mb-10">Received by</p>
-                  <p className="border-t border-black pt-1 font-semibold text-slate-900">
+                  <p className="font-black text-black mb-10 uppercase text-xs" style={{ color: '#000000' }}>Received by</p>
+                  <p className="border-t-2 border-black pt-1.5 font-black text-black text-xs" style={{ color: '#000000', borderColor: '#000000' }}>
                     {salarySlipData.watchman?.full_name}
                   </p>
-                  <p className="text-[11px] text-slate-600">Security Guard</p>
+                  <p className="text-[11px] text-neutral-800 font-bold" style={{ color: '#1f2937' }}>Security Guard</p>
                 </div>
               </div>
             </div>
