@@ -737,6 +737,46 @@ router.put('/salary-hold/:id/release', async (req: Request, res: Response): Prom
 });
 
 /**
+ * PUT /api/expenses/salary-hold/:id/re-hold
+ * Put an already released salary back on hold (e.g. guard left again or released by mistake)
+ */
+router.put('/salary-hold/:id/re-hold', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { holdReason } = req.body;
+
+    const hold = await SalaryHold.findById(id);
+    if (!hold) {
+      res.status(404).json({ success: false, message: 'Salary hold record not found' });
+      return;
+    }
+
+    if (req.user?.role === 'agency_admin' && hold.agency_id.toString() !== req.user.agencyId) {
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
+    }
+
+    hold.status = 'held';
+    hold.holdReason = holdReason?.trim() || 'Salary placed back on hold (guard left again or payment reverted)';
+    hold.heldAt = new Date();
+    hold.heldBy = req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : undefined;
+    hold.releasedAt = undefined;
+    hold.releasedBy = undefined;
+    hold.releaseNotes = undefined;
+    hold.paymentMode = undefined;
+    await hold.save();
+
+    res.json({
+      success: true,
+      data: hold,
+      message: `Salary for ${hold.periodLabel} placed back on hold successfully.`,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to place salary back on hold' });
+  }
+});
+
+/**
  * DELETE /api/expenses/salary-hold/:id
  * Remove or cancel a salary hold
  */

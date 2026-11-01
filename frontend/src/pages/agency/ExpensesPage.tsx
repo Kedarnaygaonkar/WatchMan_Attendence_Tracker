@@ -371,6 +371,22 @@ export default function ExpensesPage() {
     },
   });
 
+  // ── Re-Hold Salary Mutation (Put already released salary back on hold) ──
+  const reHoldSalaryMutation = useMutation({
+    mutationFn: async ({ id, holdReason }: { id: string; holdReason?: string }) => {
+      const res = await api.put(`/expenses/salary-hold/${id}/re-hold`, { holdReason });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || 'Salary placed back on hold');
+      queryClient.invalidateQueries({ queryKey: ['salary-slip'] });
+      queryClient.invalidateQueries({ queryKey: ['salary-holds'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to place salary back on hold');
+    },
+  });
+
   function openReleaseModal(hold: any) {
     setTargetHoldToRelease(hold);
     setReleasePaymentMode('cash');
@@ -1121,9 +1137,30 @@ export default function ExpensesPage() {
                         </button>
                       </>
                     ) : (
-                      <span className="text-xs text-emerald-400 font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        Payment Disbursed to Guard
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-emerald-400 font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          Payment Disbursed to Guard
+                        </span>
+                        <button
+                          onClick={() => {
+                            const reason = window.prompt(
+                              'Reason for putting this salary back on hold:',
+                              'Guard left again without collecting or payment reverted'
+                            );
+                            if (reason !== null) {
+                              reHoldSalaryMutation.mutate({
+                                id: salarySlipData.holdStatus.id,
+                                holdReason: reason,
+                              });
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
+                          title="Put this disbursed salary back on hold"
+                        >
+                          <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+                          Put Back on Hold
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1167,7 +1204,27 @@ export default function ExpensesPage() {
                       <PlayCircle className="w-4 h-4" />
                       Release & Pay
                     </button>
-                  ) : salarySlipData.holdStatus?.status !== 'released' ? (
+                  ) : salarySlipData.holdStatus?.status === 'released' ? (
+                    <button
+                      onClick={() => {
+                        const reason = window.prompt(
+                          'Reason for putting this salary back on hold:',
+                          'Guard left again without collecting or payment reverted'
+                        );
+                        if (reason !== null) {
+                          reHoldSalaryMutation.mutate({
+                            id: salarySlipData.holdStatus.id,
+                            holdReason: reason,
+                          });
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
+                      title="Put this disbursed salary back on hold"
+                    >
+                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      Put Back on Hold
+                    </button>
+                  ) : (
                     <button
                       onClick={() => {
                         setHoldReasonInput('Guard left for other city without collecting salary');
@@ -1179,7 +1236,7 @@ export default function ExpensesPage() {
                       <PauseCircle className="w-4 h-4 text-amber-400" />
                       Put Salary on Hold
                     </button>
-                  ) : null}
+                  )}
 
                   {/* Toggle Holds Ledger */}
                   <button
@@ -1311,9 +1368,30 @@ export default function ExpensesPage() {
                                       Release & Pay
                                     </button>
                                   ) : (
-                                    <span className="text-[11px] text-emerald-400 font-mono font-semibold">
-                                      Paid ✓
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[11px] text-emerald-400 font-mono font-semibold">
+                                        Paid ✓
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const reason = window.prompt(
+                                            `Reason for putting ${h.periodLabel} salary back on hold:`,
+                                            'Guard left again without collecting or payment reverted'
+                                          );
+                                          if (reason !== null) {
+                                            reHoldSalaryMutation.mutate({
+                                              id: h._id,
+                                              holdReason: reason,
+                                            });
+                                          }
+                                        }}
+                                        className="px-2 py-0.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded text-[10px] font-semibold transition-colors flex items-center gap-0.5"
+                                        title="Put this salary back on hold"
+                                      >
+                                        <PauseCircle className="w-3 h-3 text-amber-400" />
+                                        Re-Hold
+                                      </button>
+                                    </div>
                                   )}
                                   <button
                                     onClick={() => {
@@ -1553,7 +1631,27 @@ export default function ExpensesPage() {
                       <PlayCircle className="w-5 h-5" />
                       Release & Pay Now
                     </button>
-                  ) : salarySlipData.holdStatus?.status !== 'released' ? (
+                  ) : salarySlipData.holdStatus?.status === 'released' ? (
+                    <button
+                      onClick={() => {
+                        const reason = window.prompt(
+                          'Reason for putting this salary back on hold:',
+                          'Guard left again without collecting or payment reverted'
+                        );
+                        if (reason !== null) {
+                          reHoldSalaryMutation.mutate({
+                            id: salarySlipData.holdStatus.id,
+                            holdReason: reason,
+                          });
+                        }
+                      }}
+                      className="px-4 py-3 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition-all active:scale-95 flex items-center gap-2"
+                      title="Put this disbursed salary back on hold"
+                    >
+                      <PauseCircle className="w-4 h-4 text-amber-400" />
+                      Put Back on Hold
+                    </button>
+                  ) : (
                     <button
                       onClick={() => {
                         setHoldReasonInput('Guard left for other city without collecting salary');
@@ -1564,7 +1662,7 @@ export default function ExpensesPage() {
                       <PauseCircle className="w-4 h-4 text-amber-400" />
                       Put Salary on Hold
                     </button>
-                  ) : null}
+                  )}
 
                   <button
                     onClick={() => setShowSlipModal(true)}
