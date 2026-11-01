@@ -1,16 +1,97 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BarChart3, Calendar, AlertTriangle, Download, Filter, X, MapPin, Route, User, Building2, Grid3X3, DoorOpen, Layers, Users, Printer, ShieldCheck, CheckCircle2, Clock, Sparkles, ArrowLeft, Search } from 'lucide-react';
+import {
+  BarChart3,
+  Calendar,
+  AlertTriangle,
+  Download,
+  Filter,
+  X,
+  MapPin,
+  Route,
+  User,
+  Building2,
+  Grid3X3,
+  DoorOpen,
+  Layers,
+  Users,
+  Printer,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  ArrowLeft,
+  Search,
+  Receipt,
+  FileText,
+  RefreshCw,
+  Calculator,
+  Edit3,
+  Check
+} from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
 type ReportTab = 'daily' | 'monthly' | 'watchmen' | 'suspicious';
 
-interface Society { id: string; name: string; }
+interface Society {
+  id: string;
+  name: string;
+  address?: string;
+  wings?: string[];
+  gates?: string[];
+}
 interface Agency { id: string; name: string; }
 interface WatchmanOption { _id: string; id: string; full_name: string; employee_id: string; }
+
+interface SocietyWingBillData {
+  agency: {
+    id: string;
+    name: string;
+    subName?: string;
+    proprietor?: string;
+    proprietorSubtitle?: string;
+    address?: string;
+    state?: string;
+    pan?: string;
+    phone?: string;
+    email?: string;
+    logo_url?: string;
+  };
+  society: {
+    id: string;
+    name: string;
+    rawName?: string;
+    address?: string;
+    placeOfSupply?: string;
+    wings: string[];
+  };
+  invoice: {
+    invoiceNo: string;
+    invoiceDate: string;
+    serviceMonth: string;
+    invoicePeriod: string;
+    siteName: string;
+    wing: string;
+    particulars: string;
+    quantity: number;
+    ratePerMonth: number;
+    perDayRate: number;
+    perHrRate: number;
+    otHours: number;
+    totalDays: number;
+    subTotalA: number;
+    subTotalB: number;
+    roundOff: number;
+    total: number;
+    amountInWords: string;
+    year: number;
+    month: number;
+    daysInMonth: number;
+  };
+}
 
 interface DailyRecord {
   watchman_id: string; full_name: string; employee_id: string;
@@ -171,6 +252,290 @@ export default function ReportsPage() {
     },
     enabled: tab === 'monthly' && !!societyId,
   });
+
+  // ── Monthly Sub-Tab & Wing-Wise Bill States ────────────────────────────
+  const [monthlySubTab, setMonthlySubTab] = useState<'attendance' | 'bill'>('attendance');
+  const [selectedWing, setSelectedWing] = useState<string>('all');
+
+  // Custom invoice editable parameters
+  const [invoiceRateOverride, setInvoiceRateOverride] = useState<string>('23000');
+  const [invoiceQuantityOverride, setInvoiceQuantityOverride] = useState<string>('');
+  const [invoiceTotalDaysOverride, setInvoiceTotalDaysOverride] = useState<string>('');
+  const [invoiceNoOverride, setInvoiceNoOverride] = useState<string>('');
+  const [invoiceDateOverride, setInvoiceDateOverride] = useState<string>('');
+  const [invoicePoNumber, setInvoicePoNumber] = useState<string>('');
+  const [invoiceParticulars, setInvoiceParticulars] = useState<string>('Security Guard');
+  const [invoiceOtHours, setInvoiceOtHours] = useState<string>('0');
+  const [siteNameOverride, setSiteNameOverride] = useState<string>('');
+
+  // ── Fetch Society & Wing Bill Data ─────────────────────────────────────
+  const {
+    data: billDataResponse,
+    isLoading: billLoading,
+    refetch: refetchBill,
+  } = useQuery<SocietyWingBillData>({
+    queryKey: ['report-society-wing-bill', societyId, year, month, selectedWing, agencyId],
+    queryFn: async () => {
+      const params: any = {
+        society_id: societyId,
+        year,
+        month,
+        wing: selectedWing,
+      };
+      if (isSuperAdmin && agencyId) params.agency_id = agencyId;
+      const { data } = await api.get('/reports/society-wing-bill', { params });
+      return data?.data as SocietyWingBillData;
+    },
+    enabled: tab === 'monthly' && !!societyId,
+  });
+
+  // Available wings for society
+  const selectedSocietyObj = societies?.find(s => s.id === societyId);
+  const availableWings: string[] = selectedSocietyObj?.wings && selectedSocietyObj.wings.length > 0
+    ? selectedSocietyObj.wings
+    : (calendarData?.wings?.map(w => w.name) || billDataResponse?.society?.wings || ['A', 'B', 'C', 'M1M2']);
+
+  function resetInvoiceOverrides() {
+    setInvoiceRateOverride('23000');
+    setInvoiceQuantityOverride('');
+    setInvoiceTotalDaysOverride('');
+    setInvoiceNoOverride('');
+    setInvoiceDateOverride('');
+    setInvoicePoNumber('');
+    setInvoiceParticulars('Security Guard');
+    setInvoiceOtHours('0');
+    setSiteNameOverride('');
+    toast.success('Reset invoice parameters to auto-calculated defaults');
+  }
+
+  // Effective invoice computations
+  const currentDaysInMonth = new Date(year, month, 0).getDate();
+  const currentMonthDate = new Date(year, month - 1, 1);
+  const currentMonthName = currentMonthDate.toLocaleString('en-IN', { month: 'long' });
+  const currentMonthShort = currentMonthDate.toLocaleString('en-IN', { month: 'short' }).toUpperCase();
+  const serviceMonthText = `${currentMonthName} ${year}`;
+  const invoicePeriodText = `01 ${currentMonthShort} ${year} TO ${currentDaysInMonth} ${currentMonthShort} ${year}`;
+
+  const defaultInvoiceNo = `ASG${String(year).slice(-2)}-${String(year + 1).slice(-2)}/${String(month).padStart(2, '0')}/043`;
+  const defaultInvoiceDate = `13/${String(month).padStart(2, '0')}/${year}`;
+
+  const effectiveInvoiceNo = invoiceNoOverride.trim() || billDataResponse?.invoice?.invoiceNo || defaultInvoiceNo;
+  const effectiveInvoiceDate = invoiceDateOverride.trim() || billDataResponse?.invoice?.invoiceDate || defaultInvoiceDate;
+
+  const defaultSiteName = selectedWing && selectedWing.toLowerCase() !== 'all'
+    ? (selectedWing.toUpperCase().includes('WING') ? selectedWing.toUpperCase() : `${selectedWing.toUpperCase()} WING`)
+    : (selectedSocietyObj?.name ? `${selectedSocietyObj.name} (ALL WINGS)` : 'ALL WINGS');
+  const effectiveSiteName = siteNameOverride.trim() || billDataResponse?.invoice?.siteName || defaultSiteName;
+
+  const effectiveQuantity = invoiceQuantityOverride !== '' && !isNaN(parseInt(invoiceQuantityOverride))
+    ? Math.max(1, parseInt(invoiceQuantityOverride))
+    : (billDataResponse?.invoice?.quantity ?? (selectedWing !== 'all' ? 2 : (selectedSocietyObj ? 8 : 2)));
+
+  const effectiveRatePerMonth = invoiceRateOverride !== '' && !isNaN(parseFloat(invoiceRateOverride))
+    ? Math.max(0, parseFloat(invoiceRateOverride))
+    : (billDataResponse?.invoice?.ratePerMonth ?? 23000);
+
+  const effectiveTotalDays = invoiceTotalDaysOverride !== '' && !isNaN(parseInt(invoiceTotalDaysOverride))
+    ? Math.max(0, parseInt(invoiceTotalDaysOverride))
+    : (billDataResponse?.invoice?.totalDays ?? (effectiveQuantity * (currentDaysInMonth >= 30 ? 28 : currentDaysInMonth)));
+
+  const effectivePerDayRate = currentDaysInMonth > 0
+    ? Math.round((effectiveRatePerMonth / currentDaysInMonth) * 100) / 100
+    : 766.67;
+
+  const effectiveTotalAmount = Math.round((effectiveTotalDays * effectivePerDayRate) * 100) / 100;
+  const effectiveSubTotalA = effectiveTotalAmount;
+  const effectiveSubTotalB = effectiveTotalAmount;
+  const effectiveRoundedTotal = Math.round(effectiveTotalAmount);
+  const effectiveRoundOff = Math.round((effectiveRoundedTotal - effectiveTotalAmount) * 100) / 100;
+  const effectiveAmountInWords = numberToIndianWords(effectiveRoundedTotal);
+
+  function numberToIndianWords(num: number): string {
+    const a = [
+      '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+    ];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const n = Math.floor(Math.abs(num));
+    if (n === 0) return 'Zero Only';
+
+    function convertTwoDigits(val: number): string {
+      if (val < 20) return a[val];
+      return b[Math.floor(val / 10)] + (val % 10 !== 0 ? ' ' + a[val % 10] : '');
+    }
+
+    function convertThreeDigits(val: number): string {
+      let str = '';
+      if (val >= 100) {
+        str += a[Math.floor(val / 100)] + ' Hundred ';
+        val %= 100;
+      }
+      if (val > 0) {
+        if (str !== '') str += 'and ';
+        str += convertTwoDigits(val);
+      }
+      return str.trim();
+    }
+
+    let crore = Math.floor(n / 10000000);
+    let remainder = n % 10000000;
+    let lakh = Math.floor(remainder / 100000);
+    remainder = remainder % 100000;
+    let thousand = Math.floor(remainder / 1000);
+    let hundreds = remainder % 1000;
+
+    let res = '';
+    if (crore > 0) res += convertThreeDigits(crore) + ' Crore ';
+    if (lakh > 0) res += convertThreeDigits(lakh) + ' Lakh ';
+    if (thousand > 0) res += convertThreeDigits(thousand) + ' Thousand ';
+    if (hundreds > 0) res += convertThreeDigits(hundreds);
+
+    return res.trim() + ' Only';
+  }
+
+  function printInvoiceReport() {
+    const invoiceElement = document.getElementById('printable-tax-invoice');
+    if (!invoiceElement) {
+      toast.error('Invoice element not ready to print. Please select a society.');
+      return;
+    }
+
+    const selSociety = billDataResponse?.society?.name || societies?.find(s => s.id === societyId)?.name || 'Society';
+    const selWing = selectedWing === 'all' ? 'All-Wings' : selectedWing;
+    const monthName = new Date(year, month - 1).toLocaleString('en-IN', { month: 'long' });
+
+    const existingFrame = document.getElementById('clean-invoice-print-frame');
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'clean-invoice-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const clone = invoiceElement.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('.no-print, button').forEach(el => el.remove());
+
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tax Invoice - ${selSociety} - ${selWing} - ${monthName} ${year}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 6mm 8mm;
+    }
+    *, *:before, *:after {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .print-avoid-break {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    .no-print, button {
+      display: none !important;
+    }
+    table, th, td {
+      border-color: #000000 !important;
+    }
+  </style>
+</head>
+<body class="bg-white text-black p-0">
+  <div style="width: 100%; max-width: 100%;">
+    ${clone.innerHTML}
+  </div>
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        window.print();
+      }
+    }, 450);
+  }
+
+  function exportInvoiceCSV() {
+    if (!billDataResponse) {
+      toast.error('No invoice data available to export');
+      return;
+    }
+
+    const headers = [
+      'Invoice No',
+      'Dated',
+      'Agency Name',
+      'Society Name',
+      'Site Name',
+      'Service Month',
+      'Particulars',
+      'Quantity',
+      'Rate / Month',
+      'Per Day Rate',
+      'Total Days',
+      'Sub Total A',
+      'Sub Total B',
+      'Round Off',
+      'Total Amount',
+      'Amount in Words',
+    ];
+
+    const rows = [
+      [
+        effectiveInvoiceNo,
+        effectiveInvoiceDate,
+        billDataResponse.agency?.name || 'Alert Space Facilities & Management Services',
+        billDataResponse.society?.name || 'Society',
+        effectiveSiteName,
+        serviceMonthText,
+        invoiceParticulars,
+        effectiveQuantity,
+        effectiveRatePerMonth.toFixed(2),
+        effectivePerDayRate.toFixed(2),
+        effectiveTotalDays,
+        effectiveSubTotalA.toFixed(2),
+        effectiveSubTotalB.toFixed(2),
+        effectiveRoundOff.toFixed(2),
+        effectiveRoundedTotal.toFixed(2),
+        effectiveAmountInWords,
+      ],
+    ];
+
+    downloadCSV([headers, ...rows], `tax-invoice-${effectiveSiteName.replace(/[^a-zA-Z0-9]/g, '_')}-${year}-${month}.csv`);
+  }
 
   function downloadCSV(rows: (string | number)[][], filename: string) {
     const csv = rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -379,6 +744,62 @@ export default function ReportsPage() {
         ))}
       </div>
 
+      {/* Monthly Sub-Tabs Switcher: Attendance Report vs Society & Wing Bill */}
+      {tab === 'monthly' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-800/80 p-2.5 rounded-2xl border border-surface-700/80 print:hidden shadow-sm">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMonthlySubTab('attendance')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                monthlySubTab === 'attendance'
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-surface-700/50'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Attendance & Society Reports</span>
+            </button>
+
+            <button
+              onClick={() => setMonthlySubTab('bill')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                monthlySubTab === 'bill'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-surface-700/50'
+              }`}
+            >
+              <Receipt className="w-4 h-4 text-emerald-300" />
+              <span>Society Wise & Wing Wise Bill</span>
+              <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-emerald-950/50 text-emerald-200 border border-emerald-400/30">
+                Tax Invoice
+              </span>
+            </button>
+          </div>
+
+          {societyId && monthlySubTab === 'bill' && (
+            <div className="flex items-center gap-2 pr-1">
+              <span className="text-xs text-slate-300 font-semibold hidden md:inline">Select Wing:</span>
+              <select
+                value={selectedWing}
+                onChange={(e) => {
+                  setSelectedWing(e.target.value);
+                  setInvoiceTotalDaysOverride('');
+                  setInvoiceQuantityOverride('');
+                }}
+                className="px-3 py-1.5 bg-surface-900 border border-emerald-500/60 rounded-xl text-slate-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              >
+                <option value="all">🏢 All Wings (Society Bill)</option>
+                {availableWings.map((w: string) => (
+                  <option key={w} value={w}>
+                    📍 {w.toUpperCase().includes('WING') ? w : `${w} Wing`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Common Filters — for daily, monthly, suspicious */}
       {tab !== 'watchmen' && (
         <div className="card p-4 print:hidden">
@@ -420,13 +841,45 @@ export default function ReportsPage() {
               {tab === 'daily' && <button onClick={exportDailyCSV} disabled={!dailyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
               {tab === 'monthly' && (
                 <>
-                  <button onClick={() => {
-                    if (!societyId) toast.error('Please select a Society to generate the PDF report');
-                    else printCleanReport();
-                  }} className="bg-brand-600 hover:bg-brand-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm">
-                    <Printer className="w-4 h-4" /> Print PDF Report
-                  </button>
-                  <button onClick={exportMonthlyCSV} disabled={!monthlyData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>
+                  {monthlySubTab === 'attendance' ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          if (!societyId) toast.error('Please select a Society to generate the PDF report');
+                          else printCleanReport();
+                        }}
+                        className="bg-brand-600 hover:bg-brand-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm"
+                      >
+                        <Printer className="w-4 h-4" /> Print PDF Report
+                      </button>
+                      <button
+                        onClick={exportMonthlyCSV}
+                        disabled={!monthlyData?.length}
+                        className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"
+                      >
+                        <Download className="w-4 h-4" /> Export CSV
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          if (!societyId) toast.error('Please select a Society to print Tax Invoice');
+                          else printInvoiceReport();
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+                      >
+                        <Printer className="w-4 h-4" /> Print Tax Invoice
+                      </button>
+                      <button
+                        onClick={exportInvoiceCSV}
+                        disabled={!billDataResponse && !societyId}
+                        className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"
+                      >
+                        <Download className="w-4 h-4" /> Export CSV
+                      </button>
+                    </>
+                  )}
                 </>
               )}
               {tab === 'suspicious' && <button onClick={exportSuspiciousCSV} disabled={!suspiciousData?.length} className="btn-primary flex items-center gap-2 px-4 py-2 text-sm"><Download className="w-4 h-4" /> Export CSV</button>}
@@ -501,75 +954,83 @@ export default function ReportsPage() {
       {/* Monthly */}
       {tab === 'monthly' && (
         <>
-          {!societyId && (
-            <div className="space-y-4">
-              <div className="table-wrapper">
-                <table className="table">
-                  <thead><tr><th>Guard</th><th>Present</th><th>Late</th><th>Absent</th><th>Suspicious</th><th>Attendance %</th></tr></thead>
-                  <tbody>
-                    {monthlyLoading ? Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={i}><td colSpan={6}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
-                    )) : monthlyData?.map((r) => {
-                      const total = r.days_present + r.days_late + r.days_absent;
-                      const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
-                      return (
-                        <tr key={r.watchman_id}>
-                          <td><div><p className="font-medium">{r.full_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
-                          <td className="text-success-400 font-bold">{r.days_present}</td>
-                          <td className="text-warning-400 font-bold">{r.days_late}</td>
-                          <td className="text-danger-400 font-bold">{r.days_absent}</td>
-                          <td className="text-orange-400">{r.suspicious_count}</td>
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-surface-700 rounded-full overflow-hidden">
-                                <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                              </div>
-                              <span className="text-sm font-medium">{pct}%</span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {!monthlyLoading && (!monthlyData || monthlyData.length === 0) && (
-                  <div className="text-center py-12 text-slate-600"><BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No monthly summary found</p></div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Fully Custom Executive PDF & Screen Report for Society */}
-          {societyId && (
-            <div className="space-y-4">
-              {/* Screen toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-surface-800/90 border border-surface-700/80 rounded-2xl print:hidden max-w-[1050px] mx-auto shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <div>
-                    <h3 className="font-bold text-slate-100 text-sm">
-                      {societies?.find(s => s.id === societyId)?.name || 'Society'} • Official Attendance Report
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      Audit Period: {new Date(year, month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
-                    </p>
+          {monthlySubTab === 'attendance' && (
+            <>
+              {!societyId && (
+                <div className="space-y-4">
+                  <div className="table-wrapper">
+                    <table className="table">
+                      <thead><tr><th>Guard</th><th>Present</th><th>Late</th><th>Absent</th><th>Suspicious</th><th>Attendance %</th></tr></thead>
+                      <tbody>
+                        {monthlyLoading ? Array.from({ length: 5 }).map((_, i) => (
+                          <tr key={i}><td colSpan={6}><div className="h-10 bg-surface-700 animate-pulse rounded" /></td></tr>
+                        )) : monthlyData?.map((r) => {
+                          const total = r.days_present + r.days_late + r.days_absent;
+                          const pct = total ? Math.round(((r.days_present + r.days_late) / total) * 100) : 0;
+                          return (
+                            <tr key={r.watchman_id}>
+                              <td><div><p className="font-medium">{r.full_name}</p><p className="text-xs text-slate-500">{r.employee_id}</p></div></td>
+                              <td className="text-success-400 font-bold">{r.days_present}</td>
+                              <td className="text-warning-400 font-bold">{r.days_late}</td>
+                              <td className="text-danger-400 font-bold">{r.days_absent}</td>
+                              <td className="text-orange-400">{r.suspicious_count}</td>
+                              <td>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 h-2 bg-surface-700 rounded-full overflow-hidden">
+                                    <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-sm font-medium">{pct}%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {!monthlyLoading && (!monthlyData || monthlyData.length === 0) && (
+                      <div className="text-center py-12 text-slate-600"><BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-40" /><p className="text-sm">No monthly summary found</p></div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={printCleanReport}
-                    className="bg-brand-600 hover:bg-brand-500 active:scale-95 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-brand-600/30 transition-all flex items-center gap-2"
-                  >
-                    <Printer className="w-4 h-4" /> Download / Print PDF Report
-                  </button>
-                  <button
-                    onClick={exportMonthlyCSV}
-                    className="btn-outline px-3.5 py-2 text-xs rounded-xl flex items-center gap-1.5"
-                  >
-                    <Download className="w-4 h-4" /> Export CSV
-                  </button>
-                </div>
-              </div>
+              )}
+
+              {/* Fully Custom Executive PDF & Screen Report for Society */}
+              {societyId && (
+                <div className="space-y-4">
+                  {/* Screen toolbar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-surface-800/90 border border-surface-700/80 rounded-2xl print:hidden max-w-[1050px] mx-auto shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <div>
+                        <h3 className="font-bold text-slate-100 text-sm">
+                          {societies?.find(s => s.id === societyId)?.name || 'Society'} • Official Attendance Report
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          Audit Period: {new Date(year, month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setMonthlySubTab('bill')}
+                        className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30 transition-all flex items-center gap-1.5"
+                      >
+                        <Receipt className="w-4 h-4" /> Generate Wing/Society Bill
+                      </button>
+                      <button
+                        onClick={printCleanReport}
+                        className="bg-brand-600 hover:bg-brand-500 active:scale-95 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-brand-600/30 transition-all flex items-center gap-2"
+                      >
+                        <Printer className="w-4 h-4" /> Download / Print PDF Report
+                      </button>
+                      <button
+                        onClick={exportMonthlyCSV}
+                        className="btn-outline px-3.5 py-2 text-xs rounded-xl flex items-center gap-1.5"
+                      >
+                        <Download className="w-4 h-4" /> Export CSV
+                      </button>
+                    </div>
+                  </div>
 
               {/* Printable Document Sheet */}
               <div
@@ -1019,6 +1480,592 @@ export default function ReportsPage() {
                   );
                 })() : null}
               </div>
+            </div>
+          )}
+        </>
+      )}
+
+          {/* 🧾 Monthly Sub-Tab 2: Society Wise & Wing Wise Bill (Tax Invoice) */}
+          {monthlySubTab === 'bill' && (
+            <div className="space-y-6">
+              {!societyId ? (
+                <div className="card p-12 text-center max-w-xl mx-auto space-y-4 my-8">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg">
+                    <Receipt className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-slate-100">Select a Society to Generate Tax Invoice</h3>
+                    <p className="text-xs text-slate-400">
+                      Choose a society from the top filter bar or click any society below to generate, customize, and print the official society-wise and wing-wise tax invoice bill.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    {societies?.slice(0, 6).map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => setSocietyId(s.id)}
+                        className="px-3 py-1.5 rounded-lg bg-surface-700/60 hover:bg-emerald-600 hover:text-white text-slate-300 text-xs font-medium border border-surface-600/50 transition-all"
+                      >
+                        {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Controls & Real-Time Customization Bar (print:hidden) */}
+                  <div className="card p-5 space-y-5 print:hidden border-surface-700/80 shadow-lg">
+                    <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-surface-700/60">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                          <Receipt className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-slate-100">
+                              Society & Wing Wise Tax Invoice
+                            </h3>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                              {selectedWing === 'all' ? 'All Wings Combined' : `${selectedWing} Wing Bill`}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            Customizable billing parameters for {selectedSocietyObj?.name || 'Society'} &bull; {serviceMonthText}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => setMonthlySubTab('attendance')}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-surface-700/60 hover:bg-surface-700 hover:text-white border border-surface-600/50 flex items-center gap-1.5 transition-all"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-brand-400" /> View Attendance
+                        </button>
+                        <button
+                          onClick={resetInvoiceOverrides}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-surface-700/60 hover:bg-surface-700 hover:text-white border border-surface-600/50 flex items-center gap-1.5 transition-all"
+                          title="Reset to verified attendance defaults"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" /> Reset Defaults
+                        </button>
+                        <button
+                          onClick={exportInvoiceCSV}
+                          className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-surface-700/80 hover:bg-surface-700 hover:text-white border border-surface-600 flex items-center gap-1.5 transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5 text-emerald-400" /> Export CSV
+                        </button>
+                        <button
+                          onClick={printInvoiceReport}
+                          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition-all"
+                        >
+                          <Printer className="w-4 h-4" /> Print Tax Invoice
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Wing Selector Pills */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span className="font-semibold text-slate-300">Target Wing Selection:</span>
+                        <span>Click any wing to generate a dedicated wing bill</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setSelectedWing('all')}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                            selectedWing === 'all'
+                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                              : 'bg-surface-800/80 text-slate-400 hover:text-slate-200 border-surface-700/80 hover:bg-surface-700'
+                          }`}
+                        >
+                          🏢 All Wings ({selectedSocietyObj?.name || 'Society Total'})
+                        </button>
+                        {availableWings.map(wing => (
+                          <button
+                            key={wing}
+                            onClick={() => setSelectedWing(wing)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                              selectedWing.toLowerCase() === wing.toLowerCase()
+                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                                : 'bg-surface-800/80 text-slate-400 hover:text-slate-200 border-surface-700/80 hover:bg-surface-700'
+                            }`}
+                          >
+                            🚪 {wing.toUpperCase().includes('WING') ? wing : `${wing} Wing`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Live Calculation Summary Pill */}
+                    <div className="bg-surface-800/90 rounded-xl p-3 border border-surface-700/70 flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div>
+                          <span className="text-slate-400">Quantity: </span>
+                          <span className="font-bold text-white">{effectiveQuantity} Guard(s)</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Rate / Month: </span>
+                          <span className="font-bold text-emerald-400">₹{effectiveRatePerMonth.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Per Day Rate: </span>
+                          <span className="font-mono font-bold text-white">₹{effectivePerDayRate.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Duty Days: </span>
+                          <span className="font-mono font-bold text-white">{effectiveTotalDays} Days</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 font-medium">Grand Total Payable:</span>
+                        <span className="text-sm font-extrabold text-emerald-400 font-mono bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/25">
+                          ₹{effectiveRoundedTotal.toLocaleString('en-IN')}.00
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Invoice Parameter Inputs Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Rate / Month (₹)
+                        </label>
+                        <input
+                          type="number"
+                          value={invoiceRateOverride}
+                          onChange={e => setInvoiceRateOverride(e.target.value)}
+                          placeholder="23000"
+                          step="100"
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Guard Quantity
+                        </label>
+                        <input
+                          type="number"
+                          value={invoiceQuantityOverride}
+                          onChange={e => setInvoiceQuantityOverride(e.target.value)}
+                          placeholder={String(effectiveQuantity)}
+                          min="1"
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Total Duty Days
+                        </label>
+                        <input
+                          type="number"
+                          value={invoiceTotalDaysOverride}
+                          onChange={e => setInvoiceTotalDaysOverride(e.target.value)}
+                          placeholder={String(effectiveTotalDays)}
+                          min="0"
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Invoice No.
+                        </label>
+                        <input
+                          type="text"
+                          value={invoiceNoOverride}
+                          onChange={e => setInvoiceNoOverride(e.target.value)}
+                          placeholder={defaultInvoiceNo}
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Invoice Date
+                        </label>
+                        <input
+                          type="text"
+                          value={invoiceDateOverride}
+                          onChange={e => setInvoiceDateOverride(e.target.value)}
+                          placeholder={defaultInvoiceDate}
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          PO Number (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={invoicePoNumber}
+                          onChange={e => setInvoicePoNumber(e.target.value)}
+                          placeholder="e.g. PO-2026/09"
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Site Name / Wing Heading
+                        </label>
+                        <input
+                          type="text"
+                          value={siteNameOverride}
+                          onChange={e => setSiteNameOverride(e.target.value)}
+                          placeholder={defaultSiteName}
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Line Particulars
+                        </label>
+                        <input
+                          type="text"
+                          value={invoiceParticulars}
+                          onChange={e => setInvoiceParticulars(e.target.value)}
+                          placeholder="Security Guard"
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          OT Hours
+                        </label>
+                        <input
+                          type="number"
+                          value={invoiceOtHours}
+                          onChange={e => setInvoiceOtHours(e.target.value)}
+                          placeholder="0"
+                          min="0"
+                          className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 🧾 Official Tax Invoice Document (Replicating Reference Design) */}
+                  <div
+                    id="printable-tax-invoice"
+                    className="bg-white text-black p-6 sm:p-10 rounded-2xl shadow-2xl max-w-4xl mx-auto border border-neutral-300 font-sans print:shadow-none print:border-none print:p-0 print:max-w-none"
+                    style={{ color: '#000000', backgroundColor: '#ffffff' }}
+                  >
+                    {/* Top Header Section */}
+                    <div className="flex justify-between items-start pb-4 border-b border-black">
+                      {/* Left: Shield Logo & Brand */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-16 bg-gradient-to-b from-[#3a3a3a] via-[#1a1a1a] to-[#0a0a0a] rounded-b-[2rem] rounded-t-md flex items-center justify-center text-white font-extrabold shadow-sm border border-black/30 relative select-none">
+                          <span
+                            className="text-2xl font-serif italic tracking-tighter lowercase select-none"
+                            style={{ fontFamily: 'Georgia, serif' }}
+                          >
+                            as
+                          </span>
+                        </div>
+                        <div>
+                          <h1
+                            className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-none"
+                            style={{ fontFamily: "'Inter', sans-serif" }}
+                          >
+                            {billDataResponse?.agency?.name?.includes('Alert') || !billDataResponse?.agency?.name
+                              ? 'Alert Space'
+                              : billDataResponse.agency.name}
+                          </h1>
+                          <p className="text-[10px] tracking-[0.25em] font-extrabold text-neutral-800 uppercase mt-1">
+                            ANYTHING YOU DESIRE
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Proprietor Details & Original Recipient */}
+                      <div className="text-right">
+                        <div className="text-sm font-bold tracking-wide uppercase text-black">
+                          {billDataResponse?.agency?.proprietor || 'YUVRAJ HARI PAWAR'}
+                        </div>
+                        <div className="text-xs font-semibold tracking-wider text-black">
+                          {billDataResponse?.agency?.proprietorSubtitle || '(EX. CAPTAIN , ARMY)'}
+                        </div>
+                        <div className="text-xs text-neutral-800 mt-0.5">
+                          {billDataResponse?.agency?.subName || 'Alert Space Facilities & Management Services'}
+                        </div>
+                        <div className="text-[11px] font-semibold text-neutral-700 italic mt-1.5">
+                          Original For Recipient
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* TAX INVOICE Title Bar */}
+                    <div className="border-x border-b border-black py-1.5 text-center bg-white">
+                      <span className="text-sm sm:text-base font-bold tracking-widest uppercase text-black">
+                        TAX INVOICE
+                      </span>
+                    </div>
+
+                    {/* 2-Column Info Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 border-x border-b border-black text-[11px] leading-relaxed">
+                      {/* Left Column: Supplier (Alert Space) */}
+                      <div className="border-b md:border-b-0 md:border-r border-black flex flex-col justify-between">
+                        <div className="p-2 space-y-1">
+                          <div className="font-bold text-black uppercase tracking-tight text-[11px]">
+                            {billDataResponse?.agency?.name || 'ALERT SPACE FACILITIES AND MANAGEMENT SERVICES'}
+                          </div>
+                          <div className="grid grid-cols-[70px_1fr] gap-1">
+                            <span className="text-neutral-800">Address</span>
+                            <span className="text-black">
+                              : {billDataResponse?.agency?.address || 'Sharma Complex, 3rd Floor Near Ram Krushna Mangal Karyalay,Pimple Gurav,Pune-411061'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-[70px_1fr] gap-1">
+                            <span className="text-neutral-800">State</span>
+                            <span className="text-black">
+                              : {billDataResponse?.agency?.state || 'Maharashtra'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-[70px_1fr] gap-1">
+                            <span className="text-neutral-800">PO NO.</span>
+                            <span className="text-black">: {invoicePoNumber || ''}</span>
+                          </div>
+                          <div className="grid grid-cols-[70px_1fr] gap-1">
+                            <span className="text-neutral-800">PAN No.</span>
+                            <span className="text-black font-semibold">
+                              : {billDataResponse?.agency?.pan || 'EUBPG6574A'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row of Left: Invoice No & Dated */}
+                        <div className="grid grid-cols-2 border-t border-black text-[11px]">
+                          <div className="p-1.5 border-r border-black">
+                            <span className="font-semibold text-neutral-800">Invoice No. : </span>
+                            <span className="font-bold text-black">{effectiveInvoiceNo}</span>
+                          </div>
+                          <div className="p-1.5">
+                            <span className="font-semibold text-neutral-800">Dated : </span>
+                            <span className="font-bold text-black">{effectiveInvoiceDate}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Society Info */}
+                      <div className="flex flex-col justify-between">
+                        <div className="p-2 space-y-1">
+                          <div className="font-bold text-black uppercase tracking-tight text-[11px]">
+                            {billDataResponse?.society?.name || (selectedSocietyObj?.name ? `${selectedSocietyObj.name} Co-operative Housing Society Ltd.` : 'Society')}
+                          </div>
+                          <div className="grid grid-cols-[90px_1fr] gap-1">
+                            <span className="text-neutral-800">Address</span>
+                            <span className="text-black">
+                              : {billDataResponse?.society?.address || selectedSocietyObj?.address || 'Near S. B. Patil Public School, Ravet, Pimpri Chinchwad, Pune, Maharashtra'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-[90px_1fr] gap-1">
+                            <span className="text-neutral-800">GSTIN / UIN</span>
+                            <span className="text-black">: </span>
+                          </div>
+                          <div className="grid grid-cols-[90px_1fr] gap-1">
+                            <span className="text-neutral-800">Place Of Supply</span>
+                            <span className="text-black">
+                              : {billDataResponse?.society?.placeOfSupply || 'Maharashtra'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-[90px_1fr] gap-1">
+                            <span className="text-neutral-800">Invoice Period</span>
+                            <span className="text-black font-semibold">: {invoicePeriodText}</span>
+                          </div>
+                          <div className="grid grid-cols-[90px_1fr] gap-1">
+                            <span className="text-neutral-800">Service Month</span>
+                            <span className="text-black font-semibold">: {serviceMonthText}</span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row of Right: Site Name */}
+                        <div className="border-t border-black p-1.5 flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-neutral-800">Site Name</span>
+                          <span className="font-black text-black uppercase tracking-wide">
+                            {effectiveSiteName}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Line Items Table */}
+                    <div className="border-x border-b border-black overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-[11px]">
+                        <thead>
+                          <tr className="border-b border-black bg-neutral-100/70 font-bold text-black text-center">
+                            <th className="py-2 px-1 border-r border-black w-10">Sr. No.</th>
+                            <th className="py-2 px-2 border-r border-black text-left min-w-[130px]">Particulars</th>
+                            <th className="py-2 px-1 border-r border-black w-14">Quantity</th>
+                            <th className="py-2 px-1.5 border-r border-black text-right min-w-[85px]">Rate / Month</th>
+                            <th className="py-2 px-1.5 border-r border-black text-right min-w-[85px]">Per Day Rate</th>
+                            <th className="py-2 px-1 border-r border-black w-16">Per Hr Rate</th>
+                            <th className="py-2 px-1 border-r border-black w-14">OT Hrs</th>
+                            <th className="py-2 px-1.5 border-r border-black min-w-[70px]">Total Days</th>
+                            <th className="py-2 px-2 text-right min-w-[95px]">Total Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* Main Row */}
+                          <tr className="border-b border-black/40 text-black">
+                            <td className="py-2.5 px-1 border-r border-black text-center font-medium">1</td>
+                            <td className="py-2.5 px-2 border-r border-black font-semibold">{invoiceParticulars}</td>
+                            <td className="py-2.5 px-1 border-r border-black text-center font-medium">{effectiveQuantity}</td>
+                            <td className="py-2.5 px-1.5 border-r border-black text-right font-mono">{effectiveRatePerMonth.toFixed(2)}</td>
+                            <td className="py-2.5 px-1.5 border-r border-black text-right font-mono">{effectivePerDayRate.toFixed(2)}</td>
+                            <td className="py-2.5 px-1 border-r border-black text-center font-mono">0</td>
+                            <td className="py-2.5 px-1 border-r border-black text-center font-mono">{invoiceOtHours || 0}</td>
+                            <td className="py-2.5 px-1.5 border-r border-black text-center font-semibold font-mono">{effectiveTotalDays}</td>
+                            <td className="py-2.5 px-2 text-right font-bold font-mono">{effectiveTotalAmount.toFixed(2)}</td>
+                          </tr>
+
+                          {/* Decorative Spacer row */}
+                          <tr className="h-6 border-b border-black/20 text-transparent select-none">
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td></td>
+                          </tr>
+
+                          {/* Sub Total A */}
+                          <tr className="border-t border-black text-black">
+                            <td colSpan={2} className="py-1 px-2 border-r border-black font-bold text-right">
+                              Sub Total A :
+                            </td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="py-1 px-2 text-right font-mono font-semibold">{effectiveSubTotalA.toFixed(2)}</td>
+                          </tr>
+
+                          {/* Sub Total B */}
+                          <tr className="border-t border-black text-black">
+                            <td colSpan={2} className="py-1 px-2 border-r border-black font-bold text-right">
+                              Sub Total B :
+                            </td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="py-1 px-2 text-right font-mono font-semibold">{effectiveSubTotalB.toFixed(2)}</td>
+                          </tr>
+
+                          {/* ROUND OFF */}
+                          <tr className="border-t border-black text-black">
+                            <td colSpan={2} className="py-1 px-2 border-r border-black font-bold text-right">
+                              ROUND OFF:
+                            </td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="py-1 px-2 text-right font-mono font-medium">{effectiveRoundOff >= 0 ? effectiveRoundOff.toFixed(2) : effectiveRoundOff.toFixed(2)}</td>
+                          </tr>
+
+                          {/* Grand Total */}
+                          <tr className="border-t-2 border-black bg-neutral-100/70 font-bold text-black text-[12px]">
+                            <td colSpan={2} className="py-1.5 px-2 border-r border-black text-right uppercase tracking-wider">
+                              Total
+                            </td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="border-r border-black"></td>
+                            <td className="py-1.5 px-2 text-right font-black font-mono">{effectiveRoundedTotal.toFixed(2)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Amount in Words */}
+                    <div className="border-x border-b border-black p-2 bg-white text-[11px] leading-snug">
+                      <span className="font-bold text-black uppercase tracking-wider">INR &nbsp; Rupees: </span>
+                      <span className="font-semibold text-black uppercase">{effectiveAmountInWords}</span>
+                    </div>
+
+                    {/* Footer: Remittance & Signatures */}
+                    <div className="border-x border-b border-black grid grid-cols-1 md:grid-cols-2 text-[11px]">
+                      {/* Left: Remittance Bank Details */}
+                      <div className="p-3 border-b md:border-b-0 md:border-r border-black space-y-1">
+                        <div className="font-bold text-black uppercase tracking-wider text-[11px] underline mb-1">
+                          Bank Remittance Details:
+                        </div>
+                        <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
+                          <span className="text-neutral-700 font-medium">Bank Name</span>
+                          <span className="text-black font-semibold">: HDFC Bank Ltd.</span>
+                        </div>
+                        <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
+                          <span className="text-neutral-700 font-medium">Account Name</span>
+                          <span className="text-black font-bold">
+                            : {billDataResponse?.agency?.name || 'ALERT SPACE FACILITIES AND MANAGEMENT SERVICES'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
+                          <span className="text-neutral-700 font-medium">Account No.</span>
+                          <span className="text-black font-mono font-bold">: 50200067489211</span>
+                        </div>
+                        <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
+                          <span className="text-neutral-700 font-medium">IFSC Code</span>
+                          <span className="text-black font-mono font-bold">: HDFC0001245</span>
+                        </div>
+                        <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
+                          <span className="text-neutral-700 font-medium">Branch</span>
+                          <span className="text-black">: Pimple Gurav, Pune - 411061</span>
+                        </div>
+                      </div>
+
+                      {/* Right: Authorized Signatory */}
+                      <div className="p-3 flex flex-col justify-between text-right">
+                        <div>
+                          <div className="text-[11px] font-bold text-black">
+                            For {billDataResponse?.agency?.subName || 'Alert Space Facilities & Management Services'}
+                          </div>
+                        </div>
+
+                        <div className="pt-12 text-center ml-auto">
+                          <div className="w-48 border-b border-black mb-1 mx-auto"></div>
+                          <div className="text-[10px] font-bold text-black uppercase tracking-wider">
+                            Authorized Signatory
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Receiver Acknowledgement */}
+                    <div className="border-x border-b border-black p-3 flex justify-between items-end text-[10px] text-neutral-800">
+                      <div>
+                        <p className="font-semibold text-black uppercase">Receiver's Confirmation / Society Stamp</p>
+                        <p className="text-[9px] text-neutral-600 mt-0.5">Verified on-site attendance log matches deployed duty shifts.</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-40 border-b border-black mb-1"></div>
+                        <span className="font-bold text-black uppercase tracking-wider text-[9px]">
+                          Society Secretary / Chairman
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>

@@ -548,6 +548,215 @@ router.get('/society-calendar', asyncHandler(async (req: Request, res: Response)
 }));
 
 /**
+ * Utility to convert an amount in INR to Indian words
+ */
+function numberToIndianWords(num: number): string {
+  const a = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const n = Math.floor(Math.abs(num));
+  if (n === 0) return 'Zero Only';
+
+  function convertTwoDigits(val: number): string {
+    if (val < 20) return a[val];
+    return b[Math.floor(val / 10)] + (val % 10 !== 0 ? ' ' + a[val % 10] : '');
+  }
+
+  function convertThreeDigits(val: number): string {
+    let str = '';
+    if (val >= 100) {
+      str += a[Math.floor(val / 100)] + ' Hundred ';
+      val %= 100;
+    }
+    if (val > 0) {
+      if (str !== '') str += 'and ';
+      str += convertTwoDigits(val);
+    }
+    return str.trim();
+  }
+
+  let crore = Math.floor(n / 10000000);
+  let remainder = n % 10000000;
+  let lakh = Math.floor(remainder / 100000);
+  remainder = remainder % 100000;
+  let thousand = Math.floor(remainder / 1000);
+  let hundreds = remainder % 1000;
+
+  let res = '';
+  if (crore > 0) res += convertThreeDigits(crore) + ' Crore ';
+  if (lakh > 0) res += convertThreeDigits(lakh) + ' Lakh ';
+  if (thousand > 0) res += convertThreeDigits(thousand) + ' Thousand ';
+  if (hundreds > 0) res += convertThreeDigits(hundreds);
+
+  return res.trim() + ' Only';
+}
+
+/**
+ * GET /api/reports/society-wing-bill?society_id=&year=&month=&wing=&rate_per_month=&quantity=&agency_id=
+ * Generates official Society-wise and Wing-wise Tax Invoice / Bill details
+ */
+router.get('/society-wing-bill', asyncHandler(async (req: Request, res: Response) => {
+  const agencyId = getAgencyId(req);
+  const societyId = (req.query.society_id || req.query.societyId) as string;
+  const year = parseInt(req.query.year as string) || new Date().getFullYear();
+  const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+  const wing = ((req.query.wing as string) || 'all').trim();
+  const customRate = req.query.rate_per_month ? parseFloat(req.query.rate_per_month as string) : undefined;
+  const customQuantity = req.query.quantity ? parseInt(req.query.quantity as string) : undefined;
+  const customTotalDays = req.query.total_days ? parseInt(req.query.total_days as string) : undefined;
+
+  if (!societyId || !mongoose.Types.ObjectId.isValid(societyId)) {
+    res.status(400).json({ success: false, message: 'Valid society_id is required' });
+    return;
+  }
+
+  const society = await Society.findById(societyId).lean();
+  if (!society) {
+    res.status(404).json({ success: false, message: 'Society not found' });
+    return;
+  }
+
+  const managingAgency = society.agency_id
+    ? await Agency.findById(society.agency_id).lean()
+    : null;
+
+  const startDate = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
+  startDate.setUTCHours(0, 0, 0, 0);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  // Match attendances for this society in this month
+  const matchStage: any = {
+    society_id: new mongoose.Types.ObjectId(societyId),
+    $or: [
+      { attendance_date: { $gte: startDate, $lte: endDate } },
+      { check_in_time: { $gte: startDate, $lte: endDate } },
+    ],
+    status: { $in: ['present', 'late'] },
+  };
+
+  if (agencyId && mongoose.Types.ObjectId.isValid(agencyId)) {
+    matchStage.agency_id = new mongoose.Types.ObjectId(agencyId);
+  }
+
+  // Filter by wing if not 'all'
+  if (wing && wing.toLowerCase() !== 'all') {
+    const cleanWing = wing.replace(/wing/i, '').trim();
+    matchStage.$and = [
+      {
+        $or: [
+          { selected_wing: { $regex: new RegExp(`^${cleanWing}$`, 'i') } },
+          { selected_wing: { $regex: new RegExp(`${cleanWing}\\s*wing`, 'i') } },
+          { selected_wing: wing },
+        ],
+      },
+    ];
+  }
+
+  const attendances = await Attendance.find(matchStage).lean();
+
+  // Distinct guards deployed
+  const guardIds = new Set<string>();
+  attendances.forEach((att) => {
+    if (att.watchman_id) guardIds.add(att.watchman_id.toString());
+  });
+
+  const distinctGuardsCount = guardIds.size;
+  const quantity = customQuantity !== undefined && !isNaN(customQuantity) && customQuantity > 0
+    ? customQuantity
+    : distinctGuardsCount > 0
+    ? distinctGuardsCount
+    : (wing && wing.toLowerCase() !== 'all' ? 2 : (society.required_guards || 8));
+
+  let totalDays = attendances.length;
+  if (customTotalDays !== undefined && !isNaN(customTotalDays) && customTotalDays >= 0) {
+    totalDays = customTotalDays;
+  } else if (totalDays === 0) {
+    totalDays = quantity * (daysInMonth >= 30 ? 28 : daysInMonth);
+  }
+
+  const ratePerMonth = customRate !== undefined && !isNaN(customRate) && customRate > 0
+    ? customRate
+    : 23000;
+
+  const perDayRate = Math.round((ratePerMonth / daysInMonth) * 100) / 100;
+  const totalAmount = Math.round((totalDays * perDayRate) * 100) / 100;
+  const subTotalA = totalAmount;
+  const subTotalB = totalAmount;
+  const roundedTotal = Math.round(totalAmount);
+  const roundOff = Math.round((roundedTotal - totalAmount) * 100) / 100;
+
+  // Month formatting
+  const monthDate = new Date(year, month - 1, 1);
+  const monthName = monthDate.toLocaleString('en-IN', { month: 'long' });
+  const monthShort = monthDate.toLocaleString('en-IN', { month: 'short' }).toUpperCase();
+  const invoicePeriod = `01 ${monthShort} ${year} TO ${daysInMonth} ${monthShort} ${year}`;
+  const serviceMonth = `${monthName} ${year}`;
+
+  const yrShort = String(year).slice(-2);
+  const nextYrShort = String(year + 1).slice(-2);
+  const invoiceNo = `ASG${yrShort}-${nextYrShort}/${String(month).padStart(2, '0')}/043`;
+  const invoiceDate = `13/${String(month).padStart(2, '0')}/${year}`;
+
+  const siteName = wing && wing.toLowerCase() !== 'all'
+    ? (wing.toUpperCase().includes('WING') ? wing.toUpperCase() : `${wing.toUpperCase()} WING`)
+    : `${society.name} (ALL WINGS)`;
+
+  res.json({
+    success: true,
+    data: {
+      agency: {
+        id: managingAgency?._id?.toString() || society.agency_id?.toString(),
+        name: managingAgency?.name || 'ALERT SPACE FACILITIES AND MANAGEMENT SERVICES',
+        subName: 'Alert Space Facilities & Management Services',
+        proprietor: 'YUVRAJ HARI PAWAR',
+        proprietorSubtitle: '(EX. CAPTAIN , ARMY)',
+        address: managingAgency?.address || 'Sharma Complex, 3rd Floor Near Ram Krushna Mangal Karyalay,Pimple Gurav,Pune-411061',
+        state: 'Maharashtra',
+        pan: 'EUBPG6574A',
+        phone: managingAgency?.phone || '+91 9876541234',
+        email: managingAgency?.email || 'alertspace@gmail.com',
+        logo_url: managingAgency?.logo_url,
+      },
+      society: {
+        id: society._id.toString(),
+        name: society.name.includes('Society') ? society.name : `${society.name} Co-operative Housing Society Ltd.`,
+        rawName: society.name,
+        address: society.address,
+        placeOfSupply: 'Maharashtra',
+        wings: society.wings || [],
+      },
+      invoice: {
+        invoiceNo,
+        invoiceDate,
+        serviceMonth,
+        invoicePeriod,
+        siteName,
+        wing: wing || 'all',
+        particulars: 'Security Guard',
+        quantity,
+        ratePerMonth,
+        perDayRate,
+        perHrRate: 0,
+        otHours: 0,
+        totalDays,
+        subTotalA,
+        subTotalB,
+        roundOff,
+        total: roundedTotal,
+        amountInWords: numberToIndianWords(roundedTotal),
+        year,
+        month,
+        daysInMonth,
+      },
+    },
+  });
+}));
+
+/**
  * GET /api/reports/watchman-journey?watchman_id=&startDate=&endDate=&agency_id=
  * Day-by-day attendance journey for a specific watchman across all societies.
  * Shows PRESENT/LATE at which society, or ABSENT if no attendance that day.
