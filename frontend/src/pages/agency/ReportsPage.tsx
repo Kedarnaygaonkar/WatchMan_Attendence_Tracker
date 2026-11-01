@@ -28,7 +28,8 @@ import {
   RefreshCw,
   Calculator,
   Edit3,
-  Check
+  Check,
+  Landmark
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
@@ -267,6 +268,56 @@ export default function ReportsPage() {
   const [siteNameOverride, setSiteNameOverride] = useState<string>('');
   const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
 
+  // User-customizable Bank & Tax details (persisted in localStorage)
+  const [bankName, setBankName] = useState<string>(() => {
+    try { return localStorage.getItem('invoice_bank_name') || 'HDFC Bank Ltd.'; } catch { return 'HDFC Bank Ltd.'; }
+  });
+  const [accountName, setAccountName] = useState<string>(() => {
+    try { return localStorage.getItem('invoice_account_name') || ''; } catch { return ''; }
+  });
+  const [accountNo, setAccountNo] = useState<string>(() => {
+    try { return localStorage.getItem('invoice_account_no') || '50200067489211'; } catch { return '50200067489211'; }
+  });
+  const [ifscCode, setIfscCode] = useState<string>(() => {
+    try { return localStorage.getItem('invoice_ifsc_code') || 'HDFC0001245'; } catch { return 'HDFC0001245'; }
+  });
+  const [branchName, setBranchName] = useState<string>(() => {
+    try { return localStorage.getItem('invoice_branch') || 'Pimple Gurav, Pune - 411061'; } catch { return 'Pimple Gurav, Pune - 411061'; }
+  });
+
+  const [agencyPan, setAgencyPan] = useState<string>(() => {
+    try { return localStorage.getItem('invoice_agency_pan') || 'EUBPG6574A'; } catch { return 'EUBPG6574A'; }
+  });
+  const [agencyAddress, setAgencyAddress] = useState<string>('');
+  const [agencyState, setAgencyState] = useState<string>('Maharashtra');
+  const [societyGstin, setSocietyGstin] = useState<string>('');
+  const [placeOfSupply, setPlaceOfSupply] = useState<string>('Maharashtra');
+
+  function handleBankNameChange(val: string) {
+    setBankName(val);
+    try { localStorage.setItem('invoice_bank_name', val); } catch {}
+  }
+  function handleAccountNameChange(val: string) {
+    setAccountName(val);
+    try { localStorage.setItem('invoice_account_name', val); } catch {}
+  }
+  function handleAccountNoChange(val: string) {
+    setAccountNo(val);
+    try { localStorage.setItem('invoice_account_no', val); } catch {}
+  }
+  function handleIfscCodeChange(val: string) {
+    setIfscCode(val);
+    try { localStorage.setItem('invoice_ifsc_code', val); } catch {}
+  }
+  function handleBranchNameChange(val: string) {
+    setBranchName(val);
+    try { localStorage.setItem('invoice_branch', val); } catch {}
+  }
+  function handleAgencyPanChange(val: string) {
+    setAgencyPan(val);
+    try { localStorage.setItem('invoice_agency_pan', val); } catch {}
+  }
+
   // ── Fetch Society & Wing Bill Data ─────────────────────────────────────
   const {
     data: billDataResponse,
@@ -305,7 +356,25 @@ export default function ReportsPage() {
     setInvoiceOtHours('0');
     setSiteNameOverride('');
     setLogoLoadFailed(false);
-    toast.success('Reset invoice parameters to auto-calculated defaults');
+    setBankName('HDFC Bank Ltd.');
+    setAccountName('');
+    setAccountNo('50200067489211');
+    setIfscCode('HDFC0001245');
+    setBranchName('Pimple Gurav, Pune - 411061');
+    setAgencyPan('EUBPG6574A');
+    setAgencyAddress('');
+    setAgencyState('Maharashtra');
+    setSocietyGstin('');
+    setPlaceOfSupply('Maharashtra');
+    try {
+      localStorage.removeItem('invoice_bank_name');
+      localStorage.removeItem('invoice_account_name');
+      localStorage.removeItem('invoice_account_no');
+      localStorage.removeItem('invoice_ifsc_code');
+      localStorage.removeItem('invoice_branch');
+      localStorage.removeItem('invoice_agency_pan');
+    } catch {}
+    toast.success('Reset invoice and bank parameters to defaults');
   }
 
   // Effective invoice computations
@@ -331,6 +400,20 @@ export default function ReportsPage() {
   const currentAgencyObj = agencies?.find(a => a.id === (billDataResponse?.agency?.id || agencyId || user?.agencyId));
   const effectiveAgencyName = billDataResponse?.agency?.name || currentAgencyObj?.name || (isSuperAdmin ? agencies?.find(a => a.id === agencyId)?.name : user?.agencyName) || user?.agencyName || 'Security Agency';
   const effectiveAgencyLogo = billDataResponse?.agency?.logo_url || currentAgencyObj?.logo_url || calendarData?.society?.agency?.logo_url || '';
+
+  // Effective bank and remittance details
+  const effectiveBankName = bankName.trim() || 'HDFC Bank Ltd.';
+  const effectiveAccountName = accountName.trim() || effectiveAgencyName;
+  const effectiveAccountNo = accountNo.trim() || '50200067489211';
+  const effectiveIfscCode = ifscCode.trim() || 'HDFC0001245';
+  const effectiveBranchName = branchName.trim() || 'Pimple Gurav, Pune - 411061';
+
+  // Effective tax and registration details
+  const effectiveAgencyPan = agencyPan.trim() || billDataResponse?.agency?.pan || 'EUBPG6574A';
+  const effectiveAgencyAddress = agencyAddress.trim() || billDataResponse?.agency?.address || 'Sharma Complex, 3rd Floor Near Ram Krushna Mangal Karyalay,Pimple Gurav,Pune-411061';
+  const effectiveAgencyState = agencyState.trim() || billDataResponse?.agency?.state || 'Maharashtra';
+  const effectiveSocietyGstin = societyGstin.trim() || '';
+  const effectivePlaceOfSupply = placeOfSupply.trim() || billDataResponse?.society?.placeOfSupply || 'Maharashtra';
 
   const effectiveQuantity = invoiceQuantityOverride !== '' && !isNaN(parseInt(invoiceQuantityOverride))
     ? Math.max(1, parseInt(invoiceQuantityOverride))
@@ -516,6 +599,12 @@ export default function ReportsPage() {
       'Round Off',
       'Total Amount',
       'Amount in Words',
+      'Bank Name',
+      'Account Name',
+      'Account No',
+      'IFSC Code',
+      'Branch',
+      'Agency PAN',
     ];
 
     const rows = [
@@ -536,6 +625,12 @@ export default function ReportsPage() {
         effectiveRoundOff.toFixed(2),
         effectiveRoundedTotal.toFixed(2),
         effectiveAmountInWords,
+        effectiveBankName,
+        effectiveAccountName,
+        effectiveAccountNo,
+        effectiveIfscCode,
+        effectiveBranchName,
+        effectiveAgencyPan,
       ],
     ];
 
@@ -1753,6 +1848,153 @@ export default function ReportsPage() {
                         />
                       </div>
                     </div>
+
+                    {/* 🏦 Bank Remittance & Tax Details (Customizable) */}
+                    <div className="pt-4 border-t border-surface-700/60 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Landmark className="w-4 h-4 text-emerald-400" />
+                          <h4 className="text-xs font-bold text-slate-100">
+                            Bank Remittance & Tax Details (Fully Customizable)
+                          </h4>
+                        </div>
+                        <span className="text-[11px] text-slate-400">
+                          Inputs update the invoice and remittance slip in real time
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Bank Name
+                          </label>
+                          <input
+                            type="text"
+                            value={bankName}
+                            onChange={e => handleBankNameChange(e.target.value)}
+                            placeholder="HDFC Bank Ltd."
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Account Name
+                          </label>
+                          <input
+                            type="text"
+                            value={accountName}
+                            onChange={e => handleAccountNameChange(e.target.value)}
+                            placeholder={effectiveAgencyName}
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Account Number
+                          </label>
+                          <input
+                            type="text"
+                            value={accountNo}
+                            onChange={e => handleAccountNoChange(e.target.value)}
+                            placeholder="50200067489211"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            IFSC Code
+                          </label>
+                          <input
+                            type="text"
+                            value={ifscCode}
+                            onChange={e => handleIfscCodeChange(e.target.value)}
+                            placeholder="HDFC0001245"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none uppercase"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Branch / Location
+                          </label>
+                          <input
+                            type="text"
+                            value={branchName}
+                            onChange={e => handleBranchNameChange(e.target.value)}
+                            placeholder="Pimple Gurav, Pune - 411061"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Agency PAN No.
+                          </label>
+                          <input
+                            type="text"
+                            value={agencyPan}
+                            onChange={e => handleAgencyPanChange(e.target.value)}
+                            placeholder="EUBPG6574A"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none uppercase"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Agency State
+                          </label>
+                          <input
+                            type="text"
+                            value={agencyState}
+                            onChange={e => setAgencyState(e.target.value)}
+                            placeholder="Maharashtra"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Society GSTIN / UIN
+                          </label>
+                          <input
+                            type="text"
+                            value={societyGstin}
+                            onChange={e => setSocietyGstin(e.target.value)}
+                            placeholder="Optional GSTIN"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-emerald-500 focus:outline-none uppercase"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Place of Supply
+                          </label>
+                          <input
+                            type="text"
+                            value={placeOfSupply}
+                            onChange={e => setPlaceOfSupply(e.target.value)}
+                            placeholder="Maharashtra"
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                            Agency Address (Custom)
+                          </label>
+                          <input
+                            type="text"
+                            value={agencyAddress}
+                            onChange={e => setAgencyAddress(e.target.value)}
+                            placeholder={billDataResponse?.agency?.address || 'Agency Office Address'}
+                            className="w-full bg-surface-900/90 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* 🧾 Official Tax Invoice Document (Replicating Reference Design) */}
@@ -1806,13 +2048,13 @@ export default function ReportsPage() {
                           <div className="grid grid-cols-[70px_1fr] gap-1">
                             <span className="text-neutral-800">Address</span>
                             <span className="text-black">
-                              : {billDataResponse?.agency?.address || 'Sharma Complex, 3rd Floor Near Ram Krushna Mangal Karyalay,Pimple Gurav,Pune-411061'}
+                              : {effectiveAgencyAddress}
                             </span>
                           </div>
                           <div className="grid grid-cols-[70px_1fr] gap-1">
                             <span className="text-neutral-800">State</span>
                             <span className="text-black">
-                              : {billDataResponse?.agency?.state || 'Maharashtra'}
+                              : {effectiveAgencyState}
                             </span>
                           </div>
                           <div className="grid grid-cols-[70px_1fr] gap-1">
@@ -1822,7 +2064,7 @@ export default function ReportsPage() {
                           <div className="grid grid-cols-[70px_1fr] gap-1">
                             <span className="text-neutral-800">PAN No.</span>
                             <span className="text-black font-semibold">
-                              : {billDataResponse?.agency?.pan || 'EUBPG6574A'}
+                              : {effectiveAgencyPan}
                             </span>
                           </div>
                         </div>
@@ -1854,12 +2096,12 @@ export default function ReportsPage() {
                           </div>
                           <div className="grid grid-cols-[90px_1fr] gap-1">
                             <span className="text-neutral-800">GSTIN / UIN</span>
-                            <span className="text-black">: </span>
+                            <span className="text-black">: {effectiveSocietyGstin}</span>
                           </div>
                           <div className="grid grid-cols-[90px_1fr] gap-1">
                             <span className="text-neutral-800">Place Of Supply</span>
                             <span className="text-black">
-                              : {billDataResponse?.society?.placeOfSupply || 'Maharashtra'}
+                              : {effectivePlaceOfSupply}
                             </span>
                           </div>
                           <div className="grid grid-cols-[90px_1fr] gap-1">
@@ -1999,25 +2241,25 @@ export default function ReportsPage() {
                         </div>
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
                           <span className="text-neutral-700 font-medium">Bank Name</span>
-                          <span className="text-black font-semibold">: HDFC Bank Ltd.</span>
+                          <span className="text-black font-semibold">: {effectiveBankName}</span>
                         </div>
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
                           <span className="text-neutral-700 font-medium">Account Name</span>
                           <span className="text-black font-bold">
-                            : {effectiveAgencyName}
+                            : {effectiveAccountName}
                           </span>
                         </div>
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
                           <span className="text-neutral-700 font-medium">Account No.</span>
-                          <span className="text-black font-mono font-bold">: 50200067489211</span>
+                          <span className="text-black font-mono font-bold">: {effectiveAccountNo}</span>
                         </div>
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
                           <span className="text-neutral-700 font-medium">IFSC Code</span>
-                          <span className="text-black font-mono font-bold">: HDFC0001245</span>
+                          <span className="text-black font-mono font-bold">: {effectiveIfscCode}</span>
                         </div>
                         <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
                           <span className="text-neutral-700 font-medium">Branch</span>
-                          <span className="text-black">: Pimple Gurav, Pune - 411061</span>
+                          <span className="text-black">: {effectiveBranchName}</span>
                         </div>
                       </div>
 
